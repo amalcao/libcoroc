@@ -154,14 +154,6 @@ void vpu_suspend (void)
     vpu_switch (target); 
 }
 
-void vpu_sendsig (int signal)
-{
-    int index = 0;
-    for (; index < vpu_manager . xt_index; ++index) {
-        TSC_OS_THREAD_SENDSIG (vpu_manager . vpu[index] . os_thr, signal);
-    }
-}
-
 void vpu_clock_handler (int signal)
 {
     vpu_t *vpu = TSC_TLS_GET();

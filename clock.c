@@ -24,6 +24,11 @@ void clock_routine (void)
     while (true) {
        struct timespec period = {0, 100000};
        nanosleep (& period, NULL);
-       vpu_sendsig (TSC_CLOCK_SIGNAL); 
+
+	   int index = 0;
+	   for (; index < vpu_manager . xt_index; ++index) {
+	   		TSC_OS_THREAD_SENDSIG (vpu_manager . vpu[index] . os_thr,
+					TSC_CLOCK_SIGNAL);
+	   }
     }
 }
