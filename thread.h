@@ -16,6 +16,7 @@ typedef struct thread_attributes {
     uint32_t stack_size;
     uint32_t timeslice;
     uint32_t affinity;
+	uint32_t detachstate;
     // TODO : anything else ??
 } thread_attributes_t;
 
@@ -35,6 +36,7 @@ typedef struct thread {
     uint32_t init_timeslice;
     uint32_t rem_timeslice;
 
+	uint32_t detachstate;
     void * stack_base;
     size_t stack_size;
     thread_handler_t entry;
@@ -60,8 +62,11 @@ enum thread_type {
 
 extern thread_t thread_allocate (thread_handler_t entry, void * arguments, const char * name, uint32_t type, thread_attributes_t *attr);
 extern void thread_exit (int value);
-// TODO : extern status_t thread_join (thread_t thread);
 extern void thread_yeild (void);
+#ifdef TSC_ENABLE_THREAD_JOIN
+extern status_t thread_join (thread_t thread);
+extern void thread_detach (void);
+#endif // TSC_ENABLE_THREAD_JOIN
 
 
 #endif // _TSC_CORE_THREAD_H_

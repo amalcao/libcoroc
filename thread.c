@@ -13,7 +13,6 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 {
     vpu_t * vpu = TSC_TLS_GET();
     thread_t thread = TSC_ALLOC(sizeof (struct thread)) ;
-    void * stack_base = TSC_ALLOC(TSC_DEFAULT_STACK_SIZE);
 
     if (thread != NULL) {
         strcpy (thread -> name, name);
@@ -27,10 +26,12 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
             thread -> stack_size = attr -> stack_size;
             thread -> vpu_affinity = attr -> affinity;
             thread -> init_timeslice = attr -> timeslice;
+			thread -> detachstate = attr -> detachstate;
         } else {
             thread -> stack_size = TSC_DEFAULT_STACK_SIZE;
             thread -> vpu_affinity = TSC_DEFAULT_AFFINITY;
             thread -> init_timeslice = TSC_DEFAULT_TIMESLICE;
+			thread -> detachstate = TSC_DEFAULT_DETACHSTATE;
         }
 
         thread -> stack_base = TSC_ALLOC(thread -> stack_size);
@@ -44,7 +45,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
     TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, thread -> stack_size, thread);
     
     if (thread -> type != TSC_THREAD_IDLE) {
-        // atomic_queue_add (& vpu -> thead_list, & thread -> sched_link);
+        atomic_queue_add (& vpu_manager . thead_list, & thread -> sched_link);
         atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
     }
 
@@ -61,53 +62,69 @@ void thread_exit (int value)
     thread_t target = NULL, self = vpu -> current_thread;
     thread_t p = NULL;
 
-    self -> status = TSC_THREAD_EXIT;
-    self -> retval = value;
+	if (self -> detachstate == TSC_THREAD_UNDETACH) { 
+		lock_aquire (& self -> wait . lock);
 
-    if (self -> wait . status) while ((p = queue_rem (& (self -> wait))) != NULL) {
-        p -> status = TSC_THREAD_READY;
-        atomic_queue_add (& vpu_manager . xt[vpu_manager . xt_index], & p -> status_link);
-    }
+		self -> status = TSC_THREAD_EXIT;
+		self -> retval = value;
 
-    target = vpu_elect ();
-    vpu_switch (target);
+		if (self -> wait . status) while ((p = queue_rem (& (self -> wait))) != NULL) {
+			p -> status = TSC_THREAD_READY;
+			atomic_queue_add (& vpu_manager . xt[vpu_manager . xt_index], & p -> status_link);
+		}
+
+		lock_release (& self -> wait .lock);
+	} else {
+		// NOTE : the thread_deallocate () CANNOT release the 
+		// stack of self becasue the current frame is on it !!
+		thread_deallocate (self); // reclaim 
+	}
+
+	target = vpu_elect ();
+	vpu_switch (target);
 }
 
 status_t thread_join (thread_t thread, int * value)
 {
-    TSC_SIGNAL_MASK();
+	TSC_SIGNAL_MASK();
 
-    vpu_t * vpu = TSC_TLS_GET();
-    thread_t self = vpu -> current_thread;
+	vpu_t * vpu = TSC_TLS_GET();
+	thread_t self = vpu -> current_thread;
 
-    if (thread == NULL) return TSC_ERROR;
+	if (thread == NULL) return TSC_ERROR;
+	if (thread -> detachstate != TSC_THREAD_UNDETACH) return TSC_ERROR;
 
-    if (thread -> status != TSC_THREAD_EXIT) {
-        queue_add (& (thread -> wait), & self -> status_link);
-        vpu_suspend ();
-    }
+	lock_aquire (& thread -> wait . lock);
 
-    *value = thread -> retval;
+	if (thread -> status != TSC_THREAD_EXIT) {
+		queue_add (& (thread -> wait), & self -> status_link);
+		vpu_suspend (& thread -> wait . lock);
+	}
 
-    TSC_SIGNAL_UNMASK();
+	lock_release (& thread -> wait . lock);
 
-    return TSC_OK;
+	*value = thread -> retval;
+	thread_deallocate (thread); // reclaim
+
+	TSC_SIGNAL_UNMASK();
+
+	return TSC_OK;
 }
 
 # else
 
 void thread_exit (int value)
 {
-    TSC_SIGNAL_MASK();
+	TSC_SIGNAL_MASK();
 
-    vpu_t * vpu = TSC_TLS_GET();
-    thread_t target = NULL, self = vpu -> current_thread;
+	vpu_t * vpu = TSC_TLS_GET();
+	thread_t target = NULL, self = vpu -> current_thread;
 
-    self -> status = TSC_THREAD_EXIT;
-    self -> retval = value;
+	self -> status = TSC_THREAD_EXIT;
+	self -> retval = value;
 
-    target = vpu_elect ();
-    vpu_switch (target);
+	target = vpu_elect ();
+	vpu_switch (target);
 }
 
 # endif
@@ -115,7 +132,7 @@ void thread_exit (int value)
 
 void thread_yeild (void)
 {
-    TSC_SIGNAL_MASK();
-    vpu_yield ();
-    TSC_SIGNAL_UNMASK();
+	TSC_SIGNAL_MASK();
+	vpu_yield ();
+	TSC_SIGNAL_UNMASK();
 }

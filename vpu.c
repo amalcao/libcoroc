@@ -88,87 +88,91 @@ void vpu_switch (struct thread * thread)
     thread -> vpu_id = vpu -> id;
     vpu -> current_thread = thread;
     
-    self -> status = TSC_THREAD_READY;
+	if (self -> status == TSC_THREAD_RUNNING &&
+		self -> type != TSC_THREAD_IDLE) {
+		self -> status = TSC_THREAD_READY;
+		atomic_queue_add (& vpu_manager . xt[self -> vpu_affinity], & self -> status_link);
+	}
 
-    TSC_CONTEXT_SWAP((& self -> ctx), (& thread -> ctx));
+	TSC_CONTEXT_SWAP((& self -> ctx), (& thread -> ctx));
 }
 
 struct thread * vpu_elect (void)
 {
-    vpu_t * vpu = TSC_TLS_GET();
-    thread_t target = NULL;
+	vpu_t * vpu = TSC_TLS_GET();
+	thread_t target = NULL;
 
-    target = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
-    if (target != NULL) return target;
+	target = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
+	if (target != NULL) return target;
 
-    target = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
+	target = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
 #ifdef TSC_ENABLE_WORKSTEALING
-    if (target != NULL) return target;
+	if (target != NULL) return target;
 
-    int index = 0;
-    for (; index < vpu_manager . xt_index; ++index) {
-        if (index == vpu -> id) continue;
-        target = atomic_queue_rem (& vpu_manager . xt[index]);
-        if (target != NULL)
-            break;
-    }
+	int index = 0;
+	for (; index < vpu_manager . xt_index; ++index) {
+		if (index == vpu -> id) continue;
+		target = atomic_queue_rem (& vpu_manager . xt[index]);
+		if (target != NULL)
+			break;
+	}
 #endif // TSC_ENABLE_WORKSTEALING
 
-    return target;
+	return target;
 }
 
 void vpu_spawn (thread_t thread)
 {
-    vpu_t *vpu = TSC_TLS_GET();
+	vpu_t *vpu = TSC_TLS_GET();
 
-    thread -> status = TSC_THREAD_RUNNING;
-    vpu -> current_thread = thread;
+	thread -> status = TSC_THREAD_RUNNING;
+	vpu -> current_thread = thread;
 
-    TSC_CONTEXT_LOAD(& thread -> ctx);
+	TSC_CONTEXT_LOAD(& thread -> ctx);
 }
 
 void vpu_yield (void)
 {
-    vpu_t *vpu = TSC_TLS_GET();
-    thread_t target = NULL;
-    thread_t self = vpu -> current_thread;
+	vpu_t *vpu = TSC_TLS_GET();
+	thread_t target = NULL;
+	thread_t self = vpu -> current_thread;
 
-    self -> status = TSC_THREAD_READY;
-    atomic_queue_add (& vpu_manager . xt[self -> vpu_affinity], & self -> status_link);
-
-    target = vpu_elect ();
-    vpu_switch (target);
+	target = vpu_elect ();
+	vpu_switch (target);
 }
 
-void vpu_suspend (void)
+void vpu_suspend (lock_t * lock)
 {
-    vpu_t *vpu = TSC_TLS_GET();
-    thread_t target = NULL;
-    thread_t self = vpu -> current_thread;
+	vpu_t *vpu = TSC_TLS_GET();
+	thread_t target = NULL;
+	thread_t self = vpu -> current_thread;
 
-    self -> status = TSC_THREAD_WAIT;
-    atomic_queue_add (& vpu_manager . xt[self -> vpu_affinity], & self -> status_link);
+	self -> status = TSC_THREAD_WAIT;
+	atomic_queue_add (& vpu_manager . xt[self -> vpu_affinity], & self -> status_link);
 
-    target = vpu_elect ();
-    vpu_switch (target); 
+	target = vpu_elect ();
+	if (lock != NULL) lock_release (lock);
+
+	vpu_switch (target);
+	if (lock != NULL) lock_aquire (lock);
 }
 
 void vpu_clock_handler (int signal)
 {
-    vpu_t *vpu = TSC_TLS_GET();
-    assert (vpu != NULL);
+	vpu_t *vpu = TSC_TLS_GET();
+	assert (vpu != NULL);
 
-    thread_t current = vpu -> current_thread;
-    assert (current != NULL);
+	thread_t current = vpu -> current_thread;
+	assert (current != NULL);
 
-    if ((-- (current -> rem_timeslice)) == 0) {
-        thread_t candidate = vpu_elect ();
-        if (candidate == NULL) {
-            current -> rem_timeslice = current -> init_timeslice;
-            return;
-        } 
-        
-        vpu_switch (candidate);
-    }
+	if ((-- (current -> rem_timeslice)) == 0) {
+		thread_t candidate = vpu_elect ();
+		if (candidate == NULL) {
+			current -> rem_timeslice = current -> init_timeslice;
+			return;
+		} 
+
+		vpu_switch (candidate);
+	}
 }
