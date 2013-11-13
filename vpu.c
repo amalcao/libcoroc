@@ -1,6 +1,7 @@
 
 #include <assert.h>
 #include "vpu.h"
+#include "lock.h"
 
 
 // the VPU manager instance.
@@ -56,7 +57,7 @@ void vpu_initialize (int vpu_mp_count)
     // atomic_queue_init (& vpu_manager . team_list);
     atomic_queue_init (& vpu_manager . thread_list);
    
-    TSC_BARRIER_INIT(vpu_manager . xt_index);
+    TSC_BARRIER_INIT(vpu_manager . xt_index + 1);
     TSC_TLS_INIT();
     TSC_SIGNAL_MASK_INIT();
 
@@ -142,7 +143,7 @@ void vpu_yield (void)
 	vpu_switch (target);
 }
 
-void vpu_suspend (lock_t * lock)
+void vpu_suspend (lock_t lock)
 {
 	vpu_t *vpu = TSC_TLS_GET();
 	thread_t target = NULL;
@@ -155,7 +156,7 @@ void vpu_suspend (lock_t * lock)
 	if (lock != NULL) lock_release (lock);
 
 	vpu_switch (target);
-	if (lock != NULL) lock_aquire (lock);
+	if (lock != NULL) lock_acquire (lock);
 }
 
 void vpu_clock_handler (int signal)

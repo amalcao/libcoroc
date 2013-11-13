@@ -59,6 +59,10 @@ enum thread_type {
     TSC_THREAD_MAIN     = 0x2,
 };
 
+enum thread_deallocate {
+    TSC_THREAD_UNDETACH = 0x0,
+    TSC_THREAD_DETACH = 0x1,
+};
 
 extern thread_t thread_allocate (thread_handler_t entry, void * arguments, const char * name, uint32_t type, thread_attributes_t *attr);
 extern void thread_exit (int value);

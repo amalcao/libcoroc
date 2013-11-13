@@ -1,9 +1,10 @@
 #include "thread.h"
 #include "vpu.h"
 
-#define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
+#define TSC_DEFAULT_STACK_SIZE  (4 * 1024 * 1024) // 4MB
 #define TSC_DEFAULT_AFFINITY    (vpu_manager . xt_index)
 #define TSC_DEFAULT_TIMESLICE   10
+#define TSC_DEFAULT_DETACHSTATE TSC_THREAD_UNDETACH
 
 TSC_TLS_DECLARE
 TSC_SIGNAL_MASK_DECLARE
@@ -45,7 +46,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
     TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, thread -> stack_size, thread);
     
     if (thread -> type != TSC_THREAD_IDLE) {
-        atomic_queue_add (& vpu_manager . thead_list, & thread -> sched_link);
+        atomic_queue_add (& vpu_manager . thread_list, & thread -> sched_link);
         atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
     }
 
@@ -63,7 +64,7 @@ void thread_exit (int value)
     thread_t p = NULL;
 
 	if (self -> detachstate == TSC_THREAD_UNDETACH) { 
-		lock_aquire (& self -> wait . lock);
+		lock_acquire (self -> wait . lock);
 
 		self -> status = TSC_THREAD_EXIT;
 		self -> retval = value;
@@ -73,7 +74,7 @@ void thread_exit (int value)
 			atomic_queue_add (& vpu_manager . xt[vpu_manager . xt_index], & p -> status_link);
 		}
 
-		lock_release (& self -> wait .lock);
+		lock_release (self -> wait .lock);
 	} else {
 		// NOTE : the thread_deallocate () CANNOT release the 
 		// stack of self becasue the current frame is on it !!
@@ -94,14 +95,14 @@ status_t thread_join (thread_t thread, int * value)
 	if (thread == NULL) return TSC_ERROR;
 	if (thread -> detachstate != TSC_THREAD_UNDETACH) return TSC_ERROR;
 
-	lock_aquire (& thread -> wait . lock);
+	lock_acquire (thread -> wait . lock);
 
 	if (thread -> status != TSC_THREAD_EXIT) {
 		queue_add (& (thread -> wait), & self -> status_link);
 		vpu_suspend (& thread -> wait . lock);
 	}
 
-	lock_release (& thread -> wait . lock);
+	lock_release (thread -> wait . lock);
 
 	*value = thread -> retval;
 	thread_deallocate (thread); // reclaim
