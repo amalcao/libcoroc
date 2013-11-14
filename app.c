@@ -2,6 +2,7 @@
  * The User APP using LibTSC ..
  * - - - - */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include "thread.h"
 #include "channel.h"
@@ -15,8 +16,10 @@ void sub_task (void * arg)
 
     printf ("[sub_task:] recv id is %d!\n", *((int*)(msg->buff)));
 
+	srand (arg);
+
     int i = 0;
-    for (; i< 100000; i++);
+    for (; i < rand()%10000000 + 1000000; i++);
 
     message_send (msg, parent);
 
