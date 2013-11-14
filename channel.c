@@ -1,0 +1,99 @@
+
+#include <stdint.h>
+#include <string.h>
+#include "channel.h"
+#include "vpu.h"
+
+TSC_SIGNAL_MASK_DECLARE
+
+static bool pointer_equal (void * p0, void * p1)
+{
+    return p0 == p1;
+}
+
+static bool message_send_equal (void * p0, void * p1)
+{
+    message_t msg = (message_t)p0;
+    thread_t thread = (thread_t)p1;
+
+    return (msg -> send_tid == thread);
+}
+
+message_t message_allocate (size_t size)
+{
+    message_t msg = TSC_ALLOC (sizeof (struct message));
+    msg -> size = size;
+    msg -> buff = TSC_ALLOC (size);
+
+    msg -> send_tid = NULL;
+    msg -> recv_tid = NULL;
+
+    queue_item_init (& msg -> message_link, msg);
+
+    return msg;
+}
+
+status_t message_send (message_t msg, thread_t to)
+{
+    msg -> send_tid = thread_self ();
+    msg -> recv_tid = to;
+
+    TSC_SIGNAL_MASK();
+    
+    message_t _msg = message_clone (msg);
+    atomic_queue_add (& to -> message_queue, & _msg -> message_link);
+
+    lock_acquire (to -> wait . lock);
+    if (to -> status == TSC_THREAD_WAIT &&
+        queue_lookup (& to -> wait, pointer_equal, to) ) {
+        
+        queue_extract (& to -> wait, & to -> status_link);
+        vpu_ready (to);
+    }
+    lock_release (to -> wait . lock);
+
+    TSC_SIGNAL_UNMASK ();
+    return 0;
+}
+
+status_t message_recv (message_t * msg, thread_t from, bool block)
+{
+    thread_t self = thread_self ();
+    * msg = NULL;
+ 
+    TSC_SIGNAL_MASK ();
+
+    lock_acquire (self -> message_queue . lock);
+
+    for (;;) {
+        if (* msg = queue_lookup(& self -> message_queue, message_send_equal, from)) {
+            queue_extract (& self -> message_queue,  & ((*msg) -> message_link));
+            break;
+        } 
+        
+        if (!block) break;
+
+        vpu_suspend (self -> message_queue . lock);
+    }
+
+    lock_release (self -> message_queue . lock);
+    TSC_SIGNAL_UNMASK ();
+    return (*msg != NULL) ? 0 : -1;
+}
+
+message_t message_clone (message_t msg)
+{
+    message_t _msg = message_allocate (msg -> size);
+
+    _msg -> send_tid = msg -> send_tid;
+    _msg -> recv_tid = msg -> recv_tid;
+    memcpy (_msg -> buff, msg -> buff, msg -> size);
+
+    return _msg;
+}
+
+void message_deallocate (message_t msg)
+{
+    if (msg -> size > 0) TSC_DEALLOC (msg -> buff);
+    TSC_DEALLOC (msg);
+}

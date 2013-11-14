@@ -37,6 +37,7 @@ extern void vpu_resume (struct thread * thread);
 extern void vpu_suspend (lock_t lock); // TODO
 extern void vpu_spawn (struct thread * thread);
 extern void vpu_yield (void);
+extern void vpu_ready (struct thread * thread);
 extern void vpu_clock_handler (int);
 
 #define TSC_ALLOC_TID() __sync_fetch_and_add(& vpu_manager.last_pid, 1)

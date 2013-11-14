@@ -32,6 +32,7 @@ typedef struct thread {
     queue_item_t status_link;
     queue_item_t sched_link;
     queue_t wait;
+    queue_t message_queue;
 
     uint32_t init_timeslice;
     uint32_t rem_timeslice;
@@ -67,6 +68,7 @@ enum thread_deallocate {
 extern thread_t thread_allocate (thread_handler_t entry, void * arguments, const char * name, uint32_t type, thread_attributes_t *attr);
 extern void thread_exit (int value);
 extern void thread_yeild (void);
+extern thread_t thread_self (void);
 #ifdef TSC_ENABLE_THREAD_JOIN
 extern status_t thread_join (thread_t thread);
 extern void thread_detach (void);

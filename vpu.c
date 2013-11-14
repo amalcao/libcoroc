@@ -150,13 +150,21 @@ void vpu_suspend (lock_t lock)
 	thread_t self = vpu -> current_thread;
 
 	self -> status = TSC_THREAD_WAIT;
-	atomic_queue_add (& vpu_manager . xt[self -> vpu_affinity], & self -> status_link);
+	atomic_queue_add (& self -> wait, & self -> status_link); // FIXME !!
 
 	target = vpu_elect ();
 	if (lock != NULL) lock_release (lock);
 
 	vpu_switch (target);
 	if (lock != NULL) lock_acquire (lock);
+}
+
+void vpu_ready (struct thread * thread)
+{
+    assert (thread != NULL);
+
+    thread -> status = TSC_THREAD_READY;
+    atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
 }
 
 void vpu_clock_handler (int signal)

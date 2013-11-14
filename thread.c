@@ -39,6 +39,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
         thread -> rem_timeslice = thread -> init_timeslice;
 
         atomic_queue_init (& thread -> wait);
+        atomic_queue_init (& thread -> message_queue);
         queue_item_init (& thread -> status_link, thread);
         queue_item_init (& thread -> sched_link, thread);
     }
@@ -121,6 +122,13 @@ void thread_exit (int value)
 	vpu_t * vpu = TSC_TLS_GET();
 	thread_t target = NULL, self = vpu -> current_thread;
 
+# if 1
+    // just for testing ..
+    if (self -> type == TSC_THREAD_MAIN) {
+        exit (value);
+    }
+# endif
+
 	self -> status = TSC_THREAD_EXIT;
 	self -> retval = value;
 
@@ -136,4 +144,15 @@ void thread_yeild (void)
 	TSC_SIGNAL_MASK();
 	vpu_yield ();
 	TSC_SIGNAL_UNMASK();
+}
+
+thread_t thread_self (void)
+{   
+    thread_t self = NULL;
+    TSC_SIGNAL_MASK ();
+    vpu_t * vpu = TSC_TLS_GET();
+    self = vpu -> current_thread;
+    TSC_SIGNAL_UNMASK ();
+
+    return self;
 }
