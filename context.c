@@ -2,6 +2,7 @@
 #include <string.h>
 #include <signal.h>
 #include <stdint.h>
+#include "support.h"
 #include "context.h"
 #include "thread.h"
 

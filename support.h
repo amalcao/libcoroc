@@ -4,6 +4,14 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#ifdef __APPLE__
+
+#include "pthread_barrier.h"
+
+#define _XOPEN_SOURCE 700
+
+#endif // __APPLE__ 
+
 #define TSC_NAME_LENGTH 32
 
 // -- for thread APIs -- 
