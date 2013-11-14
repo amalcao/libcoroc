@@ -122,12 +122,10 @@ void thread_exit (int value)
 	vpu_t * vpu = TSC_TLS_GET();
 	thread_t target = NULL, self = vpu -> current_thread;
 
-# if 1
     // just for testing ..
     if (self -> type == TSC_THREAD_MAIN) {
         exit (value);
     }
-# endif
 
 	self -> status = TSC_THREAD_EXIT;
 	self -> retval = value;
@@ -136,7 +134,7 @@ void thread_exit (int value)
 	vpu_switch (target);
 }
 
-# endif
+# endif // TSC_ENABLE_THREAD_JOIN
 
 
 void thread_yeild (void)
