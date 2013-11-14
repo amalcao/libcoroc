@@ -7,9 +7,10 @@
 
 void sub_task(void *id)
 {
-	int i;
+	int i, j;
 	for (i=0; i<10; ++i) {
 		printf("Hello ! my id is %d!\n", (int)id);
+        for (j=0; j<10000000; ++j);
 #ifndef ENABLE_TIMER
 		thread_yeild();
 #endif
