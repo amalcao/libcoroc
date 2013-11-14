@@ -1,6 +1,10 @@
 /* Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT */
 
+#include <sys/types.h>
+#include <signal.h>
+#include <string.h>
 #include <stdarg.h>
+#include "context.h"
 
 #if defined(__APPLE__)
 #if defined(__i386__)

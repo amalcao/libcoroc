@@ -6,8 +6,6 @@
 #include "context.h"
 #include "thread.h"
 
-#include "_context.c"
-
 static void bootstrap (uint32_t low, uint32_t high)
 {
     uint64_t tmp = high << 16;
