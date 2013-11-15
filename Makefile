@@ -1,4 +1,4 @@
-all: app
+all: app findmax
 
 OS := $(shell uname)
 
@@ -27,9 +27,12 @@ endif
 app: app.o libTSC.a
 	gcc app.o ${CFLAGS} -L. -lTSC -lpthread -o $@
 
+findmax: findmax.o libTSC.a
+	gcc findmax.o ${CFLAGS} -L. -lTSC -lpthread -o $@
+
 libTSC.a: $(TSC_OBJS)
 	ar r $@ $(TSC_OBJS)
 
 .PHONY:clean
 clean:
-	rm -f *.o libTSC.a app 
+	rm -f *.o libTSC.a app findmax
