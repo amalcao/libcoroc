@@ -19,7 +19,7 @@ void sub_task (void * arg)
 	srand (arg);
 
     int i = 0;
-    for (; i < rand()%10000000 + 1000000; i++);
+    for (; i < rand()%1000000; i++);
 
     message_send (msg, parent);
 
