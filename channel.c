@@ -20,11 +20,12 @@ static bool message_send_equal (void * p0, void * p1)
     return (msg -> send_tid == thread);
 }
 
-message_t message_allocate (size_t size)
+message_t message_allocate (size_t size, void * buff)
 {
     message_t msg = TSC_ALLOC (sizeof (struct message));
+    msg -> type = TSC_MSG_SOFT;
     msg -> size = size;
-    msg -> buff = TSC_ALLOC (size);
+    msg -> buff = buff;
 
     msg -> send_tid = NULL;
     msg -> recv_tid = NULL;
@@ -84,10 +85,12 @@ status_t message_recv (message_t * msg, thread_t from, bool block)
 
 message_t message_clone (message_t msg)
 {
-    message_t _msg = message_allocate (msg -> size);
+    message_t _msg = message_allocate (msg -> size, NULL);
 
     _msg -> send_tid = msg -> send_tid;
     _msg -> recv_tid = msg -> recv_tid;
+    _msg -> type = TSC_MSG_HARD;
+    _msg -> buff = TSC_ALLOC (msg -> size);
     memcpy (_msg -> buff, msg -> buff, msg -> size);
 
     return _msg;
@@ -95,6 +98,30 @@ message_t message_clone (message_t msg)
 
 void message_deallocate (message_t msg)
 {
-    if (msg -> size > 0) TSC_DEALLOC (msg -> buff);
+    if (msg -> type == TSC_MSG_HARD) TSC_DEALLOC (msg -> buff);
     TSC_DEALLOC (msg);
+}
+
+//exported APIs
+status_t send (thread_t to, size_t size, void * buff)
+{
+    message_t msg = message_allocate (size, buff);
+    status_t ret = message_send (msg, to);
+    message_deallocate (msg);
+    return ret;
+}
+
+status_t recv (thread_t from, size_t * size, void * buff, bool block)
+{
+    message_t msg = NULL;
+    status_t ret = message_recv (& msg, from, block);
+
+    if (ret == 0) {
+        if (* size > msg -> size) * size = msg -> size;
+        memcpy (buff, msg -> buff, * size);
+    }
+
+    if (msg != NULL) message_deallocate (msg);
+
+    return ret;
 }

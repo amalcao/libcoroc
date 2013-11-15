@@ -4,26 +4,27 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "thread.h"
 #include "channel.h"
 
 void sub_task (void * arg)
 {
     thread_t parent = (thread_t)arg;
-    message_t msg;
+    int id;
+    size_t size = sizeof (int);
 
-    message_recv (& msg, parent, 1);
+    recv (parent, &size, &id, true);
 
-    printf ("[sub_task:] recv id is %d!\n", *((int*)(msg->buff)));
+    printf ("[sub_task:] recv id is %d!\n", id);
 
-	srand (arg);
+	srand (&arg);
 
     int i = 0;
     for (; i < rand()%1000000; i++);
 
-    message_send (msg, parent);
+    send (parent, sizeof(int), &id);
 
-    message_deallocate (msg);
     thread_exit (0);
 }
 
@@ -31,7 +32,6 @@ void sub_task (void * arg)
 int user_main (void * arg)
 {
     thread_t threads[100];
-    message_t msg = message_allocate (sizeof (int));
 
     int i;
     for (i = 0; i<100; ++i) {
@@ -39,18 +39,14 @@ int user_main (void * arg)
     }
 
     for (i = 0; i<100; ++i) {
-        *((int *)(msg -> buff)) = i;
-        message_send (msg, threads[i]);
+        send (threads[i], sizeof(int), &i);
     }
 
-    message_deallocate (msg);
-    msg = 0;
-
     for (i=0; i< 100; ++i) {
-        message_recv (& msg, NULL, 1);
-        printf ("[main_task:] recv id is %d!\n",
-            *((int*)(msg->buff)));
-        message_deallocate (msg);
+        int id;
+        size_t size = sizeof (int);
+        recv (NULL, &size, &id,  true);
+        printf ("[main_task:] recv id is %d!\n", id);
     }
 
     thread_exit (0);
