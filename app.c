@@ -47,7 +47,7 @@ int user_main (void * arg)
     msg = 0;
 
     for (i=0; i< 100; ++i) {
-        message_recv (& msg, threads[i], 1);
+        message_recv (& msg, NULL, 1);
         printf ("[main_task:] recv id is %d!\n",
             *((int*)(msg->buff)));
         message_deallocate (msg);

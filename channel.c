@@ -16,6 +16,7 @@ static bool message_send_equal (void * p0, void * p1)
     message_t msg = (message_t)p0;
     thread_t thread = (thread_t)p1;
 
+	if (thread == NULL) return (msg != NULL); // NULL sender match any .. 
     return (msg -> send_tid == thread);
 }
 
