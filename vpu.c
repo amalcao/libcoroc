@@ -92,7 +92,7 @@ void vpu_switch (struct thread * thread)
 	if (self -> status == TSC_THREAD_RUNNING &&
 		self -> type != TSC_THREAD_IDLE) {
 		self -> status = TSC_THREAD_READY;
-		atomic_queue_add (& vpu_manager . xt[self -> vpu_affinity], & self -> status_link);
+		atomic_queue_add (& vpu_manager . xt[self -> vpu_id], & self -> status_link);
 	}
 
 	TSC_CONTEXT_SWAP((& self -> ctx), (& thread -> ctx));
@@ -128,6 +128,7 @@ void vpu_spawn (thread_t thread)
 	vpu_t *vpu = TSC_TLS_GET();
 
 	thread -> status = TSC_THREAD_RUNNING;
+    thread -> vpu_id = vpu -> id;
 	vpu -> current_thread = thread;
 
 	TSC_CONTEXT_LOAD(& thread -> ctx);
@@ -169,11 +170,13 @@ void vpu_ready (struct thread * thread)
 
 void vpu_clock_handler (int signal)
 {
-	vpu_t *vpu = TSC_TLS_GET();
+	vpu_t * vpu = TSC_TLS_GET();
 	assert (vpu != NULL);
 
 	thread_t current = vpu -> current_thread;
 	assert (current != NULL);
+
+    if (current == vpu -> idle_thread) return;
 
 	if ((-- (current -> rem_timeslice)) == 0) {
 		thread_t candidate = vpu_elect ();
