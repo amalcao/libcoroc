@@ -14,6 +14,7 @@ static void bootstrap (uint32_t low, uint32_t high)
 
     thread_t thread = (thread_t)tmp;
     thread -> entry (thread -> arguments);
+	thread_exit (0);
 }
 
 void TSC_CONTEXT_INIT (TSC_CONTEXT * ctx, void *stack, size_t stack_sz,

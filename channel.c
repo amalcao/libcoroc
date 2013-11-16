@@ -75,7 +75,7 @@ status_t message_recv (message_t * msg, thread_t from, bool block)
         
         if (!block) break;
 
-        vpu_suspend (self -> message_queue . lock);
+        vpu_suspend (& self -> wait, self -> message_queue . lock);
     }
 
     lock_release (self -> message_queue . lock);

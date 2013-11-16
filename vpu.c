@@ -21,7 +21,7 @@ static int core_idle (void * args)
 
     /* --- the actual loop -- */
     while (true) if ((thread = vpu_elect ()) != NULL) {
-        vpu_switch (thread);
+        vpu_switch (thread, NULL);
     }
 }
 
@@ -76,7 +76,7 @@ void vpu_initialize (int vpu_mp_count)
 }
 
 
-void vpu_switch (struct thread * thread)
+void vpu_switch (struct thread * thread, lock_t lock)
 {
     vpu_t * vpu = TSC_TLS_GET();
     thread_t self = vpu -> current_thread;
@@ -94,8 +94,10 @@ void vpu_switch (struct thread * thread)
 		self -> status = TSC_THREAD_READY;
 		atomic_queue_add (& vpu_manager . xt[self -> vpu_id], & self -> status_link);
 	}
-
+	
+	if (lock != NULL) lock_release (lock);
 	TSC_CONTEXT_SWAP((& self -> ctx), (& thread -> ctx));
+	if (lock != NULL) lock_acquire (lock);
 }
 
 struct thread * vpu_elect (void)
@@ -141,23 +143,25 @@ void vpu_yield (void)
 	thread_t self = vpu -> current_thread;
 
 	target = vpu_elect ();
-	vpu_switch (target);
+	vpu_switch (target, NULL);
 }
 
-void vpu_suspend (lock_t lock)
+void vpu_suspend (queue_t * queue, lock_t lock)
 {
 	vpu_t *vpu = TSC_TLS_GET();
 	thread_t target = NULL;
 	thread_t self = vpu -> current_thread;
 
 	self -> status = TSC_THREAD_WAIT;
-	atomic_queue_add (& self -> wait, & self -> status_link); // FIXME !!
+	
+	// FIXME!! Ugly implementation !!
+	if (queue -> lock != lock)
+		atomic_queue_add (queue, & self -> status_link);
+	else
+		queue_add (queue, & self -> status_link); 
 
 	target = vpu_elect ();
-	if (lock != NULL) lock_release (lock);
-
-	vpu_switch (target);
-	if (lock != NULL) lock_acquire (lock);
+	vpu_switch (target, lock);
 }
 
 void vpu_ready (struct thread * thread)
@@ -185,6 +189,6 @@ void vpu_clock_handler (int signal)
 			return;
 		} 
 
-		vpu_switch (candidate);
+		vpu_switch (candidate, NULL);
 	}
 }

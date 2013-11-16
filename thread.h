@@ -32,6 +32,7 @@ typedef struct thread {
     queue_item_t status_link;
     queue_item_t sched_link;
     queue_t wait;
+	queue_t children;
     queue_t message_queue;
 
     uint32_t init_timeslice;

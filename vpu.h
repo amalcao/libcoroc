@@ -31,10 +31,10 @@ typedef struct vpu_manager {
 extern vpu_manager_t vpu_manager;
 
 extern void vpu_initialize (int cpu_mp_count);
-extern void vpu_switch (struct thread * thread);
+extern void vpu_switch (struct thread * thread, lock_t lock);
 extern struct thread * vpu_elect (void);
 extern void vpu_resume (struct thread * thread);
-extern void vpu_suspend (lock_t lock); // TODO
+extern void vpu_suspend (queue_t * queue, lock_t lock); // TODO
 extern void vpu_spawn (struct thread * thread);
 extern void vpu_yield (void);
 extern void vpu_ready (struct thread * thread);
