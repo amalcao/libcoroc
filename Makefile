@@ -13,13 +13,13 @@ endif
 
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
-CFLAGS := -g3
+CFLAGS := -g3 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
 endif
 
 %.o:%.S
-	gcc -c -g3 $<
+	gcc -c ${CFLAGS} $<
 
 %.o:%.c
 	gcc -c ${CFLAGS} $<

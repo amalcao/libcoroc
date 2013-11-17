@@ -15,12 +15,12 @@
 #if defined(__APPLE__)
 #if defined(__i386__)
 #define NEEDX86CONTEXT 1
-#define SET _setmcontext
-#define GET _getmcontext
+#define SET __setmcontext
+#define GET __getmcontext
 #elif defined(__x86_64__)
 #define NEEDAMD64CONTEXT 1
-#define SET _setmcontext
-#define GET _getmcontext
+#define SET __setmcontext
+#define GET __getmcontext
 #else
 #define NEEDPOWERCONTEXT 1
 #define SET __setmcontext
