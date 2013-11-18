@@ -1,13 +1,25 @@
 #include "thread.h"
 #include "vpu.h"
 
-#define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
+#ifdef __APPLE__
+# define TSC_DEFAULT_STACK_SIZE (4 * 1024 * 1024) // 4MB
+#else
+# define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
+#endif
+
 #define TSC_DEFAULT_AFFINITY    (vpu_manager . xt_index)
 #define TSC_DEFAULT_TIMESLICE   5
 #define TSC_DEFAULT_DETACHSTATE TSC_THREAD_UNDETACH
 
 TSC_TLS_DECLARE
 TSC_SIGNAL_MASK_DECLARE
+
+void thread_attr_init (thread_attributes_t * attr)
+{
+    attr -> stack_size = TSC_DEFAULT_STACK_SIZE;
+    attr -> timeslice = TSC_DEFAULT_TIMESLICE;
+    attr -> affinity = TSC_DEFAULT_AFFINITY;
+}
 
 thread_t thread_allocate (thread_handler_t entry, void * arguments, 
  const char * name, uint32_t type, thread_attributes_t * attr)
