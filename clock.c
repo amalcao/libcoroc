@@ -3,7 +3,7 @@
 #include "clock.h"
 #include "vpu.h"
 
-#define TSC_CLOCK_PERIOD_NANOSEC    100000
+#define TSC_CLOCK_PERIOD_NANOSEC    500000
 
 clock_manager_t clock_manager;
 
