@@ -1,3 +1,10 @@
+typedef unsigned long ulong;
+typedef unsigned int uint;
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned long long uvlong;
+typedef long long vlong;
+
 #define	setcontext(u)	setmcontext(&(u)->mc)
 #define	getcontext(u)	getmcontext(&(u)->mc)
 typedef struct mcontext mcontext_t;
