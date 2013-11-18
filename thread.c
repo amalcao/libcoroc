@@ -1,7 +1,12 @@
 #include "thread.h"
 #include "vpu.h"
 
-#define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
+#ifdef __APPLE__
+# define TSC_DEFAULT_STACK_SIZE (4 * 1024 * 1024) // 4MB
+#else
+# define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
+#endif
+
 #define TSC_DEFAULT_AFFINITY    (vpu_manager . xt_index)
 #define TSC_DEFAULT_TIMESLICE   5
 #define TSC_DEFAULT_DETACHSTATE TSC_THREAD_UNDETACH
