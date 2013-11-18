@@ -50,7 +50,11 @@ status_t message_send (message_t msg, thread_t to)
         queue_lookup (& to -> wait, pointer_equal, to) ) {
         
         queue_extract (& to -> wait, & to -> status_link);
+#if defined(ENABLE_QUICK_RESPONSE)
+        vpu_switch (to, to -> wait . lock);
+#else
         vpu_ready (to);
+#endif
     }
     lock_release (to -> wait . lock);
 
