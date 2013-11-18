@@ -1,4 +1,5 @@
-all: app findmax
+
+APPS := app.run findmax.run prio.run
 
 OS := $(shell uname)
 
@@ -14,9 +15,16 @@ endif
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
 CFLAGS := -g3 
+CFLAGS += -DENABLE_QUICK_RESPONSE
+
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
 endif
+
+all: ${APPS}
+
+libTSC.a: $(TSC_OBJS)
+	ar r $@ $(TSC_OBJS)
 
 %.o:%.S
 	gcc -c ${CFLAGS} $<
@@ -24,15 +32,9 @@ endif
 %.o:%.c
 	gcc -c ${CFLAGS} $<
 
-app: app.o libTSC.a
-	gcc app.o ${CFLAGS} -L. -lTSC -lpthread -o $@
-
-findmax: findmax.o libTSC.a
-	gcc findmax.o ${CFLAGS} -L. -lTSC -lpthread -o $@
-
-libTSC.a: $(TSC_OBJS)
-	ar r $@ $(TSC_OBJS)
+%.run:%.o libTSC.a
+	gcc $< ${CFLAGS} -L. -lTSC -lpthread -o $@
 
 .PHONY:clean
 clean:
-	rm -f *.o libTSC.a app findmax
+	rm -f *.o libTSC.a ${APPS}
