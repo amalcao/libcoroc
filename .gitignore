@@ -1,8 +1,7 @@
 *.o
 *.a
 *.so
+*.run
 *.swp
 
 tags
-app
-findmax
