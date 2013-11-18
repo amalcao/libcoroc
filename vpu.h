@@ -40,6 +40,6 @@ extern void vpu_yield (void);
 extern void vpu_ready (struct thread * thread);
 extern void vpu_clock_handler (int);
 
-#define TSC_ALLOC_TID() __sync_fetch_and_add(& vpu_manager.last_pid, 1)
+#define TSC_ALLOC_TID() TSC_ATOMIC_INC(vpu_manager.last_pid)
 
 #endif // _LIBTSC_DNA_CORE_VPU_H_

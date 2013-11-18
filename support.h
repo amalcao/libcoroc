@@ -69,5 +69,11 @@ typedef pthread_t TSC_OS_THREAD_T;
 #define TSC_SIGNAL_UNMASK() \
     sigprocmask (SIG_UNBLOCK, NULL, &__vpu_sigmask)
 
+// -- for atomic add op --
+#if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__)
+# define TSC_ATOMIC_INC(n) (++(n))  
+#else
+# define TSC_ATOMIC_INC(n) (__sync_add_and_fetch(&(n), 1))
+#endif
 
 #endif // _TSC_PLATFORM_SUPPORT_H_

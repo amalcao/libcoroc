@@ -136,14 +136,14 @@ int
 getcontext (ucontext_t * ucp)
 {
 	sigprocmask (SIG_BLOCK, NULL, & ucp -> uc_sigmask);
-	return _getcontext (ucp);
+	return _getmcontext (& ucp -> mc);
 }
 
 void
 setcontext (const ucontext_t * ucp)
 {
 	sigprocmask (SIG_SETMASK, & ucp -> uc_sigmask, NULL);
-	_setcontext (ucp);
+	_setmcontext (& ucp -> mc);
 }
 
 int
