@@ -9,6 +9,13 @@
 TSC_TLS_DECLARE
 TSC_SIGNAL_MASK_DECLARE
 
+void thread_attr_init (thread_attributes_t * attr)
+{
+    attr -> stack_size = TSC_DEFAULT_STACK_SIZE;
+    attr -> timeslice = TSC_DEFAULT_TIMESLICE;
+    attr -> affinity = TSC_DEFAULT_AFFINITY;
+}
+
 thread_t thread_allocate (thread_handler_t entry, void * arguments, 
  const char * name, uint32_t type, thread_attributes_t * attr)
 {
