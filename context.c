@@ -22,20 +22,22 @@ void TSC_CONTEXT_INIT (TSC_CONTEXT * ctx, void *stack, size_t stack_sz,
 {
     uint32_t low, high;
     uint64_t tmp = (uint64_t)(thread);
-    sigset_t zero;
+    sigset_t mask;
 
     low = tmp;
     tmp >>= 16;
     high = tmp >> 16;
 
-    sigemptyset (&zero);
+    sigemptyset (& mask);
+    if (((thread_t)thread) -> type == TSC_THREAD_IDLE)
+        sigfillset (& mask);
 
     memset (ctx, 0, sizeof(TSC_CONTEXT));
     TSC_CONTEXT_SAVE (ctx);
 
     ctx -> uc_stack . ss_sp = stack;
     ctx -> uc_stack . ss_size = stack_sz;
-    ctx -> uc_sigmask = zero;
+    ctx -> uc_sigmask = mask;
 
     TSC_CONTEXT_MAKE (ctx, bootstrap, 2, low, high);   
 }

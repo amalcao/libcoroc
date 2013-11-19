@@ -27,7 +27,6 @@ static int core_idle (void * args)
 
 static int scavenger (void * args)
 {
-	TSC_SIGNAL_MASK();
 	vpu_t * vpu = TSC_TLS_GET();
 
 	thread_t garbage = (thread_t)args;
