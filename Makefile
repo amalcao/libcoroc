@@ -14,12 +14,17 @@ endif
 
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
-CFLAGS := -g3 
-#CFLAGS += -DENABLE_QUICK_RESPONSE
+CFLAGS += -DENABLE_QUICK_RESPONSE
 CFLAGS += -DENABLE_WORKSTEALING
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
+endif
+
+ifeq (${enable_optimize}, 1)
+	CFLAGS += -O2
+else
+	CFLAGS += -g3
 endif
 
 all: ${APPS}
