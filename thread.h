@@ -16,7 +16,6 @@ typedef struct thread_attributes {
     uint32_t stack_size;
     uint32_t timeslice;
     uint32_t affinity;
-	// uint32_t detachstate;
     // TODO : anything else ??
 } thread_attributes_t;
 
@@ -32,7 +31,6 @@ typedef struct thread {
     queue_item_t status_link;
     queue_item_t sched_link;
     queue_t wait;
-	queue_t children;
     queue_t message_queue;
 
     uint32_t init_timeslice;
