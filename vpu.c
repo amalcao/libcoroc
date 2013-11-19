@@ -170,13 +170,15 @@ void vpu_suspend (queue_t * queue, lock_t lock)
 	thread_t target = NULL;
 	thread_t self = vpu -> current_thread;
 
-	self -> status = TSC_THREAD_WAIT;
-	
 	// FIXME!! Ugly implementation !!
 	if (queue -> lock != lock)
-		atomic_queue_add (queue, & self -> status_link);
-	else
-		queue_add (queue, & self -> status_link); 
+        lock_acquire (queue -> lock);
+    {
+	    self -> status = TSC_THREAD_WAIT;
+	    queue_add (queue, & self -> status_link); 
+    }
+    if (queue -> lock != lock)
+        lock_release (queue -> lock);
 
 	target = vpu_elect ();
 	vpu_switch (target, lock);
