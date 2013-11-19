@@ -45,6 +45,9 @@ static message_t message_clone (message_t msg)
 
 static int message_send (message_t msg, thread_t to)
 {
+#ifdef ENABLE_QUICK_RESPONSE
+    bool spawn_to = false;
+#endif
     msg -> send_tid = thread_self ();
     msg -> recv_tid = to;
 
@@ -58,14 +61,17 @@ static int message_send (message_t msg, thread_t to)
         queue_lookup (& to -> wait, general_inspector, to) ) {
         
         queue_extract (& to -> wait, & to -> status_link);
-#if defined(ENABLE_QUICK_RESPONSE)  
-        // FIXME : enable this option will cause segmentation fault, why ?
-        vpu_switch (to, to -> wait . lock);
+#ifdef ENABLE_QUICK_RESPONSE 
+        spawn_to = true;
 #else
         vpu_ready (to);
 #endif
     }
     lock_release (to -> wait . lock);
+
+#ifdef ENABLE_QUICK_RESPONSE
+    if (spawn_to) vpu_switch (to, NULL);
+#endif
 
     TSC_SIGNAL_UNMASK ();
     return 0;
