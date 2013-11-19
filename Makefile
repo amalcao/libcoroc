@@ -15,7 +15,7 @@ endif
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
 CFLAGS := -g3 
-CFLAGS += -DENABLE_QUICK_RESPONSE
+#CFLAGS += -DENABLE_QUICK_RESPONSE
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER

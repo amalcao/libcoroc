@@ -50,7 +50,8 @@ status_t message_send (message_t msg, thread_t to)
         queue_lookup (& to -> wait, pointer_equal, to) ) {
         
         queue_extract (& to -> wait, & to -> status_link);
-#if defined(ENABLE_QUICK_RESPONSE)
+#if defined(ENABLE_QUICK_RESPONSE)  
+        // FIXME : enable this option will cause segmentation fault, why ?
         vpu_switch (to, to -> wait . lock);
 #else
         vpu_ready (to);

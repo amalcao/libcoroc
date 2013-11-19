@@ -63,11 +63,16 @@ typedef pthread_t TSC_OS_THREAD_T;
     sigemptyset (&__vpu_sigmask);        \
     sigaddset (&__vpu_sigmask, SIGUSR1); } while (0)
 
-#define TSC_SIGNAL_MASK()  \
+#ifdef ENABLE_TIMER
+# define TSC_SIGNAL_MASK()  \
     sigprocmask (SIG_BLOCK, NULL, &__vpu_sigmask)
 
-#define TSC_SIGNAL_UNMASK() \
+# define TSC_SIGNAL_UNMASK() \
     sigprocmask (SIG_UNBLOCK, NULL, &__vpu_sigmask)
+#else
+# define TSC_SIGNAL_MASK()
+# define TSC_SIGNAL_UNMASK()
+#endif
 
 // -- for atomic add op --
 #if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__)

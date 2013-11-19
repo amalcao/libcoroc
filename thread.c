@@ -76,6 +76,10 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 void thread_deallocate (thread_t thread)
 {
 	// TODO : reclaim the thread elements ..
+    lock_deallocate (thread -> wait .lock);
+    lock_deallocate (thread -> children . lock);
+    lock_deallocate (thread -> message_queue . lock);
+
 	TSC_DEALLOC (thread -> stack_base);
 	TSC_DEALLOC (thread);
 }
