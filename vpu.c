@@ -25,9 +25,24 @@ static int core_idle (void * args)
     }
 }
 
+static int scavenger (void * args)
+{
+	TSC_SIGNAL_MASK();
+	vpu_t * vpu = TSC_TLS_GET();
+
+	thread_t garbage = (thread_t)args;
+	thread_deallocate (garbage);
+	
+	thread_t candidate = vpu_elect ();
+	if (candidate == NULL) 
+		candidate = vpu -> idle_thread;
+	
+	vpu_spawn (candidate, NULL); // FIXME 
+}
+
 static void * per_vpu_initalize (void * vpu_id)
 {
-    thread_t thread;
+	thread_t idle_thread;
     vpu_t * vpu = & vpu_manager . vpu[((int)vpu_id)];
 
     TSC_TLS_SET(vpu);
@@ -36,11 +51,13 @@ static void * per_vpu_initalize (void * vpu_id)
     vpu -> initialized = true;
 
     // initialize the idle thread
-    thread = thread_allocate (core_idle, NULL, "idle_loop", TSC_THREAD_IDLE, 0);
-    vpu -> idle_thread = thread;
+    idle_thread = thread_allocate (core_idle, NULL, "idle_loop", TSC_THREAD_IDLE, 0);
+	vpu -> idle_thread = idle_thread;
+	// initialize the scavenger thread
+    vpu -> scavenger = thread_allocate (scavenger, NULL, "scavenger", TSC_THREAD_IDLE, 0);
 
     // Spawn 
-    vpu_spawn (thread); // never return ..
+    vpu_spawn (idle_thread, NULL); // never return ..
 }
 
 void vpu_initialize (int vpu_mp_count)
@@ -125,12 +142,14 @@ struct thread * vpu_elect (void)
 	return target;
 }
 
-void vpu_spawn (thread_t thread)
+void vpu_spawn (thread_t thread, void * args)
 {
 	vpu_t *vpu = TSC_TLS_GET();
 
 	thread -> status = TSC_THREAD_RUNNING;
     thread -> vpu_id = vpu -> id;
+	if (args != NULL)
+		thread -> arguments = args;
 	vpu -> current_thread = thread;
 
 	TSC_CONTEXT_LOAD(& thread -> ctx);

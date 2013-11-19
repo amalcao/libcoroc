@@ -67,6 +67,7 @@ enum thread_deallocate {
 };
 
 extern thread_t thread_allocate (thread_handler_t entry, void * arguments, const char * name, uint32_t type, thread_attributes_t * attr);
+extern void thread_deallocate (thread_t thread);
 extern void thread_exit (int value);
 extern void thread_yeild (void);
 extern thread_t thread_self (void);

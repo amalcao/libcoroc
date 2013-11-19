@@ -16,6 +16,7 @@ typedef struct vpu {
     // team_t current_team; // TODO
     thread_t current_thread;
     thread_t idle_thread;
+	thread_t scavenger;
 } vpu_t;
 
 // Type of the VPU manager
@@ -35,7 +36,7 @@ extern void vpu_switch (struct thread * thread, lock_t lock);
 extern struct thread * vpu_elect (void);
 extern void vpu_resume (struct thread * thread);
 extern void vpu_suspend (queue_t * queue, lock_t lock); // TODO
-extern void vpu_spawn (struct thread * thread);
+extern void vpu_spawn (struct thread * thread, void * args);
 extern void vpu_yield (void);
 extern void vpu_ready (struct thread * thread);
 extern void vpu_clock_handler (int);

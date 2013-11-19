@@ -73,7 +73,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 	return thread;
 }
 
-static void thread_deallocate (thread_t thread)
+void thread_deallocate (thread_t thread)
 {
 	// TODO : reclaim the thread elements ..
 	TSC_DEALLOC (thread -> stack_base);
@@ -92,6 +92,7 @@ void thread_exit (int value)
 		exit (value);
 	}
 
+#if 0
 	// wait for all the children ..
 	while ((target = queue_rem (& self -> children)) != NULL) {
 		lock_acquire (target -> wait . lock);
@@ -102,7 +103,7 @@ void thread_exit (int value)
 		lock_release (target -> wait . lock);
 		thread_deallocate (target);
 	}
-
+#endif
 	// wakeup the all threads suspended on current one ..
 	lock_acquire (self -> wait . lock);
 	while ((target = queue_rem (& self -> wait)) != NULL) {
@@ -111,9 +112,10 @@ void thread_exit (int value)
 
 	self -> status = TSC_THREAD_EXIT;
 	self -> retval = value;
+	// is it safe to release the lock this time ?
+	lock_release (self -> wait . lock);
 
-	target = vpu_elect ();
-	vpu_switch (target, self -> wait . lock);
+	vpu_spawn (vpu -> scavenger, self);
 }
 
 void thread_yeild (void)
