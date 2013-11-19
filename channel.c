@@ -6,12 +6,7 @@
 
 TSC_SIGNAL_MASK_DECLARE
 
-static bool pointer_equal (void * p0, void * p1)
-{
-    return p0 == p1;
-}
-
-static bool message_send_equal (void * p0, void * p1)
+static bool message_inspector (void * p0, void * p1)
 {
     message_t msg = (message_t)p0;
     thread_t thread = (thread_t)p1;
@@ -20,7 +15,7 @@ static bool message_send_equal (void * p0, void * p1)
     return (msg -> send_tid == thread);
 }
 
-message_t message_allocate (size_t size, void * buff)
+static message_t message_allocate (size_t size, void * buff)
 {
     message_t msg = TSC_ALLOC (sizeof (struct message));
     msg -> type = TSC_MSG_SOFT;
@@ -35,7 +30,20 @@ message_t message_allocate (size_t size, void * buff)
     return msg;
 }
 
-status_t message_send (message_t msg, thread_t to)
+static message_t message_clone (message_t msg)
+{
+    message_t _msg = message_allocate (msg -> size, NULL);
+
+    _msg -> send_tid = msg -> send_tid;
+    _msg -> recv_tid = msg -> recv_tid;
+    _msg -> type = TSC_MSG_HARD;
+    _msg -> buff = TSC_ALLOC (msg -> size);
+    memcpy (_msg -> buff, msg -> buff, msg -> size);
+
+    return _msg;
+}
+
+static status_t message_send (message_t msg, thread_t to)
 {
     msg -> send_tid = thread_self ();
     msg -> recv_tid = to;
@@ -47,7 +55,7 @@ status_t message_send (message_t msg, thread_t to)
 
     lock_acquire (to -> wait . lock);
     if (to -> status == TSC_THREAD_WAIT &&
-        queue_lookup (& to -> wait, pointer_equal, to) ) {
+        queue_lookup (& to -> wait, general_inspector, to) ) {
         
         queue_extract (& to -> wait, & to -> status_link);
 #if defined(ENABLE_QUICK_RESPONSE)  
@@ -63,7 +71,7 @@ status_t message_send (message_t msg, thread_t to)
     return 0;
 }
 
-status_t message_recv (message_t * msg, thread_t from, bool block)
+static status_t message_recv (message_t * msg, thread_t from, bool block)
 {
     thread_t self = thread_self ();
     * msg = NULL;
@@ -73,7 +81,7 @@ status_t message_recv (message_t * msg, thread_t from, bool block)
     lock_acquire (self -> message_queue . lock);
 
     for (;;) {
-        if (* msg = queue_lookup(& self -> message_queue, message_send_equal, from)) {
+        if (* msg = queue_lookup(& self -> message_queue, message_inspector, from)) {
             queue_extract (& self -> message_queue,  & ((*msg) -> message_link));
             break;
         } 
@@ -88,20 +96,7 @@ status_t message_recv (message_t * msg, thread_t from, bool block)
     return (*msg != NULL) ? 0 : -1;
 }
 
-message_t message_clone (message_t msg)
-{
-    message_t _msg = message_allocate (msg -> size, NULL);
-
-    _msg -> send_tid = msg -> send_tid;
-    _msg -> recv_tid = msg -> recv_tid;
-    _msg -> type = TSC_MSG_HARD;
-    _msg -> buff = TSC_ALLOC (msg -> size);
-    memcpy (_msg -> buff, msg -> buff, msg -> size);
-
-    return _msg;
-}
-
-void message_deallocate (message_t msg)
+static void message_deallocate (message_t msg)
 {
     if (msg -> type == TSC_MSG_HARD) TSC_DEALLOC (msg -> buff);
     TSC_DEALLOC (msg);
