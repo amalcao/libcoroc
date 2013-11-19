@@ -12,9 +12,8 @@ void sub_task (void * arg)
 {
     thread_t parent = (thread_t)arg;
     int id;
-    size_t size = sizeof (int);
 
-    recv (parent, &size, &id, true);
+    recv (parent, sizeof(int), &id, true);
 
     printf ("[sub_task:] recv id is %d!\n", id);
 
@@ -44,8 +43,7 @@ int user_main (void * arg)
 
     for (i=0; i< 100; ++i) {
         int id;
-        size_t size = sizeof (int);
-        recv (NULL, &size, &id,  true);
+        recv (NULL, sizeof(int), &id,  true);
         printf ("[main_task:] recv id is %d!\n", id);
     }
 

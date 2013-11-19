@@ -34,15 +34,13 @@ int find_max (void * arg)
 {
 	thread_t parent = (thread_t)arg;
 	int size, * buf;
-	size_t recvsz = sizeof(int);
 
 	// firstly, get the size ..
-	recv (parent, &recvsz, &size, true);
+	recv (parent, sizeof(int), &size, true);
 	if (size <= 0) thread_exit (-1);
 
 	buf = malloc (size * sizeof(int));
-	recvsz = size * sizeof(int);
-	recv (parent, &recvsz, buf, true);
+	recv (parent, size * sizeof(int), buf, true);
 
 	if (size > 1) {
 		if (size > 2) {
@@ -61,9 +59,8 @@ int find_max (void * arg)
 			send (slave1, sizeof(int), &sz1);
 			send (slave1, sz1*sizeof(int), buf + sz0);
 			
-			recvsz = sizeof (int);
-			recv (NULL, &recvsz, & buf[0], true);
-			recv (NULL, &recvsz, & buf[1], true);
+			recv (NULL, sizeof(int), & buf[0], true);
+			recv (NULL, sizeof(int), & buf[1], true);
 		}
 		if (buf[0] < buf[1]) buf[0] = buf[1];
 	}
@@ -79,7 +76,6 @@ int user_main (void * arg)
 {
 	int max = 0, size = MAX;
 	int * array = malloc (size * sizeof(int));
-	size_t recvsz = sizeof(int);
 	thread_t slave = NULL;
 
 	gen_array_elem (array, size);
@@ -87,7 +83,7 @@ int user_main (void * arg)
 
 	send (slave, sizeof(int), &size); // send the size of array
 	send (slave, size * sizeof(int), array); // send the content of array
-	recv (slave, &recvsz, &max, true);
+	recv (slave, sizeof(int), &max, true);
 
 	printf ("The MAX element is %d\n", max);
 	if (!check_max_elem (array, size, max))
