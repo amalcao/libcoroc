@@ -126,7 +126,7 @@ struct thread * vpu_elect (void)
 
 	target = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
-#ifdef TSC_ENABLE_WORKSTEALING
+#ifdef ENABLE_WORKSTEALING
 	if (target != NULL) return target;
 
 	int index = 0;
@@ -136,7 +136,7 @@ struct thread * vpu_elect (void)
 		if (target != NULL)
 			break;
 	}
-#endif // TSC_ENABLE_WORKSTEALING
+#endif // ENABLE_WORKSTEALING
 
 	return target;
 }
