@@ -7,8 +7,6 @@
 #include "queue.h"
 #include "thread.h"
 
-typedef int status_t;
-
 enum {
     TSC_MSG_SOFT = 1,
     TSC_MSG_HARD = 2,
@@ -28,7 +26,7 @@ typedef struct message {
 } * message_t; 
 
 // -- public API --
-status_t send (thread_t to, size_t size, void * buff);
-status_t recv (thread_t from, size_t * size, void * buff, bool block);
+int send (thread_t to, size_t size, void * buff);
+int recv (thread_t from, size_t size, void * buff, bool block);
 
 #endif // _TSC_CORE_CHANNEL_H_

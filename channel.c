@@ -43,7 +43,7 @@ static message_t message_clone (message_t msg)
     return _msg;
 }
 
-static status_t message_send (message_t msg, thread_t to)
+static int message_send (message_t msg, thread_t to)
 {
     msg -> send_tid = thread_self ();
     msg -> recv_tid = to;
@@ -71,7 +71,7 @@ static status_t message_send (message_t msg, thread_t to)
     return 0;
 }
 
-static status_t message_recv (message_t * msg, thread_t from, bool block)
+static int message_recv (message_t * msg, thread_t from, bool block)
 {
     thread_t self = thread_self ();
     * msg = NULL;
@@ -103,25 +103,28 @@ static void message_deallocate (message_t msg)
 }
 
 //exported APIs
-status_t send (thread_t to, size_t size, void * buff)
+int send (thread_t to, size_t size, void * buff)
 {
     message_t msg = message_allocate (size, buff);
-    status_t ret = message_send (msg, to);
+	if (message_send (msg, to) != 0) 
+		return -1;
+
     message_deallocate (msg);
-    return ret;
+    return (int)size;
 }
 
-status_t recv (thread_t from, size_t * size, void * buff, bool block)
+int recv (thread_t from, size_t size, void * buff, bool block)
 {
     message_t msg = NULL;
-    status_t ret = message_recv (& msg, from, block);
 
-    if (ret == 0) {
-        if (* size > msg -> size) * size = msg -> size;
-        memcpy (buff, msg -> buff, * size);
-    }
+    if (message_recv (& msg, from, block) != 0)
+		return -1;
+		
+	if (size > msg -> size) 
+		size = msg -> size;
 
-    if (msg != NULL) message_deallocate (msg);
+	memcpy (buff, msg -> buff, size);
+	message_deallocate (msg);
 
-    return ret;
+	return (int)size;
 }
