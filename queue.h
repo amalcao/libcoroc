@@ -160,4 +160,10 @@ static inline void atomic_queue_walk (queue_t * queue, void (*inspector)(void *)
 	}
 }
 
+// -- general pointer inspector callback --
+static bool general_inspector (void * p0, void * p1)
+{
+	return p0 == p1;
+}
+
 #endif // _TSC_SUPPORT_QUEUE_H_
