@@ -1,140 +1,152 @@
-
-#include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 #include <assert.h>
 #include "channel.h"
-#include "vpu.h"
 
-TSC_SIGNAL_MASK_DECLARE
-
-static bool message_inspector (void * p0, void * p1)
+static inline void quantum_init (quantum * q, thread_t thread, void * buf)
 {
-    message_t msg = (message_t)p0;
-    thread_t thread = (thread_t)p1;
-
-	if (thread == NULL) return (msg != NULL); // NULL sender match any .. 
-    return (msg -> send_tid == thread);
+	q -> thread = thread;
+	q -> itembuf = buf;
+	queue_item_init (& q -> link, q);
 }
 
-static message_t message_allocate (size_t size, void * buff)
+channel_t channel_allocate (int32_t elemsize, int32_t bufsize)
 {
-    message_t msg = TSC_ALLOC (sizeof (struct message));
+	struct channel * chan = TSC_ALLOC (sizeof(struct channel) + elemsize * bufsize);
+	assert (chan != NULL);
 
-	assert (msg != NULL);
+	chan -> elemsize = elemsize;
+	chan -> bufsize = bufsize;	
+	chan -> buf = (uint8_t *)(chan + 1);
+	chan -> nbuf = 0;
+	chan -> recvx = chan -> sendx = 0; // TODO
+	chan -> lock = lock_allocate ();
 
-    msg -> type = TSC_MSG_SOFT;
-    msg -> size = size;
-    msg -> buff = buff;
+	assert (chan -> lock != NULL);
 
-    msg -> send_tid = NULL;
-    msg -> recv_tid = NULL;
+	queue_init (& chan -> recv_que);
+	queue_init (& chan -> send_que);
 
-    queue_item_init (& msg -> message_link, msg);
-
-    return msg;
+	return chan;
 }
 
-static message_t message_clone (message_t msg)
+void channel_dealloc (channel_t chan)
 {
-    message_t _msg = message_allocate (msg -> size, NULL);
-
-    _msg -> send_tid = msg -> send_tid;
-    _msg -> recv_tid = msg -> recv_tid;
-    _msg -> type = TSC_MSG_HARD;
-    _msg -> buff = TSC_ALLOC (msg -> size);
-
-	assert (_msg -> buff != NULL);
-    memcpy (_msg -> buff, msg -> buff, msg -> size);
-
-    return _msg;
+	/* TODO: awaken the sleeping threads */
+	lock_deallocate (chan -> lock);
+	TSC_DEALLOC (chan);
 }
 
-static int message_send (message_t msg, thread_t to)
+static int _channel_send (channel_t chan, void * buf, bool block)
 {
-#ifdef ENABLE_QUICK_RESPONSE
-    bool spawn_to = false;
-#endif
-    msg -> send_tid = thread_self ();
-    msg -> recv_tid = to;
+	assert (chan != NULL);
+	TSC_SIGNAL_MASK ();
 
-    TSC_SIGNAL_MASK();
-    
-    message_t _msg = message_clone (msg);
-    atomic_queue_add (& to -> message_queue, & _msg -> message_link);
+	int ret = 0;
+	thread_t self = thread_self();
 
-    lock_acquire (to -> wait . lock);
-    if (to -> status == TSC_THREAD_WAIT &&
-        queue_lookup (& to -> wait, general_inspector, to) ) {
-        
-        queue_extract (& to -> wait, & to -> status_link);
-#ifdef ENABLE_QUICK_RESPONSE 
-        spawn_to = true;
-#else
-        vpu_ready (to);
-#endif
-    }
-    lock_release (to -> wait . lock);
-
-#ifdef ENABLE_QUICK_RESPONSE
-    if (spawn_to) vpu_switch (to, NULL);
-#endif
-
-    TSC_SIGNAL_UNMASK ();
-    return 0;
-}
-
-static int message_recv (message_t * msg, thread_t from, bool block)
-{
-    thread_t self = thread_self ();
-    * msg = NULL;
- 
-    TSC_SIGNAL_MASK ();
-
-    for (;;) {
-		lock_acquire (self -> message_queue . lock);
-		if (* msg = queue_lookup(& self -> message_queue, message_inspector, from)) {
-			queue_extract (& self -> message_queue,  & ((*msg) -> message_link));
-		} 
-		lock_release (self -> message_queue . lock);
-
-		if (*msg != NULL || !block) break;
-
-		vpu_suspend (& self -> wait, NULL);
+	lock_acquire (chan -> lock);
+	// check if there're any waiting threads ..
+	quantum * qp = queue_rem (& chan -> recv_que);
+	if (qp != NULL) {
+		memcpy (qp -> itembuf, buf, chan -> elemsize);
+		atomic_queue_rem (& qp -> thread -> wait);
+		vpu_ready (qp -> thread);
+		
+		lock_release (chan -> lock);
+		return 0;
 	}
+	
+	// check if there're any buffer slots ..
+	if (chan -> nbuf < chan -> bufsize) {
+		uint8_t * p = chan -> buf;
+		p += (chan -> elemsize) * (chan -> sendx ++);
+		memcpy (p, buf, chan -> elemsize);
+		(chan -> sendx) %= (chan -> bufsize);
+		chan -> nbuf ++;
+	} else {
+		if (block) {
+			// the async way ..
+			quantum q;
+			quantum_init (& q, self, buf);
+			queue_add (& chan -> send_que, & q . link);
+			vpu_suspend (& self -> wait, chan -> lock);
+		} else {
+			ret = -1;
+		}
+	}
+	// awaken by some receiver ..
+	lock_release (chan -> lock);
 
 	TSC_SIGNAL_UNMASK ();
-	return (*msg != NULL) ? 0 : -1;
+
+	return ret;
 }
 
-static void message_deallocate (message_t msg)
+static int _channel_recv (channel_t chan, void * buf, bool block)
 {
-	if (msg -> type == TSC_MSG_HARD) TSC_DEALLOC (msg -> buff);
-	TSC_DEALLOC (msg);
+	assert (chan != NULL);
+	TSC_SIGNAL_MASK ();
+
+	int ret = 0;
+	thread_t self = thread_self ();
+
+	lock_acquire (chan -> lock);
+	// check if there're any senders pending .
+	quantum * qp = queue_rem (& chan -> send_que);
+	if (qp != NULL) {
+		memcpy (buf, qp -> itembuf, chan -> elemsize);
+		atomic_queue_rem (& qp -> thread -> wait);
+		vpu_ready (qp -> thread);
+
+		lock_release (chan -> lock);
+		return 0;
+	}
+
+	// check if there're any empty slots ..
+	if (chan -> nbuf > 0) {
+		uint8_t * p = chan -> buf;
+		p += (chan -> elemsize) * (chan -> recvx ++);
+		memcpy (buf, p, chan -> elemsize);
+		(chan -> recvx) %= (chan -> bufsize);
+		chan -> nbuf --;
+	} else {
+		if (block) {
+			// async way ..
+			quantum q;
+			quantum_init (& q, self, buf);
+			queue_add (& chan -> recv_que, & q . link);
+			vpu_suspend (& self -> wait, chan -> lock);
+
+		} else {
+			ret = -1;
+		}
+	}
+
+	lock_release (chan -> lock);
+
+	TSC_SIGNAL_UNMASK ();
+	return ret;
 }
 
-//exported APIs
-int send (thread_t to, size_t size, void * buff)
+/* -- the public APIs for channel -- */
+int channel_send (channel_t chan, void * buf)
 {
-	message_t msg = message_allocate (size, buff);
-	if (message_send (msg, to) != 0) 
-		return -1;
-
-	message_deallocate (msg);
-	return (int)size;
+	return _channel_send (chan, buf, true);
 }
 
-int recv (thread_t from, size_t size, void * buff, bool block)
+int channel_recv (channel_t chan, void * buf)
 {
-	message_t msg = NULL;
-
-	if (message_recv (& msg, from, block) != 0)
-		return -1;
-
-	if (size > msg -> size) 
-		size = msg -> size;
-
-	memcpy (buff, msg -> buff, size);
-	message_deallocate (msg);
-
-	return (int)size;
+	return _channel_recv (chan, buf, true);
 }
+
+int channel_nbsend (channel_t chan, void * buf)
+{
+	return _channel_send (chan, buf, false);
+}
+
+int channel_nbrecv (channel_t chan, void * buf)
+{
+	return _channel_recv (chan, buf, false);
+}
+
