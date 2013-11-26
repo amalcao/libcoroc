@@ -1,6 +1,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 #include "channel.h"
 #include "vpu.h"
 
@@ -18,6 +19,9 @@ static bool message_inspector (void * p0, void * p1)
 static message_t message_allocate (size_t size, void * buff)
 {
     message_t msg = TSC_ALLOC (sizeof (struct message));
+
+	assert (msg != NULL);
+
     msg -> type = TSC_MSG_SOFT;
     msg -> size = size;
     msg -> buff = buff;
@@ -38,6 +42,8 @@ static message_t message_clone (message_t msg)
     _msg -> recv_tid = msg -> recv_tid;
     _msg -> type = TSC_MSG_HARD;
     _msg -> buff = TSC_ALLOC (msg -> size);
+
+	assert (_msg -> buff != NULL);
     memcpy (_msg -> buff, msg -> buff, msg -> size);
 
     return _msg;
@@ -84,48 +90,46 @@ static int message_recv (message_t * msg, thread_t from, bool block)
  
     TSC_SIGNAL_MASK ();
 
-    lock_acquire (self -> message_queue . lock);
-
     for (;;) {
-        if (* msg = queue_lookup(& self -> message_queue, message_inspector, from)) {
-            queue_extract (& self -> message_queue,  & ((*msg) -> message_link));
-            break;
-        } 
-        
-        if (!block) break;
+		lock_acquire (self -> message_queue . lock);
+		if (* msg = queue_lookup(& self -> message_queue, message_inspector, from)) {
+			queue_extract (& self -> message_queue,  & ((*msg) -> message_link));
+		} 
+		lock_release (self -> message_queue . lock);
 
-        vpu_suspend (& self -> wait, self -> message_queue . lock);
-    }
+		if (*msg != NULL || !block) break;
 
-    lock_release (self -> message_queue . lock);
-    TSC_SIGNAL_UNMASK ();
-    return (*msg != NULL) ? 0 : -1;
+		vpu_suspend (& self -> wait, NULL);
+	}
+
+	TSC_SIGNAL_UNMASK ();
+	return (*msg != NULL) ? 0 : -1;
 }
 
 static void message_deallocate (message_t msg)
 {
-    if (msg -> type == TSC_MSG_HARD) TSC_DEALLOC (msg -> buff);
-    TSC_DEALLOC (msg);
+	if (msg -> type == TSC_MSG_HARD) TSC_DEALLOC (msg -> buff);
+	TSC_DEALLOC (msg);
 }
 
 //exported APIs
 int send (thread_t to, size_t size, void * buff)
 {
-    message_t msg = message_allocate (size, buff);
+	message_t msg = message_allocate (size, buff);
 	if (message_send (msg, to) != 0) 
 		return -1;
 
-    message_deallocate (msg);
-    return (int)size;
+	message_deallocate (msg);
+	return (int)size;
 }
 
 int recv (thread_t from, size_t size, void * buff, bool block)
 {
-    message_t msg = NULL;
+	message_t msg = NULL;
 
-    if (message_recv (& msg, from, block) != 0)
+	if (message_recv (& msg, from, block) != 0)
 		return -1;
-		
+
 	if (size > msg -> size) 
 		size = msg -> size;
 

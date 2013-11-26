@@ -176,6 +176,7 @@ void vpu_suspend (queue_t * queue, lock_t lock)
     {
 	    self -> status = TSC_THREAD_WAIT;
 	    queue_add (queue, & self -> status_link); 
+		assert (queue -> status == 1); // DEBUG!!
     }
     if (queue -> lock != lock)
         lock_release (queue -> lock);

@@ -21,6 +21,7 @@ typedef struct thread_attributes {
 
 typedef struct thread {
     thread_id_t id;
+	thread_id_t pid; // DEBUG
     char name[TSC_NAME_LENGTH];
 
     uint32_t type;
@@ -67,7 +68,7 @@ enum thread_deallocate {
 extern thread_t thread_allocate (thread_handler_t entry, void * arguments, const char * name, uint32_t type, thread_attributes_t * attr);
 extern void thread_deallocate (thread_t thread);
 extern void thread_exit (int value);
-extern void thread_yeild (void);
+extern void thread_yield (void);
 extern thread_t thread_self (void);
 #ifdef TSC_ENABLE_THREAD_JOIN
 extern status_t thread_join (thread_t thread);

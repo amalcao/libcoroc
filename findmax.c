@@ -5,7 +5,7 @@
 #include "thread.h"
 #include "channel.h"
 
-#define MAX 2048
+#define MAX 16
 
 void gen_array_elem (int * array, int size)
 {
@@ -33,6 +33,7 @@ bool check_max_elem (int * array, int size, int max)
 int find_max (void * arg)
 {
 	thread_t parent = (thread_t)arg;
+	thread_t self = thread_self();
 	int size, * buf;
 
 	// firstly, get the size ..
@@ -51,11 +52,11 @@ int find_max (void * arg)
 			sz0 = size / 2;
 			sz1 = size - sz0;
 
-			slave0 = thread_allocate (find_max, thread_self(), "", TSC_THREAD_NORMAL, 0);
+			slave0 = thread_allocate (find_max, thread_self(), "s0", TSC_THREAD_NORMAL, 0);
 			send (slave0, sizeof(int), &sz0);
 			send (slave0, sz0*sizeof(int), buf);
 
-			slave1 = thread_allocate (find_max, thread_self(), "", TSC_THREAD_NORMAL, 0);
+			slave1 = thread_allocate (find_max, thread_self(), "s1", TSC_THREAD_NORMAL, 0);
 			send (slave1, sizeof(int), &sz1);
 			send (slave1, sz1*sizeof(int), buf + sz0);
 			
@@ -79,11 +80,11 @@ int user_main (void * arg)
 	thread_t slave = NULL;
 
 	gen_array_elem (array, size);
-	slave = thread_allocate (find_max, thread_self(), "", TSC_THREAD_NORMAL, 0);
+	slave = thread_allocate (find_max, thread_self(), "s", TSC_THREAD_NORMAL, 0);
 
 	send (slave, sizeof(int), &size); // send the size of array
 	send (slave, size * sizeof(int), array); // send the content of array
-	recv (slave, sizeof(int), &max, true);
+	recv (NULL, sizeof(int), &max, true);
 
 	printf ("The MAX element is %d\n", max);
 	if (!check_max_elem (array, size, max))

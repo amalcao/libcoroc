@@ -1,8 +1,10 @@
+#include <string.h>
+#include <assert.h>
 #include "thread.h"
 #include "vpu.h"
 
 #ifdef __APPLE__
-# define TSC_DEFAULT_STACK_SIZE (4 * 1024 * 1024) // 4MB
+# define TSC_DEFAULT_STACK_SIZE (2 * 1024 * 1024) // 4MB
 #else
 # define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
 #endif
@@ -45,6 +47,8 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
         }
 
         thread -> stack_base = TSC_ALLOC(thread -> stack_size);
+		assert (thread -> stack_base != NULL);
+
         thread -> rem_timeslice = thread -> init_timeslice;
 
         atomic_queue_init (& thread -> wait);
@@ -57,7 +61,11 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
     
     if (thread -> type != TSC_THREAD_IDLE) {
         atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
+		atomic_queue_add (& vpu_manager . thread_list, & thread -> sched_link);
 	}
+
+	if (thread -> type == TSC_THREAD_NORMAL)
+		thread -> pid = vpu -> current_thread -> id; 
 
 	TSC_SIGNAL_UNMASK();
 	return thread;
@@ -91,10 +99,13 @@ void thread_exit (int value)
 	// is it safe to release the lock this time ?
 	lock_release (self -> wait . lock);
 
+	// DEBUG : remove the thread from the threads list ..
+	atomic_queue_extract (& vpu_manager . thread_list, & self -> sched_link);	
+
 	vpu_spawn (vpu -> scavenger, self);
 }
 
-void thread_yeild (void)
+void thread_yield (void)
 {
 	TSC_SIGNAL_MASK();
 	vpu_yield ();
