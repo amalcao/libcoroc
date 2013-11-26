@@ -1,7 +1,10 @@
 
-APPS := app.run findmax.run prio.run
+#APPS := app.run findmax.run prio.run
+APPS := primes.run
 
 OS := $(shell uname)
+
+CC := gcc
 
 TSC_HEADERS:= clock.h channel.h context.h lock.h queue.h support.h thread.h vpu.h 
 TSC_CFILES := boot.c channel.c clock.c context.c thread.c vpu.c 
@@ -21,6 +24,10 @@ ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
 endif
 
+ifeq (${use_clang}, 1)
+	CC := clang
+endif
+
 ifeq (${enable_optimize}, 1)
 	CFLAGS += -O2
 else
@@ -33,13 +40,13 @@ libTSC.a: $(TSC_OBJS)
 	ar r $@ $(TSC_OBJS)
 
 %.o:%.S
-	gcc -c ${CFLAGS} $<
+	$(CC) -c ${CFLAGS} $<
 
 %.o:%.c
-	gcc -c ${CFLAGS} $<
+	$(CC) -c ${CFLAGS} $<
 
 %.run:%.o libTSC.a
-	gcc $< ${CFLAGS} -L. -lTSC -lpthread -o $@
+	$(CC) $< ${CFLAGS} -L. -lTSC -lpthread -o $@
 
 .PHONY:clean
 clean:
