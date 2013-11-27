@@ -11,205 +11,198 @@ TSC_BARRIER_DEFINE
 TSC_TLS_DEFINE
 TSC_SIGNAL_MASK_DEFINE
 
-static int core_idle (void * args)
+static void core_sched (void)
 {
     vpu_t * vpu = TSC_TLS_GET();
-    thread_t thread = NULL;
-
-    vpu -> initialized = true;
-    TSC_BARRIER_WAIT();
+    thread_t candidate = NULL;
 
     /* --- the actual loop -- */
-    while (true) if ((thread = vpu_elect ()) != NULL) {
-        vpu_switch (thread, NULL);
-    }
+	while (true) {
+		candidate = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
+		if (candidate == NULL) 
+			candidate = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
+
+#ifdef ENABLE_WORKSTEALING
+		if (candidate == NULL) {
+			int index = 0;
+			for (; index < vpu_manager . xt_index; index++) {
+				if (index == vpu -> id) continue;
+				if (candidate = atomic_queue_rem (& vpu_manager . xt[index]))
+					break;
+			}
+		}
+#endif // ENABLE_WORKSTEALING 
+
+		if (candidate != NULL) {
+			candidate -> vpu_id = vpu -> id;
+			candidate -> syscall = false;
+			candidate -> wait = NULL;
+			candidate -> rem_timeslice = candidate -> init_timeslice;
+			candidate -> status = TSC_THREAD_RUNNING;
+
+			/* swap to the candidate's context */
+			TSC_CONTEXT_LOAD(& candidate -> ctx);
+		}
+	}
 }
 
-static int scavenger (void * args)
+int core_exit (void * args)
 {
 	vpu_t * vpu = TSC_TLS_GET();
-
 	thread_t garbage = (thread_t)args;
 	thread_deallocate (garbage);
-	
-	thread_t candidate = vpu_elect ();
-	if (candidate == NULL) 
-		candidate = vpu -> idle_thread;
-	
-	vpu_spawn (candidate, NULL); // FIXME 
+	return 0;
+}
+
+/* called on scheduler's context 
+ * let the given thread waiting for some event */
+int core_wait (void * args)
+{
+	vpu_t * vpu = TSC_TLS_GET();
+	thread_t victim = (thread_t)args;
+
+	if (victim -> wait != NULL)
+		atomic_queue_add (victim -> wait, & victim -> status_link);
+	victim -> status = TSC_THREAD_WAIT;
+	/* victim -> vpu_id = -1; */
+	return 0;
+}
+
+int core_yield (void * args)
+{
+	vpu_t * vpu = TSC_TLS_GET();
+	thread_t victim = (thread_t)args;
+
+	victim -> status = TSC_THREAD_READY;
+	atomic_queue_add (& vpu_manager . xt[victim -> vpu_id], & victim -> status_link);
+	return 0;
 }
 
 static void * per_vpu_initalize (void * vpu_id)
 {
-	thread_t idle_thread;
-    vpu_t * vpu = & vpu_manager . vpu[((int)vpu_id)];
+	thread_t scheduler;
+	thread_attributes_t attr;
 
-    TSC_TLS_SET(vpu);
-    
-    vpu -> id = (int)vpu_id;
-    vpu -> initialized = true;
+	vpu_t * vpu = & vpu_manager . vpu[((int)vpu_id)];
+	vpu -> id = (int)vpu_id;
 
-    // initialize the idle thread
-    idle_thread = thread_allocate (core_idle, NULL, "idle_loop", TSC_THREAD_IDLE, 0);
-	vpu -> idle_thread = idle_thread;
-	// initialize the scavenger thread
-    vpu -> scavenger = thread_allocate (scavenger, NULL, "scavenger", TSC_THREAD_IDLE, 0);
+	TSC_TLS_SET(vpu);
 
-    // Spawn 
-    vpu_spawn (idle_thread, NULL); // never return ..
+	// initialize the system scheduler thread ..
+	thread_attr_init (& attr);
+	thread_attr_set_stacksize (& attr, 0); // trick, using current stack !
+	scheduler = thread_allocate (NULL, NULL, "sys/scheduler", TSC_THREAD_IDLE, & attr);
+	
+	// trick: use current context to init the scheduler's context ..
+	TSC_CONTEXT_SAVE(& scheduler -> ctx);
+	
+	// vpu_syscall will go here !!
+	// because the savecontext() has no return value like setjmp,
+	// we could only distinguish the status by the `arguments' field !!
+	if (scheduler -> entry == NULL) {
+		sigset_t mask;
+		sigemptyset (& mask);
+		sigaddset (& mask, TSC_CLOCK_SIGNAL);
+		scheduler -> ctx . uc_sigmask = mask;
+
+		vpu -> current_thread = vpu -> scheduler = scheduler;
+		vpu -> initialized = true;
+
+		TSC_BARRIER_WAIT();
+	} else {
+		int (*pfn)(void *);
+		pfn = scheduler -> entry;
+		(* pfn) (scheduler -> arguments);
+	}
+
+	// Spawn 
+	core_sched (); // never return 
+
 }
 
 void vpu_initialize (int vpu_mp_count)
 {
-    // schedulers initialization
-    vpu_manager . xt_index = vpu_mp_count;
-    vpu_manager . last_pid = 0;
+	// schedulers initialization
+	vpu_manager . xt_index = vpu_mp_count;
+	vpu_manager . last_pid = 0;
 
-    vpu_manager . vpu = (vpu_t*)TSC_ALLOC(vpu_mp_count*sizeof(vpu_t));
-    vpu_manager . xt = (queue_t*)TSC_ALLOC((vpu_mp_count+1)*sizeof(vpu_t));
+	vpu_manager . vpu = (vpu_t*)TSC_ALLOC(vpu_mp_count*sizeof(vpu_t));
+	vpu_manager . xt = (queue_t*)TSC_ALLOC((vpu_mp_count+1)*sizeof(vpu_t));
 
-    // global queues initialization
-    atomic_queue_init (& vpu_manager . xt[vpu_manager . xt_index]);
-    // atomic_queue_init (& vpu_manager . team_list);
-    atomic_queue_init (& vpu_manager . thread_list);
-   
-    TSC_BARRIER_INIT(vpu_manager . xt_index + 1);
-    TSC_TLS_INIT();
-    TSC_SIGNAL_MASK_INIT();
+	// global queues initialization
+	atomic_queue_init (& vpu_manager . xt[vpu_manager . xt_index]);
 
-    TSC_SIGNAL_MASK();
+	TSC_BARRIER_INIT(vpu_manager . xt_index + 1);
+	TSC_TLS_INIT();
+	TSC_SIGNAL_MASK_INIT();
 
-    // VPU initialization
-    int index = 0;
-    for (; index < vpu_manager . xt_index; ++index) {
-        atomic_queue_init (& vpu_manager . xt[index]);
-        TSC_OS_THREAD_CREATE(
-            & (vpu_manager . vpu[index] . os_thr),
-            NULL, per_vpu_initalize, (void *)index );
-    }
+	TSC_SIGNAL_MASK();
 
-    TSC_BARRIER_WAIT();
-}
-
-
-void vpu_switch (struct thread * thread, lock_t lock)
-{
-    vpu_t * vpu = TSC_TLS_GET();
-    thread_t self = vpu -> current_thread;
-
-    if (thread == NULL) thread = vpu -> idle_thread;
-
-    if (thread -> rem_timeslice == 0) 
-        thread -> rem_timeslice = thread -> init_timeslice;
-    thread -> status = TSC_THREAD_RUNNING;
-    thread -> vpu_id = vpu -> id;
-    vpu -> current_thread = thread;
-    
-	if (self -> status == TSC_THREAD_RUNNING &&
-		self -> type != TSC_THREAD_IDLE) {
-		self -> status = TSC_THREAD_READY;
-		atomic_queue_add (& vpu_manager . xt[self -> vpu_id], & self -> status_link);
-	}
-	
-	if (lock != NULL) lock_release (lock);
-	TSC_CONTEXT_SWAP((& self -> ctx), (& thread -> ctx));
-	if (lock != NULL) lock_acquire (lock);
-}
-
-struct thread * vpu_elect (void)
-{
-	vpu_t * vpu = TSC_TLS_GET();
-	thread_t target = NULL;
-
-	target = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
-	if (target != NULL) return target;
-
-	target = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
-
-#ifdef ENABLE_WORKSTEALING
-	if (target != NULL) return target;
-
+	// VPU initialization
 	int index = 0;
 	for (; index < vpu_manager . xt_index; ++index) {
-		if (index == vpu -> id) continue;
-		target = atomic_queue_rem (& vpu_manager . xt[index]);
-		if (target != NULL)
-			break;
+		atomic_queue_init (& vpu_manager . xt[index]);
+		TSC_OS_THREAD_CREATE(
+				& (vpu_manager . vpu[index] . os_thr),
+				NULL, per_vpu_initalize, (void *)index );
 	}
-#endif // ENABLE_WORKSTEALING
 
-	return target;
-}
-
-void vpu_spawn (thread_t thread, void * args)
-{
-	vpu_t *vpu = TSC_TLS_GET();
-
-	thread -> status = TSC_THREAD_RUNNING;
-    thread -> vpu_id = vpu -> id;
-	if (args != NULL)
-		thread -> arguments = args;
-	vpu -> current_thread = thread;
-
-	TSC_CONTEXT_LOAD(& thread -> ctx);
-}
-
-void vpu_yield (void)
-{
-	vpu_t *vpu = TSC_TLS_GET();
-	thread_t target = NULL;
-	thread_t self = vpu -> current_thread;
-
-	target = vpu_elect ();
-	vpu_switch (target, NULL);
-}
-
-void vpu_suspend (queue_t * queue, lock_t lock)
-{
-	vpu_t *vpu = TSC_TLS_GET();
-	thread_t target = NULL;
-	thread_t self = vpu -> current_thread;
-
-	// FIXME!! Ugly implementation !!
-	if (queue -> lock != lock)
-        lock_acquire (queue -> lock);
-    {
-	    self -> status = TSC_THREAD_WAIT;
-	    queue_add (queue, & self -> status_link); 
-		assert (queue -> status == 1); // DEBUG!!
-    }
-    if (queue -> lock != lock)
-        lock_release (queue -> lock);
-
-	target = vpu_elect ();
-	vpu_switch (target, lock);
+	TSC_BARRIER_WAIT();
 }
 
 void vpu_ready (struct thread * thread)
 {
-    assert (thread != NULL);
+	assert (thread != NULL);
 
-    thread -> status = TSC_THREAD_READY;
-    atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
+	thread -> status = TSC_THREAD_READY;
+	atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
+}
+
+void vpu_syscall (int (*pfn)(void *)) 
+{
+	vpu_t * vpu = TSC_TLS_GET();
+	thread_t self = vpu -> current_thread;
+
+	assert (self != NULL);
+
+	self -> syscall = true;
+	TSC_CONTEXT_SAVE(& self -> ctx);
+
+	/* trick : use `syscall' to distinguish if already returned from syscall */
+	if (self && self -> syscall) {
+		thread_t scheduler = vpu -> scheduler;
+		scheduler -> entry = pfn;
+		scheduler -> arguments = self;
+
+		vpu -> current_thread = scheduler;
+		// swap to the scheduler context,
+		// never return here !!
+		TSC_CONTEXT_LOAD(& scheduler -> ctx);
+	}
+
+	return ;
+}
+
+void vpu_suspend (queue_t * queue, lock_t lock)
+{
+	thread_t self = thread_self ();
+
+	if (lock != NULL)
+		lock_release (lock);
+
+	self -> wait = queue;
+	vpu_syscall (core_wait);
+
+	if (lock != NULL)
+		lock_release (lock);
+}
+
+void vpu_yield (void)
+{
+	vpu_syscall (core_yield);
 }
 
 void vpu_clock_handler (int signal)
 {
-	vpu_t * vpu = TSC_TLS_GET();
-	assert (vpu != NULL);
-
-	thread_t current = vpu -> current_thread;
-	assert (current != NULL);
-
-    if (current == vpu -> idle_thread) return;
-
-	if ((-- (current -> rem_timeslice)) == 0) {
-		thread_t candidate = vpu_elect ();
-		if (candidate == NULL) {
-			current -> rem_timeslice = current -> init_timeslice;
-			return;
-		} 
-
-		vpu_switch (candidate, NULL);
-	}
+	// TODO !!
 }
