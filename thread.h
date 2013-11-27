@@ -30,9 +30,8 @@ typedef struct thread {
     uint32_t vpu_id;
 
     queue_item_t status_link;
-    queue_item_t sched_link;
-    queue_t wait;
-    queue_t message_queue;
+    queue_t * wait;
+	bool syscall;
 
     uint32_t init_timeslice;
     uint32_t rem_timeslice;

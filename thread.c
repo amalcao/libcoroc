@@ -28,6 +28,8 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 {
     vpu_t * vpu = TSC_TLS_GET();
     thread_t thread = TSC_ALLOC(sizeof (struct thread)) ;
+	memset (thread, 0, sizeof(struct thread));
+	memset (& thread -> ctx, 0, sizeof (struct ucontext));
 
     if (thread != NULL) {
         strcpy (thread -> name, name);
@@ -35,6 +37,8 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
         thread -> id = TSC_ALLOC_TID();
         thread -> entry = entry;
         thread -> arguments = arguments;
+		thread -> syscall = false;
+		thread -> wait = NULL;
 
         if (attr != NULL) {
             thread -> stack_size = attr -> stack_size;
@@ -46,69 +50,44 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
             thread -> init_timeslice = TSC_DEFAULT_TIMESLICE;
         }
 
-        thread -> stack_base = TSC_ALLOC(thread -> stack_size);
-		assert (thread -> stack_base != NULL);
+		if (thread -> stack_size > 0) {
+			thread -> stack_base = TSC_ALLOC(thread -> stack_size);
+			assert (thread -> stack_base != NULL);
+		}
 
-        thread -> rem_timeslice = thread -> init_timeslice;
+		thread -> rem_timeslice = thread -> init_timeslice;
 
-        atomic_queue_init (& thread -> wait);
-        atomic_queue_init (& thread -> message_queue);
-        queue_item_init (& thread -> status_link, thread);
-        queue_item_init (& thread -> sched_link, thread);
-    }
-
-    TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, thread -> stack_size, thread);
-    
-    if (thread -> type != TSC_THREAD_IDLE) {
-        atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
-		atomic_queue_add (& vpu_manager . thread_list, & thread -> sched_link);
+		queue_item_init (& thread -> status_link, thread);
 	}
 
-	if (thread -> type == TSC_THREAD_NORMAL)
-		thread -> pid = vpu -> current_thread -> id; 
+	if (thread -> type != TSC_THREAD_IDLE) { 
+		TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, thread -> stack_size, thread);
+		atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
+		TSC_SIGNAL_UNMASK();
+	}
 
-	TSC_SIGNAL_UNMASK();
 	return thread;
 }
 
 void thread_deallocate (thread_t thread)
 {
 	// TODO : reclaim the thread elements ..
-    lock_deallocate (thread -> wait .lock);
-    lock_deallocate (thread -> message_queue . lock);
-
-	TSC_DEALLOC (thread -> stack_base);
+	if (thread -> stack_size > 0)
+		TSC_DEALLOC (thread -> stack_base);
 	TSC_DEALLOC (thread);
 }
 
 void thread_exit (int value)
 {
 	TSC_SIGNAL_MASK();
-
-	vpu_t * vpu = TSC_TLS_GET();
-	thread_t target = NULL, self = vpu -> current_thread;
-
-	// just for testing ..
-	if (self -> type == TSC_THREAD_MAIN) {
-		exit (value);
-	}
-
-	lock_acquire (self -> wait . lock);
-	    self -> status = TSC_THREAD_EXIT;
-	    self -> retval = value;
-	// is it safe to release the lock this time ?
-	lock_release (self -> wait . lock);
-
-	// DEBUG : remove the thread from the threads list ..
-	atomic_queue_extract (& vpu_manager . thread_list, & self -> sched_link);	
-
-	vpu_spawn (vpu -> scavenger, self);
+	vpu_syscall (core_exit);
+	TSC_SIGNAL_UNMASK();
 }
 
 void thread_yield (void)
 {
 	TSC_SIGNAL_MASK();
-	vpu_yield ();
+	vpu_syscall (core_yield);
 	TSC_SIGNAL_UNMASK();
 }
 
