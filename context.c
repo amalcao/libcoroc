@@ -29,17 +29,13 @@ void TSC_CONTEXT_INIT (TSC_CONTEXT * ctx, void *stack, size_t stack_sz,
     high = tmp >> 16;
 
     sigemptyset (& mask);
-#ifdef ENABLE_TIMER
-    if (((thread_t)thread) -> type == TSC_THREAD_IDLE)
-        sigaddset (& mask, TSC_CLOCK_SIGNAL);
-#endif
 
     memset (ctx, 0, sizeof(TSC_CONTEXT));
     TSC_CONTEXT_SAVE (ctx);
 
-    ctx -> uc_stack . ss_sp = stack;
-    ctx -> uc_stack . ss_size = stack_sz;
-    ctx -> uc_sigmask = mask;
+	ctx -> uc_stack . ss_sp = stack;
+	ctx -> uc_stack . ss_size = stack_sz;
+	ctx -> uc_sigmask = mask;
 
-    TSC_CONTEXT_MAKE (ctx, bootstrap, 2, low, high);   
+	TSC_CONTEXT_MAKE (ctx, bootstrap, 2, low, high);
 }
