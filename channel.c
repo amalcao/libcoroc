@@ -70,7 +70,7 @@ static int _channel_send (channel_t chan, void * buf, bool block)
 			quantum q;
 			quantum_init (& q, self, buf);
 			queue_add (& chan -> send_que, & q . link);
-			vpu_suspend (& self -> wait, chan -> lock);
+			vpu_suspend (NULL, chan -> lock);
 		} else {
 			ret = -1;
 		}
@@ -116,7 +116,7 @@ static int _channel_recv (channel_t chan, void * buf, bool block)
 			quantum q;
 			quantum_init (& q, self, buf);
 			queue_add (& chan -> recv_que, & q . link);
-			vpu_suspend (& self -> wait, chan -> lock);
+			vpu_suspend (NULL, chan -> lock);
 
 		} else {
 			ret = -1;
