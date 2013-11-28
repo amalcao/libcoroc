@@ -40,6 +40,7 @@ static void core_sched (void)
 			candidate -> rem_timeslice = candidate -> init_timeslice;
 			candidate -> status = TSC_THREAD_RUNNING;
 
+			vpu -> current_thread = candidate; // important !!
 			/* swap to the candidate's context */
 			TSC_CONTEXT_LOAD(& candidate -> ctx);
 		}
@@ -50,6 +51,11 @@ int core_exit (void * args)
 {
 	vpu_t * vpu = TSC_TLS_GET();
 	thread_t garbage = (thread_t)args;
+
+	if (garbage -> type == TSC_THREAD_MAIN) {
+		// TODO : more works to halt the system
+		exit (0);
+	}
 	thread_deallocate (garbage);
 	return 0;
 }
@@ -93,31 +99,25 @@ static void * per_vpu_initalize (void * vpu_id)
 	thread_attr_set_stacksize (& attr, 0); // trick, using current stack !
 	scheduler = thread_allocate (NULL, NULL, "sys/scheduler", TSC_THREAD_IDLE, & attr);
 	
+	vpu -> current_thread = vpu -> scheduler = scheduler;
+	vpu -> initialized = true;
+
+	TSC_BARRIER_WAIT();
+
 	// trick: use current context to init the scheduler's context ..
 	TSC_CONTEXT_SAVE(& scheduler -> ctx);
-	
+
 	// vpu_syscall will go here !!
 	// because the savecontext() has no return value like setjmp,
-	// we could only distinguish the status by the `arguments' field !!
-	if (scheduler -> entry == NULL) {
-		sigset_t mask;
-		sigemptyset (& mask);
-		sigaddset (& mask, TSC_CLOCK_SIGNAL);
-		scheduler -> ctx . uc_sigmask = mask;
-
-		vpu -> current_thread = vpu -> scheduler = scheduler;
-		vpu -> initialized = true;
-
-		TSC_BARRIER_WAIT();
-	} else {
+	// we could only distinguish the status by the `entry' field !!
+	if (vpu -> scheduler -> entry != NULL) {
 		int (*pfn)(void *);
 		pfn = scheduler -> entry;
 		(* pfn) (scheduler -> arguments);
 	}
 
 	// Spawn 
-	core_sched (); // never return 
-
+	core_sched ();
 }
 
 void vpu_initialize (int vpu_mp_count)
@@ -176,8 +176,9 @@ void vpu_syscall (int (*pfn)(void *))
 
 		vpu -> current_thread = scheduler;
 		// swap to the scheduler context,
-		// never return here !!
 		TSC_CONTEXT_LOAD(& scheduler -> ctx);
+
+		assert (0); 
 	}
 
 	return ;
@@ -194,7 +195,7 @@ void vpu_suspend (queue_t * queue, lock_t lock)
 	vpu_syscall (core_wait);
 
 	if (lock != NULL)
-		lock_release (lock);
+		lock_acquire (lock);
 }
 
 void vpu_yield (void)
