@@ -34,11 +34,15 @@ static void core_sched (void)
 #endif // ENABLE_WORKSTEALING 
 
 		if (candidate != NULL) {
-			candidate -> vpu_id = vpu -> id;
+            if (candidate -> hold != NULL)
+                lock_acquire (candidate -> hold);
+
+            candidate -> hold = NULL;
 			candidate -> syscall = false;
 			candidate -> wait = NULL;
 			candidate -> rem_timeslice = candidate -> init_timeslice;
 			candidate -> status = TSC_THREAD_RUNNING;
+			candidate -> vpu_id = vpu -> id;
 
 			vpu -> current_thread = candidate; // important !!
 			/* swap to the candidate's context */
@@ -67,9 +71,11 @@ int core_wait (void * args)
 	vpu_t * vpu = TSC_TLS_GET();
 	thread_t victim = (thread_t)args;
 
+	victim -> status = TSC_THREAD_WAIT;
 	if (victim -> wait != NULL)
 		atomic_queue_add (victim -> wait, & victim -> status_link);
-	victim -> status = TSC_THREAD_WAIT;
+    if (victim -> hold != NULL)
+        lock_release (victim -> hold);
 	/* victim -> vpu_id = -1; */
 	return 0;
 }
@@ -187,15 +193,9 @@ void vpu_syscall (int (*pfn)(void *))
 void vpu_suspend (queue_t * queue, lock_t lock)
 {
 	thread_t self = thread_self ();
-
-	if (lock != NULL)
-		lock_release (lock);
-
 	self -> wait = queue;
+    self -> hold = lock;
 	vpu_syscall (core_wait);
-
-	if (lock != NULL)
-		lock_acquire (lock);
 }
 
 void vpu_yield (void)
