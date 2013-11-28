@@ -31,6 +31,7 @@ typedef struct thread {
 
     queue_item_t status_link;
     queue_t * wait;
+    lock_t hold;
 	bool syscall;
 
     uint32_t init_timeslice;
