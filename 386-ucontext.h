@@ -1,15 +1,12 @@
-#define	_setcontext(u)	_setmcontext(&(u)->uc_mcontext)
-#define	_getcontext(u)	_getmcontext(&(u)->uc_mcontext)
+#define	setcontext(u)	setmcontext(&(u)->uc_mcontext)
+#define	getcontext(u)	getmcontext(&(u)->uc_mcontext)
 typedef struct mcontext mcontext_t;
 typedef struct ucontext ucontext_t;
 
 extern	int		swapcontext(ucontext_t*, const ucontext_t*);
 extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
-extern	int		getcontext(ucontext_t*);
-extern	void		setcontext(const ucontext_t*);
-
-extern	int		_getmcontext(mcontext_t*);
-extern	void		_setmcontext(const mcontext_t*);
+extern	int		getmcontext(mcontext_t*);
+extern	void		setmcontext(const mcontext_t*);
 
 /*-
  * Copyright (c) 1999 Marcel Moolenaar

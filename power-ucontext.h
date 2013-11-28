@@ -1,12 +1,5 @@
-typedef unsigned long ulong;
-typedef unsigned int uint;
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned long long uvlong;
-typedef long long vlong;
-
-#define	setcontext(u)	setmcontext(&(u)->mc)
-#define	getcontext(u)	getmcontext(&(u)->mc)
+#define	setcontext(u)	_setmcontext(&(u)->mc)
+#define	getcontext(u)	_getmcontext(&(u)->mc)
 typedef struct mcontext mcontext_t;
 typedef struct ucontext ucontext_t;
 struct mcontext
@@ -39,6 +32,6 @@ struct ucontext
 
 void makecontext(ucontext_t*, void(*)(void), int, ...);
 int swapcontext(ucontext_t*, const ucontext_t*);
-int getmcontext(mcontext_t*);
-void setmcontext(const mcontext_t*);
+int _getmcontext(mcontext_t*);
+void _setmcontext(const mcontext_t*);
 
