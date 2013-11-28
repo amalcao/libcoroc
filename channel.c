@@ -50,7 +50,6 @@ static int _channel_send (channel_t chan, void * buf, bool block)
 	quantum * qp = queue_rem (& chan -> recv_que);
 	if (qp != NULL) {
 		memcpy (qp -> itembuf, buf, chan -> elemsize);
-		atomic_queue_rem (& qp -> thread -> wait);
 		vpu_ready (qp -> thread);
 		
 		lock_release (chan -> lock);
@@ -96,7 +95,6 @@ static int _channel_recv (channel_t chan, void * buf, bool block)
 	quantum * qp = queue_rem (& chan -> send_que);
 	if (qp != NULL) {
 		memcpy (buf, qp -> itembuf, chan -> elemsize);
-		atomic_queue_rem (& qp -> thread -> wait);
 		vpu_ready (qp -> thread);
 
 		lock_release (chan -> lock);
