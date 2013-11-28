@@ -29,7 +29,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
     vpu_t * vpu = TSC_TLS_GET();
     thread_t thread = TSC_ALLOC(sizeof (struct thread)) ;
 	memset (thread, 0, sizeof(struct thread));
-	memset (& thread -> ctx, 0, sizeof (struct ucontext));
+	memset (& thread -> ctx, 0, sizeof (TSC_CONTEXT));
 
     if (thread != NULL) {
         strcpy (thread -> name, name);
