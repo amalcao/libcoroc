@@ -1,6 +1,5 @@
 
-#APPS := app.run findmax.run prio.run
-APPS := primes.run
+APPS := primes.run timeshare.run
 
 OS := $(shell uname)
 
@@ -22,7 +21,6 @@ CFLAGS += -DENABLE_WORKSTEALING
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
-	APPS += timeshare.run
 endif
 
 ifeq (${use_clang}, 1)

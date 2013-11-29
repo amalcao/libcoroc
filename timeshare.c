@@ -14,7 +14,11 @@ void sub_task (void * arg)
 
     printf ("[sub_task:] id is %i!\n", id);
 
-    while (1);
+	for (;;) {
+#ifndef ENABLE_TIMER
+		thread_yield ();
+#endif 
+	}
 
     thread_exit (0);
 }
@@ -29,7 +33,11 @@ int user_main (void * arg)
         threads[i] = thread_allocate (sub_task, i, "", TSC_THREAD_NORMAL, 0);
     }
 
-    while (1);
+	for (;;) {
+#ifndef ENABLE_TIMER
+		thread_yield ();
+#endif 
+	}
 
     thread_exit (0);
 
