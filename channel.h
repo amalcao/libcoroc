@@ -21,7 +21,7 @@ typedef struct channel {
 	queue_t recv_que;
 	queue_t send_que;
 	uint8_t * buf;
-	lock_t lock;
+	lock lock;
 } * channel_t;
 
 channel_t channel_allocate (int32_t elemsize, int32_t bufsize);

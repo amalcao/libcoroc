@@ -22,10 +22,9 @@ channel_t channel_allocate (int32_t elemsize, int32_t bufsize)
 	chan -> bufsize = bufsize;	
 	chan -> buf = (uint8_t *)(chan + 1);
 	chan -> nbuf = 0;
-	chan -> recvx = chan -> sendx = 0; // TODO
-	chan -> lock = lock_allocate ();
+	chan -> recvx = chan -> sendx = 0;
 
-	assert (chan -> lock != NULL);
+	lock_init(& chan -> lock);
 
 	queue_init (& chan -> recv_que);
 	queue_init (& chan -> send_que);
@@ -36,7 +35,7 @@ channel_t channel_allocate (int32_t elemsize, int32_t bufsize)
 void channel_dealloc (channel_t chan)
 {
 	/* TODO: awaken the sleeping threads */
-	lock_deallocate (chan -> lock);
+	lock_finit(& chan -> lock);
 	TSC_DEALLOC (chan);
 }
 
@@ -48,14 +47,14 @@ static int _channel_send (channel_t chan, void * buf, bool block)
 	int ret = 0;
 	thread_t self = thread_self();
 
-	lock_acquire (chan -> lock);
+	lock_acquire (& chan -> lock);
 	// check if there're any waiting threads ..
 	quantum * qp = queue_rem (& chan -> recv_que);
 	if (qp != NULL) {
 		memcpy (qp -> itembuf, buf, chan -> elemsize);
 		vpu_ready (qp -> thread);
 		
-		lock_release (chan -> lock);
+		lock_release (& chan -> lock);
 		return 0;
 	}
 	
@@ -72,13 +71,13 @@ static int _channel_send (channel_t chan, void * buf, bool block)
 			quantum q;
 			quantum_init (& q, self, buf);
 			queue_add (& chan -> send_que, & q . link);
-			vpu_suspend (NULL, chan -> lock);
+			vpu_suspend (NULL, & chan -> lock);
 		} else {
 			ret = -1;
 		}
 	}
 	// awaken by some receiver ..
-	lock_release (chan -> lock);
+	lock_release (& chan -> lock);
 
 	TSC_SIGNAL_UNMASK ();
 
@@ -93,14 +92,14 @@ static int _channel_recv (channel_t chan, void * buf, bool block)
 	int ret = 0;
 	thread_t self = thread_self ();
 
-	lock_acquire (chan -> lock);
+	lock_acquire (& chan -> lock);
 	// check if there're any senders pending .
 	quantum * qp = queue_rem (& chan -> send_que);
 	if (qp != NULL) {
 		memcpy (buf, qp -> itembuf, chan -> elemsize);
 		vpu_ready (qp -> thread);
 
-		lock_release (chan -> lock);
+		lock_release (& chan -> lock);
 		return 0;
 	}
 
@@ -117,14 +116,14 @@ static int _channel_recv (channel_t chan, void * buf, bool block)
 			quantum q;
 			quantum_init (& q, self, buf);
 			queue_add (& chan -> recv_que, & q . link);
-			vpu_suspend (NULL, chan -> lock);
+			vpu_suspend (NULL, & chan -> lock);
 
 		} else {
 			ret = -1;
 		}
 	}
 
-	lock_release (chan -> lock);
+	lock_release (& chan -> lock);
 
 	TSC_SIGNAL_UNMASK ();
 	return ret;

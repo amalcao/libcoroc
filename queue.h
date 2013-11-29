@@ -11,7 +11,7 @@ typedef struct queue_item {
 } queue_item_t;
 
 typedef struct queue {
-	lock_t lock;
+	lock lock;
 	queue_item_t  * head;
 	queue_item_t  * tail;
 	volatile uint32_t status;
@@ -36,7 +36,7 @@ static inline void queue_init (queue_t * queue) {
 }
 
 static inline void atomic_queue_init (queue_t * queue) {
-	queue -> lock = lock_allocate ();
+	lock_init(& queue -> lock);
 	queue_init (queue);
 }
 
@@ -59,9 +59,9 @@ static inline void queue_add (queue_t * queue, queue_item_t * item) {
 }
 
 static inline void atomic_queue_add (queue_t * queue, queue_item_t * item) {
-	lock_acquire(queue -> lock);
+	lock_acquire(& queue -> lock);
 	queue_add (queue, item);
-	lock_release(queue -> lock);
+	lock_release(& queue -> lock);
 }
 
 /*---- Remove function ----*/
@@ -87,9 +87,9 @@ static inline void * atomic_queue_rem (queue_t * queue) {
 
 	if (! queue -> status) return NULL;
 
-	lock_acquire(queue -> lock);
+	lock_acquire(& queue -> lock);
 	owner = queue_rem (queue);
-	lock_release(queue -> lock);	
+	lock_release(& queue -> lock);	
 
 	return owner;
 }
@@ -109,9 +109,9 @@ static inline void queue_extract (queue_t * queue, queue_item_t * item) {
 }
 
 static inline void atomic_queue_extract (queue_t * queue, queue_item_t * item) {
-	lock_acquire(queue -> lock);
+	lock_acquire(& queue -> lock);
 	queue_extract (queue, item);
-	lock_release(queue -> lock);	
+	lock_release(& queue -> lock);	
 }
 
 /*---- Lookup function ----*/
@@ -133,9 +133,9 @@ static inline void * atomic_queue_lookup (queue_t * queue, bool (*inspector)(voi
 
 	if (! queue -> status) return NULL;
 
-	lock_acquire(queue -> lock);
+	lock_acquire(& queue -> lock);
 	owner = queue_lookup (queue, inspector, value);
-	lock_release(queue -> lock);	
+	lock_release(& queue -> lock);	
 
 	return owner;
 }
@@ -154,9 +154,9 @@ static inline void queue_walk (queue_t * queue, void (*inspector)(void *)) {
 
 static inline void atomic_queue_walk (queue_t * queue, void (*inspector)(void *)) {
 	if (queue -> status) {;
-		lock_acquire(queue -> lock);
+		lock_acquire(& queue -> lock);
 		queue_walk (queue, inspector);
-		lock_release(queue -> lock);	
+		lock_release(& queue -> lock);	
 	}
 }
 

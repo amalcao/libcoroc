@@ -6,22 +6,12 @@
 #include "pthread_spinlock.h"
 #endif
 
-typedef pthread_spinlock_t * lock_t;
+typedef pthread_spinlock_t lock;
+typedef lock * lock_t;
 
-static inline lock_t lock_allocate (void)
-{
-    lock_t lock = malloc (sizeof(pthread_spinlock_t));
-    pthread_spin_init (lock, PTHREAD_PROCESS_PRIVATE);
-    return lock;
-}
-
-static inline void lock_deallocate (lock_t lock)
-{
-    pthread_spin_destroy(lock);
-    free (lock);
-}
-
-#define lock_acquire pthread_spin_lock
-#define lock_release pthread_spin_unlock
+#define lock_init(lock) pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE)
+#define lock_acquire(lock) pthread_spin_lock(lock)
+#define lock_release(lock) pthread_spin_unlock(lock)
+#define lock_finit(lock) pthread_spin_destroy(lock)
 
 #endif // _TSC_SUPPORT_LOCK_H_
