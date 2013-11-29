@@ -10,7 +10,7 @@ TSC_HEADERS:= clock.h channel.h context.h lock.h queue.h support.h thread.h vpu.
 TSC_CFILES := boot.c channel.c clock.c context.c thread.c vpu.c 
 
 ifeq (${OS}, Darwin)
-TSC_HEADERS += pthread_barrier.h amd64-ucontext.h 386-ucontext.h power-ucontext.h
+TSC_HEADERS += pthread_barrier.h pthread_spinlock.h amd64-ucontext.h 386-ucontext.h power-ucontext.h
 TSC_CFILES += pthread_barrier.c ucontext.c
 TSC_OBJS := asm.o
 endif
@@ -22,6 +22,7 @@ CFLAGS += -DENABLE_WORKSTEALING
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
+	APPS += timeshare.run
 endif
 
 ifeq (${use_clang}, 1)
