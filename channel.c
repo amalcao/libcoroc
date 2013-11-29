@@ -1,7 +1,10 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
+#include "support.h"
 #include "channel.h"
+
+TSC_SIGNAL_MASK_DECLARE
 
 static inline void quantum_init (quantum * q, thread_t thread, void * buf)
 {

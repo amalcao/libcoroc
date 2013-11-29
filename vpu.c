@@ -11,16 +11,9 @@ TSC_BARRIER_DEFINE
 TSC_TLS_DEFINE
 TSC_SIGNAL_MASK_DEFINE
 
-static void core_sched (void)
+static inline thread_t core_elect (vpu_t * vpu)
 {
-    vpu_t * vpu = TSC_TLS_GET();
-    thread_t candidate = NULL;
-
-    /* --- the actual loop -- */
-	while (true) {
-		candidate = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
-		if (candidate == NULL) 
-			candidate = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
+    thread_t candidate = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
 #ifdef ENABLE_WORKSTEALING
 		if (candidate == NULL) {
@@ -33,14 +26,30 @@ static void core_sched (void)
 		}
 #endif // ENABLE_WORKSTEALING 
 
+    return candidate;
+}
+
+static void core_sched (void)
+{
+    vpu_t * vpu = TSC_TLS_GET();
+    thread_t candidate = NULL;
+
+    /* --- the actual loop -- */
+    while (true) {
+        candidate = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
+        if (candidate == NULL) 
+            candidate = core_elect (vpu); 
+
 		if (candidate != NULL) {
             if (candidate -> hold != NULL)
                 lock_acquire (candidate -> hold);
 
+            if (candidate -> rem_timeslice == 0)
+                candidate -> rem_timeslice = candidate -> init_timeslice;
+
             candidate -> hold = NULL;
 			candidate -> syscall = false;
 			candidate -> wait = NULL;
-			candidate -> rem_timeslice = candidate -> init_timeslice;
 			candidate -> status = TSC_THREAD_RUNNING;
 			candidate -> vpu_id = vpu -> id;
 
@@ -86,7 +95,7 @@ int core_yield (void * args)
 	thread_t victim = (thread_t)args;
 
 	victim -> status = TSC_THREAD_READY;
-	atomic_queue_add (& vpu_manager . xt[victim -> vpu_id], & victim -> status_link);
+    atomic_queue_add (& vpu_manager . xt[vpu_manager . xt_index], & victim -> status_link);
 	return 0;
 }
 
@@ -121,6 +130,12 @@ static void * per_vpu_initalize (void * vpu_id)
 		pfn = scheduler -> entry;
 		(* pfn) (scheduler -> arguments);
 	}
+#ifdef ENABLE_TIMER
+    // set the sigmask of the system thread !!
+    else {
+        sigaddset (& scheduler -> ctx . uc_sigmask, TSC_CLOCK_SIGNAL);
+    }
+#endif // ENABLE_TIMER
 
 	// Spawn 
 	core_sched ();
@@ -198,12 +213,18 @@ void vpu_suspend (queue_t * queue, lock_t lock)
 	vpu_syscall (core_wait);
 }
 
-void vpu_yield (void)
-{
-	vpu_syscall (core_yield);
-}
-
 void vpu_clock_handler (int signal)
 {
-	// TODO !!
+    TSC_SIGNAL_MASK();
+
+    vpu_t * vpu = TSC_TLS_GET();
+    thread_t current = vpu -> current_thread;
+
+    /* this case should not happen !! */
+    if (current == vpu -> scheduler)
+        return ; 
+
+    current -> rem_timeslice --;
+    if (current -> rem_timeslice == 0)
+        vpu_syscall (core_yield);
 }
