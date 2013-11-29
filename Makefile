@@ -51,4 +51,4 @@ libTSC.a: $(TSC_OBJS)
 
 .PHONY:clean
 clean:
-	rm -f *.o libTSC.a ${APPS}
+	rm -f *.o *.run libTSC.a 
