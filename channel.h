@@ -5,14 +5,16 @@
 #include "support.h"
 #include "queue.h"
 #include "thread.h"
+#include "lock_chain.h"
 
-typedef struct quantum {
-	thread_t thread;
-	uint8_t * itembuf;
-	queue_item_t link;
-} quantum;
+enum {
+	CHAN_SUCCESS,
+	CHAN_AWAKEN,
+	CHAN_BUSY,
+};
 
 typedef struct channel {
+	bool	select;
 	int32_t elemsize;
 	int32_t bufsize;
 	int32_t nbuf;
@@ -27,18 +29,32 @@ typedef struct channel {
 channel_t channel_allocate (int32_t elemsize, int32_t bufsize);
 void channel_dealloc (channel_t chan);
 
-int channel_send (channel_t chan, void * buf);
-int channel_recv (channel_t chan, void * buf);
-int channel_nbsend (channel_t chan, void * buf);
-int channel_nbrecv (channel_t chan, void * buf);
+extern int _channel_send (channel_t chan, void * buf, bool block);
+extern int _channel_recv (channel_t chan, void * buf, bool block);
+
+#define channel_send(chan, buf) _channel_send(chan, buf, true)
+#define channel_recv(chan, buf) _channel_recv(chan, buf, true)
+#define channel_nbsend(chan, buf) _channel_send(chan, buf, false)
+#define channel_nbrecv(chan, buf) _channel_recv(chan, buf, false)
 
 #if defined(ENABLE_CHANNEL_SELECT)
-/* TODO : multi-channel send / recv , like select clause in GoLang .. */
-int channel_select (selector_t sel, void * buf);
-int channel_nbselect (selector_t sel, void * buf);
+typedef struct chan_set {
+	queue_t sel_que;
+	lock_chain_t locks;
+} * chan_set_t;
 
-int selector_send (selector_t sel, channel_t chan, chan_callback_t call);
-int selector_recv (selector_t sel, channel_t chan, chan_callback_t call);
-#endif
+/* multi-channel send / recv , like select clause in GoLang .. */
+chan_set_t chan_set_allocate (void);
+void chan_set_dealloc (chan_set_t set);
+
+void chan_set_send (chan_set_t set, channel_t chan);
+void chan_set_recv (chan_set_t set, channel_t chan);
+
+extern int _chan_set_select (chan_set_t set, void * buf, bool block, channel_t * active);
+
+#define chan_set_select(set, buf, pchan) _chan_set_select(set, buf, true, pchan)
+#define chan_set_nbselect(set, buf, pchan) _chan_set_select(set, buf, false, pchan)
+
+#endif // ENABLE_CHANNEL_SELECT
 
 #endif // _TSC_CORE_CHANNEL_H_
