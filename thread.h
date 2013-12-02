@@ -7,6 +7,7 @@
 #include "queue.h"
 
 typedef int32_t (* thread_handler_t) (void *args);
+typedef void (* unlock_hander_t) (void *lock);
 
 typedef int32_t thread_id_t;
 
@@ -31,8 +32,11 @@ typedef struct thread {
 
     queue_item_t status_link;
     queue_t * wait;
-    lock_t hold;
+    void * hold;
+	unlock_hander_t unlock_handler;
 	bool syscall;
+
+	void * qtag; // used by channel_select
 
     uint32_t init_timeslice;
     uint32_t rem_timeslice;
