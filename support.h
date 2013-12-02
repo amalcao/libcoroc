@@ -48,6 +48,7 @@ typedef pthread_t TSC_OS_THREAD_T;
 
 // -- for memory alloc api --
 #define TSC_ALLOC   malloc
+#define TSC_REALLOC realloc
 #define TSC_DEALLOC free
 
 // -- for signals --
@@ -77,8 +78,10 @@ typedef pthread_t TSC_OS_THREAD_T;
 // -- for atomic add op --
 #if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__)
 # define TSC_ATOMIC_INC(n) (++(n))  
+// TODO # define TSC_CAS(pval, old, new)  
 #else
 # define TSC_ATOMIC_INC(n) (__sync_add_and_fetch(&(n), 1))
+# define TSC_CAS(pval, old, new) (__sync_bool_compare_and_swap(pval, old, new))
 #endif
 
 #endif // _TSC_PLATFORM_SUPPORT_H_
