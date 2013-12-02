@@ -1,5 +1,6 @@
 
 APPS := findmax.run primes.run timeshare.run select.run
+APPS += mandelbrot.run
 
 OS := $(shell uname)
 
