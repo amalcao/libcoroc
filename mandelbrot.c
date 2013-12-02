@@ -57,12 +57,15 @@ void renderRow (channel_t * chans)
 #define WORK_CHAN 0
 #define FINISH_CHAN 1
 
-void user_main (void * args)
+void user_main (int argc, char ** argv)
 {
-	int y;
+	int size, y;
 	channel_t chans[2];
+
+	size = (argc > 1) ? atoi(argv[1]) : SIZE;
+
 	iter = ITER;
-	w = h = SIZE;
+	w = h = size;
 	bytesPerRow = w / 8;
 	
 	rows = malloc (sizeof(uint8_t) * bytesPerRow * h);

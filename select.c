@@ -14,7 +14,7 @@ int sub_task (channel_t chan)
 	thread_exit (0);
 }
 
-int user_main (void * args)
+int user_main (int argc, char ** argv)
 {
 	thread_t thrds[SIZE];
 	channel_t chans[SIZE];

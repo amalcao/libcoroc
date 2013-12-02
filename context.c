@@ -6,6 +6,11 @@
 #include "context.h"
 #include "thread.h"
 
+extern int __argc;
+extern char ** __argv;
+
+typedef int (* main_entry_t) (int, char **);
+
 static void bootstrap (uint32_t low, uint32_t high)
 {
     uint64_t tmp = high << 16;
@@ -13,7 +18,10 @@ static void bootstrap (uint32_t low, uint32_t high)
     tmp |= low;
 
     thread_t thread = (thread_t)tmp;
-    thread -> entry (thread -> arguments);
+	if (thread -> type == TSC_THREAD_MAIN)
+		((main_entry_t)(thread -> entry)) (__argc, __argv);
+	else
+    	thread -> entry (thread -> arguments);
 	thread_exit (0);
 }
 
