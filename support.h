@@ -84,4 +84,29 @@ typedef pthread_t TSC_OS_THREAD_T;
 # define TSC_CAS(pval, old, new) (__sync_bool_compare_and_swap(pval, old, new))
 #endif
 
+#if defined(__APPLE__)
+# include <sys/param.h>
+# include <sys/sysctl.h>
+static int inline TSC_NP_ONLINE(void) {
+	int num_cpu;
+	int mib[4];
+	size_t len = sizeof (num_cpu);
+
+	/* set the mib for hw.ncpu */
+	mib[0] = CTL_HW;
+	mib[1] = HW_AVAILCPU;
+
+	/* get the number of CPUs from the system */
+	sysctl (mib, 2, & num_cpu, & len, NULL, 0);
+	if (num_cpu < 0) {
+		mib[1] = HW_NCPU;
+		sysctl (mib, 2, & num_cpu, & len, NULL, 0);
+		if (num_cpu < 0) return 1;
+	}
+	return num_cpu;
+}
+#else // linux platforms ..
+# define TSC_NP_ONLINE() (sysconf(_SC_NPROCCESSORS_ONLN))
+#endif
+
 #endif // _TSC_PLATFORM_SUPPORT_H_
