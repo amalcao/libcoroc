@@ -41,15 +41,10 @@ static void core_sched (void)
             candidate = core_elect (vpu); 
 
 		if (candidate != NULL) {
-            if (candidate -> hold != NULL)
-                lock_acquire (candidate -> hold);
-
             if (candidate -> rem_timeslice == 0)
                 candidate -> rem_timeslice = candidate -> init_timeslice;
 
-            candidate -> hold = NULL;
 			candidate -> syscall = false;
-			candidate -> wait = NULL;
 			candidate -> status = TSC_THREAD_RUNNING;
 			candidate -> vpu_id = vpu -> id;
 
@@ -81,10 +76,16 @@ int core_wait (void * args)
 	thread_t victim = (thread_t)args;
 
 	victim -> status = TSC_THREAD_WAIT;
-	if (victim -> wait != NULL)
+	if (victim -> wait != NULL) {
 		atomic_queue_add (victim -> wait, & victim -> status_link);
-    if (victim -> hold != NULL)
-        lock_release (victim -> hold);
+		victim -> wait = NULL;
+	}
+    if (victim -> hold != NULL) {
+		unlock_hander_t unlock = victim -> unlock_handler;
+		(* unlock) (victim -> hold);
+		victim -> unlock_handler = NULL;
+		victim -> hold = NULL;
+	}
 	/* victim -> vpu_id = -1; */
 	return 0;
 }
@@ -205,11 +206,12 @@ void vpu_syscall (int (*pfn)(void *))
 	return ;
 }
 
-void vpu_suspend (queue_t * queue, lock_t lock)
+void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler)
 {
 	thread_t self = thread_self ();
 	self -> wait = queue;
     self -> hold = lock;
+	self -> unlock_handler = handler;
 	vpu_syscall (core_wait);
 }
 

@@ -33,7 +33,7 @@ extern int core_yield (void *);
 extern int core_exit (void *);
 
 extern void vpu_initialize (int cpu_mp_count);
-extern void vpu_suspend (queue_t * queue, lock_t lock); 
+extern void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler); 
 extern void vpu_ready (struct thread * thread);
 extern void vpu_syscall (int (*pfn)(void *));
 extern void vpu_clock_handler (int);
