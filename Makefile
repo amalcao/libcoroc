@@ -1,5 +1,5 @@
 
-APPS := primes.run timeshare.run select.run
+APPS := findmax.run primes.run timeshare.run select.run
 
 OS := $(shell uname)
 

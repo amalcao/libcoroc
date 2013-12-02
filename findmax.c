@@ -7,6 +7,8 @@
 
 #define MAX 16
 
+int * array;
+
 void gen_array_elem (int * array, int size)
 {
 	int i;
@@ -30,61 +32,63 @@ bool check_max_elem (int * array, int size, int max)
 }
 
 /* -- the slave entry -- */
-int find_max (void * arg)
+int find_max (channel_t chan)
 {
-	thread_t parent = (thread_t)arg;
 	thread_t self = thread_self();
-	int size, * buf;
+	int size, start, max[2];
 
-	// firstly, get the size ..
-	recv (parent, sizeof(int), &size, true);
+	// get the size firstly
+	channel_recv (chan, &size);
 	if (size <= 0) thread_exit (-1);
+	// get my tasks' start index
+	channel_recv (chan, &start);
 
-	buf = malloc (size * sizeof(int));
-	recv (parent, size * sizeof(int), buf, true);
-
+	max[0] = array[start];
+	max[1] = array[start+1];
 	if (size > 1) {
 		if (size > 2) {
 
-			thread_t slave0, slave1;
-			int sz0, sz1;
+			thread_t slave[2];
+			channel_t ch[2];
+			int sz[2], st[2];
 
-			sz0 = size / 2;
-			sz1 = size - sz0;
+			sz[0] = size / 2; st[0] = start;
+			sz[1] = size - sz[0]; st[1] = start + sz[0];
 
-			slave0 = thread_allocate (find_max, thread_self(), "s0", TSC_THREAD_NORMAL, 0);
-			send (slave0, sizeof(int), &sz0);
-			send (slave0, sz0*sizeof(int), buf);
+			int i = 0;
+			for (; i<2; ++i) {
+				ch[i] = channel_allocate (sizeof(int), 0);
+				slave[i] = thread_allocate (find_max, ch[i], "", TSC_THREAD_NORMAL, 0);
+				channel_send (ch[i], &sz[i]);
+				channel_send (ch[i], &st[i]);
+			}
 
-			slave1 = thread_allocate (find_max, thread_self(), "s1", TSC_THREAD_NORMAL, 0);
-			send (slave1, sizeof(int), &sz1);
-			send (slave1, sz1*sizeof(int), buf + sz0);
-			
-			recv (NULL, sizeof(int), & buf[0], true);
-			recv (NULL, sizeof(int), & buf[1], true);
+			channel_recv (ch[0], &max[0]);
+			channel_recv (ch[1], &max[1]);
 		}
-		if (buf[0] < buf[1]) buf[0] = buf[1];
+		if (max[0] < max[1]) max[0] = max[1];
 	}
 
-	send (parent, sizeof(int), buf);
-
-	free (buf);
+	channel_send (chan, &max[0]);
 	thread_exit (0);
 }
 
 /* -- the user entry -- */
 int user_main (void * arg)
 {
-	int max = 0, size = MAX;
-	int * array = malloc (size * sizeof(int));
+	int max = 0, size = MAX, start = 0;
+	array = malloc (size * sizeof(int));
 	thread_t slave = NULL;
+	channel_t chan = NULL;
 
 	gen_array_elem (array, size);
-	slave = thread_allocate (find_max, thread_self(), "s", TSC_THREAD_NORMAL, 0);
+	chan = channel_allocate (sizeof(int), 0);
+	slave = thread_allocate (find_max, chan, "s", TSC_THREAD_NORMAL, 0);
 
-	send (slave, sizeof(int), &size); // send the size of array
-	send (slave, size * sizeof(int), array); // send the content of array
-	recv (NULL, sizeof(int), &max, true);
+	channel_send (chan, &size); // send the size of array
+	channel_send (chan, &start); // send the start index of array
+
+	channel_recv (chan, &max); // recv the result
 
 	printf ("The MAX element is %d\n", max);
 	if (!check_max_elem (array, size, max))
