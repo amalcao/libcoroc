@@ -168,16 +168,18 @@ enum {
 typedef struct elem {
 	int type;
 	channel_t chan;
+	void * buf;
 	queue_item_t link;
 } * elem_t;
 
-static inline elem_t elem_alloc (int type, channel_t chan)
+static inline elem_t elem_alloc (int type, channel_t chan, void * buf)
 {
 	elem_t elem = TSC_ALLOC(sizeof (struct elem));
 	assert (elem != NULL);
 
 	elem -> type = type;
 	elem -> chan = chan;
+	elem -> buf = buf;
 	queue_item_init (& elem -> link, elem);
 	return elem;
 }
@@ -199,25 +201,25 @@ void chan_set_dealloc (chan_set_t set)
 	TSC_DEALLOC(set);
 }
 
-void chan_set_send (chan_set_t set, channel_t chan)
+void chan_set_send (chan_set_t set, channel_t chan, void * buf)
 {
 	assert (set != NULL && chan != NULL);
 	chan -> select = true;
 	lock_chain_add (& set -> locks, & chan -> lock);
-	elem_t e = elem_alloc (CHAN_SEND, chan);
+	elem_t e = elem_alloc (CHAN_SEND, chan, buf);
 	queue_add (& set -> sel_que, & e -> link);
 }
 
-void chan_set_recv (chan_set_t set, channel_t chan)
+void chan_set_recv (chan_set_t set, channel_t chan, void * buf)
 {
 	assert (set != NULL && chan != NULL);
 	chan -> select = true;
 	lock_chain_add (& set -> locks, & chan -> lock);
-	elem_t e = elem_alloc (CHAN_RECV, chan);
+	elem_t e = elem_alloc (CHAN_RECV, chan, buf);
 	queue_add (& set -> sel_que, & e -> link);
 }
 
-int _chan_set_select (chan_set_t set, void * buf, bool block, channel_t * active)
+int _chan_set_select (chan_set_t set, bool block, channel_t * active)
 {
 	assert (set != NULL);
 	TSC_SIGNAL_MASK();
@@ -237,10 +239,10 @@ int _chan_set_select (chan_set_t set, void * buf, bool block, channel_t * active
 
 		switch (e -> type) {
 			case CHAN_SEND:
-				ret = __channel_send (e -> chan, buf, false);
+				ret = __channel_send (e -> chan, e -> buf, false);
 				break;
 			case CHAN_RECV:
-				ret = __channel_recv (e -> chan, buf, false);
+				ret = __channel_recv (e -> chan, e -> buf, false);
 		}
 		if (ret == CHAN_SUCCESS) {
 			* active = e -> chan; 
@@ -261,7 +263,7 @@ int _chan_set_select (chan_set_t set, void * buf, bool block, channel_t * active
 
 		while (sel != NULL) {
 			elem_t e = (elem_t)(sel -> owner);
-			quantum_init (pq, e -> chan, self, buf, true);
+			quantum_init (pq, e -> chan, self, e -> buf, true);
 			switch (e -> type) {
 			case CHAN_SEND:
 				queue_add (& e -> chan -> send_que, & pq -> link);

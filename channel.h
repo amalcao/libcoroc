@@ -47,13 +47,13 @@ typedef struct chan_set {
 chan_set_t chan_set_allocate (void);
 void chan_set_dealloc (chan_set_t set);
 
-void chan_set_send (chan_set_t set, channel_t chan);
-void chan_set_recv (chan_set_t set, channel_t chan);
+void chan_set_send (chan_set_t set, channel_t chan, void * buf);
+void chan_set_recv (chan_set_t set, channel_t chan, void * buf);
 
-extern int _chan_set_select (chan_set_t set, void * buf, bool block, channel_t * active);
+extern int _chan_set_select (chan_set_t set, bool block, channel_t * active);
 
-#define chan_set_select(set, buf, pchan) _chan_set_select(set, buf, true, pchan)
-#define chan_set_nbselect(set, buf, pchan) _chan_set_select(set, buf, false, pchan)
+#define chan_set_select(set, pchan) _chan_set_select(set, true, pchan)
+#define chan_set_nbselect(set, pchan) _chan_set_select(set, false, pchan)
 
 #endif // ENABLE_CHANNEL_SELECT
 

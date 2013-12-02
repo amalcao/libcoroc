@@ -24,12 +24,12 @@ int user_main (void * args)
 	for (; i < SIZE; i++) {
 		chans[i] = channel_allocate (sizeof(int), 0);
 		thrds[i] = thread_allocate (sub_task, chans[i], "", TSC_THREAD_NORMAL, NULL);
-		chan_set_recv (set, chans[i]);
+		chan_set_recv (set, chans[i], &id);
 	}
 
 	for (i = 0; i < SIZE; i++) {
 		channel_t ch = NULL;
-		chan_set_select(set, &id, &ch);
+		chan_set_select(set, &ch);
 		if (ch != NULL) {
 			printf ("[main task]: recv id is %d!\n", id);
 		}
