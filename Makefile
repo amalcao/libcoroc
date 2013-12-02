@@ -1,5 +1,5 @@
 
-APPS := primes.run timeshare.run
+APPS := primes.run timeshare.run select.run
 
 OS := $(shell uname)
 
@@ -18,6 +18,7 @@ TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
 #CFLAGS += -DENABLE_QUICK_RESPONSE
 CFLAGS += -DENABLE_WORKSTEALING
+CFLAGS += -DENABLE_CHANNEL_SELECT
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
