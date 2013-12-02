@@ -1,6 +1,7 @@
 #ifndef _TSC_PLATFORM_SUPPORT_H_
 #define _TSC_PLATFORM_SUPPORT_H_
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
 
@@ -106,7 +107,8 @@ static int inline TSC_NP_ONLINE(void) {
 	return num_cpu;
 }
 #else // linux platforms ..
-# define TSC_NP_ONLINE() (sysconf(_SC_NPROCCESSORS_ONLN))
+# include <sys/sysinfo.h>
+# define TSC_NP_ONLINE() get_nprocs()
 #endif
 
 #endif // _TSC_PLATFORM_SUPPORT_H_
