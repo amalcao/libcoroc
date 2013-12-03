@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 
 #include "thread.h"
@@ -82,10 +83,10 @@ void user_main (int argc, char ** argv)
 		bool finish;
 		channel_recv (chans[FINISH_CHAN], & finish);
 	}
+    
+    /* -- uncomment the next line to output the result -- */
+    /* fwrite (rows, h * w / 8, 1, stdout); */
 
-#if 0 // for check the result ..
-    fwrite (rows, h * w / 8, 1, stdout);
-#endif
     free (rows);
 
 	return ;
