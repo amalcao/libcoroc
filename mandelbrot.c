@@ -13,8 +13,7 @@ const int SIZE = 16000;
 uint8_t * rows;
 int bytesPerRow;
 
-uint8_t w, h;
-int size, bytes, iter;
+int w, h, iter;
 
 // This func is responsible for rendering a row of pixels,
 // and when complete writing it out to the file.
@@ -37,7 +36,7 @@ void renderRow (channel_t * chans)
 		Cr = (2 * (double)x/(double)w - 1.5);
 
 		for (i = 0; i < iter && Tr+Ti <= LIMIT*LIMIT; i++) {
-			Zi = 2 * Zr * Zr + Ci;
+			Zi = 2 * Zi * Zr + Ci;
 			Zr = Tr - Ti + Cr;
 			Tr = Zr * Zr;
 			Ti = Zi * Zi;
@@ -69,6 +68,7 @@ void user_main (int argc, char ** argv)
 	bytesPerRow = w / 8;
 	
 	rows = malloc (sizeof(uint8_t) * bytesPerRow * h);
+    memset (rows, 0, bytesPerRow * h);
 
 	chans[WORK_CHAN] = channel_allocate (sizeof(int), 2*POOL+1);
 	chans[FINISH_CHAN] = channel_allocate (sizeof(bool), 0);
@@ -82,6 +82,11 @@ void user_main (int argc, char ** argv)
 		bool finish;
 		channel_recv (chans[FINISH_CHAN], & finish);
 	}
+
+#if 0 // for check the result ..
+    fwrite (rows, h * w / 8, 1, stdout);
+#endif
+    free (rows);
 
 	return ;
 }
