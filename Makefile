@@ -1,6 +1,6 @@
 
 APPS := findmax.run primes.run timeshare.run select.run
-APPS += mandelbrot.run
+APPS += mandelbrot.run spectral-norm.run
 
 OS := $(shell uname)
 
@@ -47,7 +47,7 @@ libTSC.a: $(TSC_OBJS)
 	$(CC) -c ${CFLAGS} $<
 
 %.run:%.o libTSC.a
-	$(CC) $< ${CFLAGS} -L. -lTSC -lpthread -o $@
+	$(CC) $< ${CFLAGS} -L. -lTSC -lpthread -lm -o $@
 
 .PHONY:clean
 clean:
