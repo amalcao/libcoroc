@@ -67,14 +67,16 @@ typedef pthread_t TSC_OS_THREAD_T;
 
 #ifdef ENABLE_TIMER
 # define TSC_SIGNAL_MASK()  \
-    sigprocmask (SIG_BLOCK, NULL, &__vpu_sigmask)
+    sigprocmask (SIG_BLOCK, &__vpu_sigmask, NULL)
 
 # define TSC_SIGNAL_UNMASK() \
-    sigprocmask (SIG_UNBLOCK, NULL, &__vpu_sigmask)
+    sigprocmask (SIG_UNBLOCK, &__vpu_sigmask, NULL)
 #else
 # define TSC_SIGNAL_MASK()
 # define TSC_SIGNAL_UNMASK()
 #endif
+
+#define TSC_RESCHED_THRESHOLD   5
 
 // -- for atomic add op --
 #if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__)
