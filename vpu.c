@@ -34,6 +34,9 @@ static void core_sched (void)
     vpu_t * vpu = TSC_TLS_GET();
     thread_t candidate = NULL;
 
+    /* clean the watchdog tick */
+    vpu -> watchdog = 0;
+
     /* --- the actual loop -- */
     while (true) {
         candidate = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
@@ -41,9 +44,10 @@ static void core_sched (void)
             candidate = core_elect (vpu); 
 
 		if (candidate != NULL) {
+#if 0   /* the timeslice is not used in this version */
             if (candidate -> rem_timeslice == 0)
                 candidate -> rem_timeslice = candidate -> init_timeslice;
-
+#endif
 			candidate -> syscall = false;
 			candidate -> status = TSC_THREAD_RUNNING;
 			candidate -> vpu_id = vpu -> id;
@@ -107,6 +111,8 @@ static void * per_vpu_initalize (void * vpu_id)
 
 	vpu_t * vpu = & vpu_manager . vpu[((int)vpu_id)];
 	vpu -> id = (int)vpu_id;
+    vpu -> ticks = 0;
+    vpu -> watchdog = 0;
 
 	TSC_TLS_SET(vpu);
 
@@ -118,6 +124,7 @@ static void * per_vpu_initalize (void * vpu_id)
 	vpu -> current_thread = vpu -> scheduler = scheduler;
 	vpu -> initialized = true;
 
+    TSC_SIGNAL_MASK();
 	TSC_BARRIER_WAIT();
 
 	// trick: use current context to init the scheduler's context ..
@@ -217,16 +224,15 @@ void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler)
 
 void vpu_clock_handler (int signal)
 {
-    TSC_SIGNAL_MASK();
-
     vpu_t * vpu = TSC_TLS_GET();
-    thread_t current = vpu -> current_thread;
+
+    vpu -> ticks ++;    // 0.5ms per tick ..
 
     /* this case should not happen !! */
-    if (current == vpu -> scheduler)
-        return ; 
+    assert (vpu -> current_thread != vpu -> scheduler);
 
-    current -> rem_timeslice --;
-    if (current -> rem_timeslice == 0)
+    /* increase the watchdog tick,
+     * and do re-schedule if the number reaches the threshold */
+    if (++(vpu -> watchdog) > TSC_RESCHED_THRESHOLD)
         vpu_syscall (core_yield);
 }

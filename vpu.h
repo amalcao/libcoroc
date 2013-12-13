@@ -13,6 +13,8 @@ typedef struct vpu {
     TSC_OS_THREAD_T os_thr;
     uint32_t id;
     bool initialized;
+    uint32_t watchdog;
+    uint32_t ticks;
     thread_t current_thread;
 	thread_t scheduler;
 } vpu_t;
