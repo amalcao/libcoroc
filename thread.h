@@ -41,6 +41,8 @@ typedef struct thread {
     uint32_t init_timeslice;
     uint32_t rem_timeslice;
 
+    int     sigmask_nest;
+
 	uint32_t detachstate;
     void * stack_base;
     size_t stack_size;

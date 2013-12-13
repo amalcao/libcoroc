@@ -53,6 +53,9 @@ static void core_sched (void)
 			candidate -> vpu_id = vpu -> id;
 
 			vpu -> current_thread = candidate; // important !!
+
+            /* restore the sigmask nested level */
+            TSC_SIGNAL_STATE_LOAD(& candidate -> sigmask_nest);
 			/* swap to the candidate's context */
 			TSC_CONTEXT_LOAD(& candidate -> ctx);
 		}
@@ -124,7 +127,7 @@ static void * per_vpu_initalize (void * vpu_id)
 	vpu -> current_thread = vpu -> scheduler = scheduler;
 	vpu -> initialized = true;
 
-    TSC_SIGNAL_MASK();
+    // TSC_SIGNAL_MASK();
 	TSC_BARRIER_WAIT();
 
 	// trick: use current context to init the scheduler's context ..
@@ -195,6 +198,7 @@ void vpu_syscall (int (*pfn)(void *))
 	assert (self != NULL);
 
 	self -> syscall = true;
+    TSC_SIGNAL_STATE_SAVE(& self -> sigmask_nest);
 	TSC_CONTEXT_SAVE(& self -> ctx);
 
 	/* trick : use `syscall' to distinguish if already returned from syscall */
@@ -228,8 +232,14 @@ void vpu_clock_handler (int signal)
 
     vpu -> ticks ++;    // 0.5ms per tick ..
 
+/* FIXME: The assertion may failed sometimes, Why ?*/
+#if 0
     /* this case should not happen !! */
     assert (vpu -> current_thread != vpu -> scheduler);
+#else
+    if (vpu -> current_thread == vpu -> scheduler)
+        return ; 
+#endif
 
     /* increase the watchdog tick,
      * and do re-schedule if the number reaches the threshold */

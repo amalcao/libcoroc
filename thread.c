@@ -26,6 +26,8 @@ void thread_attr_init (thread_attributes_t * attr)
 thread_t thread_allocate (thread_handler_t entry, void * arguments, 
  const char * name, uint32_t type, thread_attributes_t * attr)
 {
+    TSC_SIGNAL_MASK();
+
     vpu_t * vpu = TSC_TLS_GET();
     thread_t thread = TSC_ALLOC(sizeof (struct thread)) ;
 	memset (thread, 0, sizeof(struct thread));
@@ -39,6 +41,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
         thread -> arguments = arguments;
 		thread -> syscall = false;
 		thread -> wait = NULL;
+        thread -> sigmask_nest = 0;
 
         if (attr != NULL) {
             thread -> stack_size = attr -> stack_size;
@@ -63,9 +66,9 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 	if (thread -> type != TSC_THREAD_IDLE) { 
 		TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, thread -> stack_size, thread);
 		atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
-		TSC_SIGNAL_UNMASK();
 	}
 
+    TSC_SIGNAL_UNMASK();
 	return thread;
 }
 

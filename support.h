@@ -55,25 +55,42 @@ typedef pthread_t TSC_OS_THREAD_T;
 // -- for signals --
 #define TSC_CLOCK_SIGNAL    SIGUSR1
 
-#define TSC_SIGNAL_MASK_DEFINE      \
-    sigset_t __vpu_sigmask;
+#ifdef ENABLE_TIMER
 
-#define TSC_SIGNAL_MASK_DECLARE     \
-    extern TSC_SIGNAL_MASK_DEFINE
+# define TSC_SIGNAL_MASK_DEFINE      \
+    sigset_t __vpu_sigmask;         \
+    __thread int __vpu_sigmask_nest = 0;
 
-#define TSC_SIGNAL_MASK_INIT()   do { \
-    sigemptyset (&__vpu_sigmask);        \
+# define TSC_SIGNAL_MASK_DECLARE     \
+    extern sigset_t __vpu_sigmask;  \
+    extern __thread int __vpu_sigmask_nest;
+
+# define TSC_SIGNAL_MASK_INIT()   do {   \
+    sigemptyset (&__vpu_sigmask);       \
     sigaddset (&__vpu_sigmask, SIGUSR1); } while (0)
 
-#ifdef ENABLE_TIMER
-# define TSC_SIGNAL_MASK()  \
-    sigprocmask (SIG_BLOCK, &__vpu_sigmask, NULL)
+# define TSC_SIGNAL_MASK()  do {    \
+    if (__vpu_sigmask_nest++ == 0)  \
+        sigprocmask (SIG_BLOCK, &__vpu_sigmask, NULL); } while (0)
 
-# define TSC_SIGNAL_UNMASK() \
-    sigprocmask (SIG_UNBLOCK, &__vpu_sigmask, NULL)
+# define TSC_SIGNAL_UNMASK() do {   \
+    if (--__vpu_sigmask_nest == 0)  \
+        sigprocmask (SIG_UNBLOCK, &__vpu_sigmask, NULL); } while (0)
+
+# define TSC_SIGNAL_STATE_SAVE(p) \
+    *(p) = __vpu_sigmask_nest
+
+# define TSC_SIGNAL_STATE_LOAD(p) \
+    __vpu_sigmask_nest = *(p)
+
 #else
+# define TSC_SIGNAL_MASK_DEFINE
+# define TSC_SIGNAL_MASK_DECLARE
+# define TSC_SIGNAL_MASK_INIT()
 # define TSC_SIGNAL_MASK()
 # define TSC_SIGNAL_UNMASK()
+# define TSC_SIGNAL_STATE_SAVE(p)
+# define TSC_SIGNAL_STATE_LOAD(p)
 #endif
 
 #define TSC_RESCHED_THRESHOLD   5
