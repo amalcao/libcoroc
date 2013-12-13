@@ -13,6 +13,7 @@ ifeq (${OS}, Darwin)
 TSC_HEADERS += pthread_barrier.h pthread_spinlock.h amd64-ucontext.h 386-ucontext.h power-ucontext.h
 TSC_CFILES += pthread_barrier.c ucontext.c
 TSC_OBJS := asm.o
+use_clang := 1
 endif
 
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
