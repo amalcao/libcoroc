@@ -4,7 +4,7 @@ The LibTSC is a time sharing coroutine library for Unix like systems.
 
 ## Introduction
 
-Coroutine is a kind of light-level task mechanism which implemented in user space. As less resources usage and less overhead during context-switch than OS level threads or processes, the coroutines are well-suited for implementing the user level concurrent system or library.
+Coroutine is a kind of lightweight task mechanism which implemented in user space. As less resources usage and less overhead during context-switch than OS level threads or processes, the coroutines are well-suited for implementing the user level concurrent system or library.
 
 The [Go](http://golang.org) and its ancestor [libtask](http://swich.com/libtask/) use the coroutine mechanism to implement the user-level tasks, called Goroutine in Go and task in libtask.
 
