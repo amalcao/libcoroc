@@ -80,8 +80,15 @@ typedef pthread_t TSC_OS_THREAD_T;
 # define TSC_SIGNAL_STATE_SAVE(p) \
     *(p) = __vpu_sigmask_nest
 
-# define TSC_SIGNAL_STATE_LOAD(p) \
+# if defined(__APPLE__)
+#  define TSC_SIGNAL_STATE_LOAD(p) do { \
+	__vpu_sigmask_nest = *(p);		\
+	if (*(p) == 0) \
+		sigprocmask (SIG_UNBLOCK, &__vpu_sigmask, NULL); } while (0)
+# else
+#  define TSC_SIGNAL_STATE_LOAD(p) \
     __vpu_sigmask_nest = *(p)
+# endif
 
 #else
 # define TSC_SIGNAL_MASK_DEFINE

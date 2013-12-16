@@ -52,10 +52,10 @@ static void core_sched (void)
 			candidate -> status = TSC_THREAD_RUNNING;
 			candidate -> vpu_id = vpu -> id;
 
-			vpu -> current_thread = candidate; // important !!
-
             /* restore the sigmask nested level */
             TSC_SIGNAL_STATE_LOAD(& candidate -> sigmask_nest);
+
+			vpu -> current_thread = candidate; // important !!
 			/* swap to the candidate's context */
 			TSC_CONTEXT_LOAD(& candidate -> ctx);
 		}
@@ -127,7 +127,7 @@ static void * per_vpu_initalize (void * vpu_id)
 	vpu -> current_thread = vpu -> scheduler = scheduler;
 	vpu -> initialized = true;
 
-    // TSC_SIGNAL_MASK();
+    TSC_SIGNAL_MASK();
 	TSC_BARRIER_WAIT();
 
 	// trick: use current context to init the scheduler's context ..
@@ -168,7 +168,7 @@ void vpu_initialize (int vpu_mp_count)
 	TSC_TLS_INIT();
 	TSC_SIGNAL_MASK_INIT();
 
-	TSC_SIGNAL_MASK();
+	// TSC_SIGNAL_MASK();
 
 	// VPU initialization
 	int index = 0;
@@ -232,13 +232,14 @@ void vpu_clock_handler (int signal)
 
     vpu -> ticks ++;    // 0.5ms per tick ..
 
-/* FIXME: The assertion may failed sometimes, Why ?*/
-#if 0
-    /* this case should not happen !! */
-    assert (vpu -> current_thread != vpu -> scheduler);
-#else
+/* FIXME: It is unstable for OS X because of the implementation
+ * 			of the ucontext API from libtask ignoring the sigmask .. */
+#if defined(__APPLE__)
     if (vpu -> current_thread == vpu -> scheduler)
         return ; 
+#else
+    /* this case should not happen !! */
+    assert (vpu -> current_thread != vpu -> scheduler);
 #endif
 
     /* increase the watchdog tick,
