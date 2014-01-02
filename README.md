@@ -26,6 +26,7 @@ There are some building options:
 - `enable_timer=1` to enable the time-sharing mechanism, which is disable default.
 - `enable_optimize=1` to build the target with `-O2` option, if not use this option, the debug mode library and examples will be built.
 - `use_clang=1` to use the clang/llvm compiler to build the programs. This is the default setting for Darwin platform.
+- `enable_splitstack` to enable the split-stack feature, make sure your complier (gcc 4.6.0+) and linker (GNU gold) support that feature!
 
 To build an optimized library with time-sharing support, just use the command:
 		
@@ -52,7 +53,7 @@ There are lots of things needed to improve both the functionality and the perfor
 - A more efficient way for work-stealing among the schedulers
 - Wrappers for the system calls which may suspend the current scheduler
 - Asynchronous API for socket IO operations
-- [Segment-stack](http://gcc.gnu.org/wiki/SplitStacks) support for coroutines
+- [Segment-stack](http://gcc.gnu.org/wiki/SplitStacks) support for coroutines (**DONE**)
 - A more efficient memory management module, like [tc_malloc](http://goog-perftools.sourceforge.net/doc/tcmalloc.html)
 - Garbage-Collection mechanism for auto deallocation
 
