@@ -4,7 +4,7 @@ APPS += mandelbrot.run spectral-norm.run
 
 OS := $(shell uname)
 
-CC := gcc
+CC := gcc-4.8
 
 TSC_HEADERS:= clock.h channel.h context.h lock.h queue.h support.h thread.h vpu.h 
 TSC_CFILES := boot.c channel.c clock.c context.c thread.c vpu.c 
@@ -34,6 +34,11 @@ ifeq (${enable_optimize}, 1)
 	CFLAGS += -O2
 else
 	CFLAGS += -g3
+endif
+
+ifeq (${enable_splitstack}, 1)
+	CFLAGS += -DENABLE_SPLITSTACK
+	CFLAGS += -fsplit-stack
 endif
 
 all: ${APPS}

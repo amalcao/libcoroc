@@ -41,9 +41,15 @@ void TSC_CONTEXT_INIT (TSC_CONTEXT * ctx, void *stack, size_t stack_sz,
     memset (ctx, 0, sizeof(TSC_CONTEXT));
     TSC_CONTEXT_SAVE (ctx);
 
+#ifdef ENABLE_SPLITSTACK
+    (ctx -> ctx) . uc_stack . ss_sp = stack;
+    (ctx -> ctx) . uc_stack . ss_size = stack_sz;
+    (ctx -> ctx) . uc_sigmask = mask;
+#else
 	ctx -> uc_stack . ss_sp = stack;
 	ctx -> uc_stack . ss_size = stack_sz;
 	ctx -> uc_sigmask = mask;
+#endif
 
 	TSC_CONTEXT_MAKE (ctx, bootstrap, 2, low, high);
 }

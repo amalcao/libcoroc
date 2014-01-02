@@ -18,6 +18,10 @@
 // -- for thread APIs -- 
 typedef pthread_t TSC_OS_THREAD_T;
 
+#define TSC_OS_THREAD_ATTR              pthread_attr_t
+#define TSC_OS_THREAD_ATTR_INIT         pthread_attr_init
+#define TSC_OS_THREAD_ATTR_SETSTACKSZ   pthread_attr_setstacksize
+
 #define TSC_OS_THREAD_CREATE    pthread_create
 #define TSC_OS_THREAD_SENDSIG   pthread_kill
 
@@ -46,6 +50,10 @@ typedef pthread_t TSC_OS_THREAD_T;
 
 #define TSC_BARRIER_WAIT() \
     pthread_barrier_wait (& __vpu_barrier);
+
+#if !defined(PTHREAD_STACK_MIN)
+# define PTHREAD_STACK_MIN (16 * 1024) // 16KB
+#endif
 
 // -- for memory alloc api --
 #define TSC_ALLOC   malloc

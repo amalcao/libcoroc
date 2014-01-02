@@ -56,6 +56,9 @@ static void core_sched (void)
             TSC_SIGNAL_STATE_LOAD(& candidate -> sigmask_nest);
 
 			vpu -> current_thread = candidate; // important !!
+#ifdef ENABLE_SPLITSTACK
+            TSC_STACK_CONTEXT_LOAD(& candidate -> ctx);
+#endif
 			/* swap to the candidate's context */
 			TSC_CONTEXT_LOAD(& candidate -> ctx);
 		}
@@ -130,6 +133,10 @@ static void * per_vpu_initalize (void * vpu_id)
     TSC_SIGNAL_MASK();
 	TSC_BARRIER_WAIT();
 
+#ifdef ENABLE_SPLITSTACK
+    TSC_STACK_CONTEXT_SAVE(& scheduler -> ctx);
+#endif
+
 	// trick: use current context to init the scheduler's context ..
 	TSC_CONTEXT_SAVE(& scheduler -> ctx);
 
@@ -144,7 +151,7 @@ static void * per_vpu_initalize (void * vpu_id)
 #ifdef ENABLE_TIMER
     // set the sigmask of the system thread !!
     else {
-        sigaddset (& scheduler -> ctx . uc_sigmask, TSC_CLOCK_SIGNAL);
+        TSC_CONTEXT_SIGADDMASK(& scheduler -> ctx, TSC_CLOCK_SIGNAL);
     }
 #endif // ENABLE_TIMER
 
@@ -155,6 +162,7 @@ static void * per_vpu_initalize (void * vpu_id)
 void vpu_initialize (int vpu_mp_count)
 {
 	// schedulers initialization
+    size_t stacksize = 1024 + PTHREAD_STACK_MIN;
 	vpu_manager . xt_index = vpu_mp_count;
 	vpu_manager . last_pid = 0;
 
@@ -173,6 +181,10 @@ void vpu_initialize (int vpu_mp_count)
 	// VPU initialization
 	int index = 0;
 	for (; index < vpu_manager . xt_index; ++index) {
+        TSC_OS_THREAD_ATTR attr;
+        TSC_OS_THREAD_ATTR_INIT (&attr);
+        TSC_OS_THREAD_ATTR_SETSTACKSZ (&attr, stacksize);
+
 		atomic_queue_init (& vpu_manager . xt[index]);
 		TSC_OS_THREAD_CREATE(
 				& (vpu_manager . vpu[index] . os_thr),
@@ -199,11 +211,20 @@ void vpu_syscall (int (*pfn)(void *))
 
 	self -> syscall = true;
     TSC_SIGNAL_STATE_SAVE(& self -> sigmask_nest);
+
+#ifdef ENABLE_SPLITSTACK
+    TSC_STACK_CONTEXT_SAVE(& self -> ctx);
+#endif
+
 	TSC_CONTEXT_SAVE(& self -> ctx);
 
 	/* trick : use `syscall' to distinguish if already returned from syscall */
 	if (self && self -> syscall) {
 		thread_t scheduler = vpu -> scheduler;
+
+#ifdef ENABLE_SPLITSTACK
+        TSC_STACK_CONTEXT_LOAD(& scheduler -> ctx);
+#endif 
 		scheduler -> entry = pfn;
 		scheduler -> arguments = self;
 

@@ -29,12 +29,40 @@
 #include <ucontext.h>
 #endif // USE_UCONTEXT
 
+#if defined(ENABLE_SPLITSTACK)
+typedef struct {
+    ucontext_t ctx;
+    void * stack_ctx[10];
+} TSC_CONTEXT;
+
+extern void * __splitstack_makecontext (size_t stack_size, void *context[10], size_t *size);
+extern void __splitstack_setcontext (void *context[10]);
+extern void __splitstack_getcontext (void *context[10]);
+
+#define TSC_CONTEXT_LOAD(cp) setcontext(& (cp)->ctx)
+#define TSC_CONTEXT_SAVE(cp) getcontext(& (cp)->ctx)
+#define TSC_CONTEXT_MAKE(cp, ...) makecontext(& (cp)->ctx, __VA_ARGS__) 
+
+#define TSC_STACK_CONTEXT_MAKE(sz, cp, ...) \
+    __splitstack_makecontext(sz, & (cp)->stack_ctx[0], __VA_ARGS__)
+#define TSC_STACK_CONTEXT_LOAD(cp) \
+    __splitstack_setcontext(& (cp)->stack_ctx[0])
+#define TSC_STACK_CONTEXT_SAVE(cp) \
+    __splitstack_getcontext(& (cp)->stack_ctx[0])
+
+#define TSC_CONTEXT_SIGADDMASK(cp, sig) sigaddset(& (cp)->ctx.uc_sigmask, sig)
+
+#else
 typedef ucontext_t TSC_CONTEXT;
 
 #define TSC_CONTEXT_LOAD setcontext
 #define TSC_CONTEXT_SAVE getcontext
 #define TSC_CONTEXT_SWAP swapcontext
 #define TSC_CONTEXT_MAKE makecontext
+
+#define TSC_CONTEXT_SIGADDMASK(cp, sig) sigaddset(& (cp)->uc_sigmask, sig)
+
+#endif
 
 extern void TSC_CONTEXT_INIT (TSC_CONTEXT * ctx, void *stack, size_t stack_sz, void * thread);
 

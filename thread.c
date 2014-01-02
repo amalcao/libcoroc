@@ -3,10 +3,14 @@
 #include "thread.h"
 #include "vpu.h"
 
-#ifdef __APPLE__
-# define TSC_DEFAULT_STACK_SIZE (2 * 1024 * 1024) // 4MB
+#if defined(ENABLE_SPLITSTACK) // && defined(LINKER_SUPPORTS_SPLIT_STACK)
+# define TSC_DEFAULT_STACK_SIZE PTHREAD_STACK_MIN
 #else
-# define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
+# ifdef __APPLE__
+#  define TSC_DEFAULT_STACK_SIZE (2 * 1024 * 1024) // 4MB
+# else
+#  define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
+# endif
 #endif
 
 #define TSC_DEFAULT_AFFINITY    (vpu_manager . xt_index)
@@ -28,6 +32,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 {
     TSC_SIGNAL_MASK();
 
+    size_t size;
     vpu_t * vpu = TSC_TLS_GET();
     thread_t thread = TSC_ALLOC(sizeof (struct thread)) ;
 	memset (thread, 0, sizeof(struct thread));
@@ -54,17 +59,22 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
         }
 
 		if (thread -> stack_size > 0) {
+#ifdef ENABLE_SPLITSTACK
+            thread -> stack_base =
+                TSC_STACK_CONTEXT_MAKE(thread ->stack_size, & thread->ctx, & size);
+#else
+            size = thread -> stack_size;
 			thread -> stack_base = TSC_ALLOC(thread -> stack_size);
+#endif
 			assert (thread -> stack_base != NULL);
 		}
-
 		thread -> rem_timeslice = thread -> init_timeslice;
 
 		queue_item_init (& thread -> status_link, thread);
 	}
 
 	if (thread -> type != TSC_THREAD_IDLE) { 
-		TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, thread -> stack_size, thread);
+		TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, size, thread);
 		atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
 	}
 
@@ -75,8 +85,13 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 void thread_deallocate (thread_t thread)
 {
 	// TODO : reclaim the thread elements ..
+#ifdef ENABLE_SPLITSTACK
+    __splitstack_releasecontext (& thread->ctx.stack_ctx[0]);
+#else
 	if (thread -> stack_size > 0)
 		TSC_DEALLOC (thread -> stack_base);
+#endif
+
 	TSC_DEALLOC (thread);
 }
 
