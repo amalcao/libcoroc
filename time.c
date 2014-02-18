@@ -181,6 +181,8 @@ static int tsc_intertimer_routine (void *unused)
 
                 if (__size > 0)
                     __down_adjust_heap (__timers, 0, __size);
+            } else {
+                break;
             }
         }
 
