@@ -7,6 +7,8 @@
 #include "thread.h"
 
 extern int user_main (void*);
+extern void tsc_intertimer_initialize (void);
+
 int __argc;
 char ** __argv;
 
@@ -18,6 +20,8 @@ int main (int argc, char **argv)
 
     vpu_initialize (n);
     clock_initialize ();
+    tsc_intertimer_initialize ();
+
     // -- TODO : more modules later .. --
     //
     thread_t init = thread_allocate ((thread_handler_t)user_main,
