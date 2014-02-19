@@ -42,6 +42,7 @@ Some examples are provided for users to test the library:
 - **findmax.c**			for testing the basic thread and channel API
 - **timeshare.c**		for testing the time-sharing mechanism
 - **select.c**			for testing the select operation among multi-channels
+- **ticker.c**          for testing the ticker/timer API
 - **primes.c**	 		example migrated from libtask
 - **mandelbrot.c**		benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
 - **spectral-norm.c**	benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
