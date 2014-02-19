@@ -186,9 +186,14 @@ static int tsc_intertimer_routine (void *unused)
             }
         }
 
-        lock_release (& tsc_intertimer_manager . lock);
-
-        thread_yield (); // let others run ..
+        // no alive timers here, just suspend myself ..
+        if (__size == 0) {
+            vpu_suspend (NULL, & tsc_intertimer_manager . lock, 
+                        (unlock_hander_t)(lock_release));
+        } else {
+            lock_release (& tsc_intertimer_manager . lock);
+            thread_yield (); // let others run ..
+        }
     }
 
     return 0;
@@ -229,6 +234,11 @@ int tsc_add_intertimer (tsc_inter_timer_t *timer)
     __up_adjust_heap (__timers, __size);
 
     tsc_intertimer_manager . size ++;
+    
+    // awaken the timer daemon thread ..
+    if (__size == 1) {
+        vpu_ready (tsc_intertimer_manager . daemon);
+    }
 
     lock_release (& tsc_intertimer_manager . lock);
     
@@ -249,6 +259,7 @@ int tsc_del_intertimer (tsc_inter_timer_t *timer)
         if (__timers[i] == timer) {
             __timers[i] = __timers[--__size];
             __down_adjust_heap (__timers, i, __size);
+            tsc_intertimer_manager . size = __size;
             ret = 0;
             break;
         }
