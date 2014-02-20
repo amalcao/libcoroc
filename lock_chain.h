@@ -13,9 +13,9 @@ typedef struct {
 	lock_t * locks;
 } lock_chain_t;
 
-static int lock_addr_comp (lock_t lock1, lock_t lock2)
+static int lock_addr_comp (const void *lock1, const void *lock2)
 {
-	return *(uint64_t*)(lock1) - *(uint64_t*)(lock2);
+	return *(uint64_t*)(lock1) > *(uint64_t*)(lock2) ? 1 : -1;
 }
 
 static void lock_chain_init (lock_chain_t * chain)
