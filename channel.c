@@ -6,6 +6,12 @@
 
 TSC_SIGNAL_MASK_DECLARE
 
+static inline void __chan_memcpy (void *dst, const void *src, size_t size)
+{
+    if (dst && src)
+        memcpy (dst, src, size);
+}
+
 typedef struct quantum {
 	bool select;
 	channel_t chan;
@@ -69,7 +75,7 @@ static int __channel_send (channel_t chan, void * buf, bool block)
 	// check if there're any waiting threads ..
 	quantum * qp = fetch_quantum (& chan -> recv_que);
 	if (qp != NULL) {
-		memcpy (qp -> itembuf, buf, chan -> elemsize);
+		__chan_memcpy (qp -> itembuf, buf, chan -> elemsize);
 		vpu_ready (qp -> thread);
 		return CHAN_SUCCESS;
 	}
@@ -77,7 +83,7 @@ static int __channel_send (channel_t chan, void * buf, bool block)
 	if (chan -> nbuf < chan -> bufsize) {
 		uint8_t * p = chan -> buf;
 		p += (chan -> elemsize) * (chan -> sendx ++);
-		memcpy (p, buf, chan -> elemsize);
+		__chan_memcpy (p, buf, chan -> elemsize);
 		(chan -> sendx) %= (chan -> bufsize);
 		chan -> nbuf ++;
 		return CHAN_SUCCESS;
@@ -103,7 +109,7 @@ static int __channel_recv (channel_t chan, void * buf, bool block)
 	// check if there're any senders pending .
 	quantum * qp = fetch_quantum (& chan -> send_que);
 	if (qp != NULL) {
-		memcpy (buf, qp -> itembuf, chan -> elemsize);
+		__chan_memcpy (buf, qp -> itembuf, chan -> elemsize);
 		vpu_ready (qp -> thread);
 		return CHAN_SUCCESS;
 	}
@@ -111,7 +117,7 @@ static int __channel_recv (channel_t chan, void * buf, bool block)
 	if (chan -> nbuf > 0) {
 		uint8_t * p = chan -> buf;
 		p += (chan -> elemsize) * (chan -> recvx ++);
-		memcpy (buf, p, chan -> elemsize);
+		__chan_memcpy (buf, p, chan -> elemsize);
 		(chan -> recvx) %= (chan -> bufsize);
 		chan -> nbuf --;
 		return CHAN_SUCCESS;
