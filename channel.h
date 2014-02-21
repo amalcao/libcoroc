@@ -8,7 +8,7 @@
 #include "lock_chain.h"
 
 enum {
-	CHAN_SUCCESS,
+	CHAN_SUCCESS = 0,
 	CHAN_AWAKEN,
 	CHAN_BUSY,
 };
