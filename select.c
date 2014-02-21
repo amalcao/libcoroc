@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "thread.h"
-#include "channel.h"
+#include "libtsc.h"
 
 #define SIZE 4
 

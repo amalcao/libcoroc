@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "thread.h"
-#include "channel.h"
+
+#include "libtsc.h"
 
 void sub_task (void * arg)
 {

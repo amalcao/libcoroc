@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "thread.h"
-#include "channel.h"
+#include "libtsc.h"
 
 #define MAX 16
 

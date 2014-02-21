@@ -1,9 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "thread.h"
-#include "channel.h"
-#include "time.h"
+#include "libtsc.h"
 
 void callback (void)
 {

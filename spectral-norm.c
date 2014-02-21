@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#include "thread.h"
-#include "channel.h"
 
+#include "libtsc.h"
 
 int Num = 1000;
 int NumCPU = 2;

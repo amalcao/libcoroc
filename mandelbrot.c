@@ -3,8 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "thread.h"
-#include "channel.h"
+#include "libtsc.h"
 
 const double ZERO = 0;
 const double LIMIT = 2.0;
