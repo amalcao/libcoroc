@@ -7,6 +7,8 @@
 
 #define TSC_DEFAULT_INTERTIMERS_CAP 32
 
+TSC_SIGNAL_MASK_DECLARE
+
 static void tsc_send_timer (void * arg)
 {
     tsc_timer_t timer = (tsc_timer_t)arg;
@@ -156,6 +158,8 @@ static int tsc_intertimer_routine (void *unused)
     // once this routine is started,
     // it will never stop until the whole system exits ..
     for (;;) {
+        TSC_SIGNAL_MASK();
+
         lock_acquire (& tsc_intertimer_manager . lock);
         
         tsc_inter_timer_t **__timers = tsc_intertimer_manager . timers;
@@ -171,7 +175,7 @@ static int tsc_intertimer_routine (void *unused)
                 if (t->period == 0) {
                     // del the timer ..
                     if (--__size > 0)
-                        __timers[0] = __timers[1];
+                        __timers[0] = __timers[__size];
                     
                     tsc_intertimer_manager . size = __size;
                 } else {
@@ -194,6 +198,8 @@ static int tsc_intertimer_routine (void *unused)
             lock_release (& tsc_intertimer_manager . lock);
             thread_yield (); // let others run ..
         }
+
+        TSC_SIGNAL_UNMASK();
     }
 
     return 0;
@@ -212,13 +218,11 @@ static void tsc_intertimer_start (void)
 
 int tsc_add_intertimer (tsc_inter_timer_t *timer)
 {
-    int ret = 0;
+    TSC_SIGNAL_MASK();
 
+    int ret = 0;
     lock_acquire (& tsc_intertimer_manager . lock);
     
-    if (tsc_intertimer_manager . daemon == NULL) 
-        tsc_intertimer_start ();
-
     // realloc if need ..
     if (tsc_intertimer_manager . cap == tsc_intertimer_manager . size) {
         tsc_intertimer_manager . cap *= 2;
@@ -235,13 +239,16 @@ int tsc_add_intertimer (tsc_inter_timer_t *timer)
 
     tsc_intertimer_manager . size ++;
     
+    if (tsc_intertimer_manager . daemon == NULL) {
+        tsc_intertimer_start ();
+    } else if (__size == 0) {
     // awaken the timer daemon thread ..
-    if (__size == 1) {
         vpu_ready (tsc_intertimer_manager . daemon);
     }
 
     lock_release (& tsc_intertimer_manager . lock);
     
+    TSC_SIGNAL_UNMASK();
     return ret;
 }
 
