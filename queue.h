@@ -5,8 +5,12 @@
 #include <stdbool.h>
 #include "lock.h"
 
+struct queue;
+
 typedef struct queue_item {
 	struct queue_item * next;
+	struct queue_item * prev;
+    struct queue * que;
 	void * owner;
 } queue_item_t;
 
@@ -26,6 +30,8 @@ typedef struct queue {
 /*---- Initilization functions ----*/
 static inline void queue_item_init (queue_item_t * item, void * owner) {
 	item -> next = NULL;
+    item -> prev = NULL;
+    item -> que = NULL;
 	item -> owner = owner;
 }
 
@@ -52,9 +58,11 @@ static inline void queue_add (queue_t * queue, queue_item_t * item) {
 	}
 	else {
 		queue -> tail -> next = item;
+        item -> prev = queue -> tail;
 		queue -> tail = item;
 	}
 
+    item -> que = queue;
 	queue -> status += 1;
 }
 
@@ -74,10 +82,16 @@ static inline void * queue_rem (queue_t * queue) {
 	/*---- Check what item to remove ----*/
 	kitem = queue -> head;
 	queue -> head = queue -> head -> next;
+    if (queue -> head)
+        queue -> head -> prev = NULL;
+    else
+        queue -> tail = queue -> head;
+
 	queue -> status -= 1;
 
 	/*---- Clean the links ----*/
-	kitem -> next = NULL;
+    kitem -> prev = kitem -> next = NULL;
+	kitem -> que = NULL;
 
 	return kitem -> owner;
 }
@@ -96,6 +110,7 @@ static inline void * atomic_queue_rem (queue_t * queue) {
 
 /*---- Extract function ----*/
 static inline void queue_extract (queue_t * queue, queue_item_t * item) {
+#if 0
 	queue_item_t * kitem = queue -> head;
 
 	if (queue -> head == item) queue -> head = item -> next;
@@ -106,6 +121,25 @@ static inline void queue_extract (queue_t * queue, queue_item_t * item) {
 	}
 
 	queue -> status -= 1;
+#else
+    assert (item -> que == queue && queue -> status);
+    
+    if (item -> prev) 
+        item -> prev -> next = item -> next;
+    else
+        queue -> head = item -> next;
+
+    if (item -> next)
+        item -> next -> prev = item -> prev;
+    else
+        queue -> tail = item -> prev;
+
+    queue -> status --;
+
+    item -> prev = item -> next = NULL;
+    item -> que = NULL;
+
+#endif
 }
 
 static inline void atomic_queue_extract (queue_t * queue, queue_item_t * item) {
@@ -114,6 +148,7 @@ static inline void atomic_queue_extract (queue_t * queue, queue_item_t * item) {
 	lock_release(& queue -> lock);	
 }
 
+#if 0
 /*---- Lookup function ----*/
 static inline void * queue_lookup (queue_t * queue, bool (*inspector)(void *, void *), void * value) {
 	queue_item_t * item = queue -> head;
@@ -139,6 +174,7 @@ static inline void * atomic_queue_lookup (queue_t * queue, bool (*inspector)(voi
 
 	return owner;
 }
+#endif
 
 /*---- Walk function ----*/
 static inline void queue_walk (queue_t * queue, void (*inspector)(void *)) {
