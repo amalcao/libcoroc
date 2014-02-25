@@ -16,7 +16,6 @@ typedef struct vpu {
     uint32_t watchdog;
     uint32_t ticks;
     thread_t current_thread;
-    thread_t current_wait;
 	thread_t scheduler;
 } vpu_t;
 
@@ -32,6 +31,7 @@ typedef struct vpu_manager {
     pthread_cond_t cond;
     pthread_mutex_t lock;
     uint32_t alive;
+    queue_t wait_list;
 #endif
 } vpu_manager_t;
 

@@ -77,6 +77,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 		thread -> rem_timeslice = thread -> init_timeslice;
 
 		queue_item_init (& thread -> status_link, thread);
+		queue_item_init (& thread -> wait_link, thread);
 	}
 
     if (thread -> type == TSC_THREAD_MAIN) {
@@ -84,10 +85,10 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
     }
 
 	if (thread -> type != TSC_THREAD_IDLE) { 
+        vpu_wakeup_all ();
 		TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, size, thread);
 		atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], 
             & thread -> status_link);
-        vpu_wakeup_all ();
 	}
 
     TSC_SIGNAL_UNMASK();
