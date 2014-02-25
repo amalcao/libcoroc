@@ -295,9 +295,10 @@ int _chan_set_select (chan_set_t set, bool block, channel_t * active)
 			if (e -> type == CHAN_RECV)
 				que = & (e -> chan -> recv_que);
 
-			if (queue_lookup (que, general_inspector, pq)) {
+#if 0
+			if (queue_lookup (que, general_inspector, pq)) 
+#endif
 				queue_extract (que, & pq -> link);				
-			}
 			sel = sel -> next;
 			pq ++;
 		}
