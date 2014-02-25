@@ -85,7 +85,7 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
     }
 
 	if (thread -> type != TSC_THREAD_IDLE) { 
-        vpu_wakeup_all ();
+        vpu_wakeup_one ();
 		TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, size, thread);
 		atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], 
             & thread -> status_link);

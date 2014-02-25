@@ -239,7 +239,7 @@ void vpu_ready (struct thread * thread)
 #endif
   atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
 
-  vpu_wakeup_all ();
+  vpu_wakeup_one ();
 }
 
 void vpu_syscall (int (*pfn)(void *)) 
@@ -316,12 +316,12 @@ void vpu_clock_handler (int signal)
     vpu_syscall (core_yield);
 }
 
-void vpu_wakeup_all (void)
+void vpu_wakeup_one (void)
 {
 #ifdef ENABLE_DAEDLOCK_DETECT
   pthread_mutex_lock (& vpu_manager . lock);
   if (vpu_manager . alive < vpu_manager . xt_index) {
-      pthread_cond_broadcast (& vpu_manager . cond);
+      pthread_cond_signal (& vpu_manager . cond);
   }
   pthread_mutex_unlock (& vpu_manager . lock);
 #endif

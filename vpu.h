@@ -46,7 +46,7 @@ extern void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler);
 extern void vpu_ready (struct thread * thread);
 extern void vpu_syscall (int (*pfn)(void *));
 extern void vpu_clock_handler (int);
-extern void vpu_wakeup_all (void);
+extern void vpu_wakeup_one (void);
 #ifdef ENABLE_DAEDLOCK_DETECT
 extern void vpu_backtrace (int);
 #endif
