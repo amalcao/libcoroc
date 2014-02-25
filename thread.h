@@ -35,6 +35,7 @@ typedef struct thread {
     void * hold;
 	unlock_hander_t unlock_handler;
 	bool syscall;
+    bool backtrace; // wakeup for backtrace 
 
 	void * qtag; // used by channel_select
 
@@ -72,12 +73,13 @@ enum thread_deallocate {
 };
 
 extern thread_t thread_allocate (thread_handler_t entry, void * arguments, const char * name, uint32_t type, thread_attributes_t * attr);
-extern void thread_deallocate (thread_t thread);
+extern void thread_deallocate (thread_t);
 extern void thread_exit (int value);
 extern void thread_yield (void);
 extern thread_t thread_self (void);
+extern void thread_backtrace (thread_t);
 #ifdef TSC_ENABLE_THREAD_JOIN
-extern status_t thread_join (thread_t thread);
+extern status_t thread_join (thread_t);
 extern void thread_detach (void);
 #endif // TSC_ENABLE_THREAD_JOIN
 

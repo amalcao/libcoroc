@@ -16,6 +16,7 @@ typedef struct vpu {
     uint32_t watchdog;
     uint32_t ticks;
     thread_t current_thread;
+    thread_t current_wait;
 	thread_t scheduler;
 } vpu_t;
 
@@ -25,7 +26,13 @@ typedef struct vpu_manager {
     queue_t *xt;
     uint32_t xt_index;
     uint32_t last_pid;
+    thread_t main_thread;
     queue_t thread_list;
+#ifdef ENABLE_DAEDLOCK_DETECT
+    pthread_cond_t cond;
+    pthread_mutex_t lock;
+    uint32_t alive;
+#endif
 } vpu_manager_t;
 
 extern vpu_manager_t vpu_manager;
@@ -39,6 +46,10 @@ extern void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler);
 extern void vpu_ready (struct thread * thread);
 extern void vpu_syscall (int (*pfn)(void *));
 extern void vpu_clock_handler (int);
+extern void vpu_wakeup_all (void);
+#ifdef ENABLE_DAEDLOCK_DETECT
+extern void vpu_backtrace (int);
+#endif
 
 #define TSC_ALLOC_TID() TSC_ATOMIC_INC(vpu_manager.last_pid)
 

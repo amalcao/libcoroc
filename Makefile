@@ -41,6 +41,11 @@ ifeq (${enable_splitstack}, 1)
 	CFLAGS += -fsplit-stack
 endif
 
+ifeq (${enable_daedlock_detect}, 1)
+	CFLAGS += -DENABLE_DAEDLOCK_DETECT
+	CFLAGS += -rdynamic
+endif
+
 all: ${APPS}
 
 libTSC.a: $(TSC_OBJS)

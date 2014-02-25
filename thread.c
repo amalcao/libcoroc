@@ -1,4 +1,8 @@
+#include <execinfo.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <assert.h>
 #include "thread.h"
 #include "vpu.h"
@@ -12,6 +16,8 @@
 #  define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
 # endif
 #endif
+
+#define TSC_BACKTRACE_LEVEL 20
 
 #define TSC_DEFAULT_AFFINITY    (vpu_manager . xt_index)
 #define TSC_DEFAULT_TIMESLICE   5
@@ -73,9 +79,15 @@ thread_t thread_allocate (thread_handler_t entry, void * arguments,
 		queue_item_init (& thread -> status_link, thread);
 	}
 
+    if (thread -> type == TSC_THREAD_MAIN) {
+        vpu_manager . main_thread = thread;
+    }
+
 	if (thread -> type != TSC_THREAD_IDLE) { 
 		TSC_CONTEXT_INIT (& thread -> ctx, thread -> stack_base, size, thread);
-		atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
+		atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], 
+            & thread -> status_link);
+        vpu_wakeup_all ();
 	}
 
     TSC_SIGNAL_UNMASK();
@@ -118,5 +130,24 @@ thread_t thread_self (void)
 	TSC_SIGNAL_UNMASK ();
 
 	return self;
+}
+
+void thread_backtrace (thread_t self)
+{
+    int level;
+    void *buffer[TSC_BACKTRACE_LEVEL];
+
+    TSC_SIGNAL_MASK();
+
+    fprintf (stderr, "The \"%s\"<#%d> thread's stack trace:\n", 
+        self -> name, self -> id);
+
+    level = backtrace (buffer, TSC_BACKTRACE_LEVEL);
+    backtrace_symbols_fd (buffer, level, STDERR_FILENO);
+
+    fprintf (stderr, "\n");
+
+    vpu_syscall (core_exit);
+    TSC_SIGNAL_UNMASK();
 }
 

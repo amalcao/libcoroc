@@ -1,4 +1,6 @@
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 #include "vpu.h"
 #include "lock.h"
@@ -33,6 +35,7 @@ static void core_sched (void)
 {
     vpu_t * vpu = TSC_TLS_GET();
     thread_t candidate = NULL;
+    int idle_loops = 0;
 
     /* clean the watchdog tick */
     vpu -> watchdog = 0;
@@ -62,6 +65,22 @@ static void core_sched (void)
 			/* swap to the candidate's context */
 			TSC_CONTEXT_LOAD(& candidate -> ctx);
 		}
+#ifdef ENABLE_DAEDLOCK_DETECT
+        if (++idle_loops > 10000) {
+            pthread_mutex_lock (& vpu_manager . lock);
+            vpu_manager . alive --;
+
+            if (vpu_manager . alive == 0) {
+                vpu_backtrace (vpu -> id);
+            } else {
+                pthread_cond_wait (& vpu_manager . cond, & vpu_manager . lock);
+                // wake up by other vpu ..
+                vpu_manager . alive ++;
+                idle_loops = 0;
+                pthread_mutex_unlock (& vpu_manager . lock);
+            }
+        }
+#endif
 	}
 }
 
@@ -75,6 +94,7 @@ int core_exit (void * args)
 		exit (0);
 	}
 	thread_deallocate (garbage);
+
 	return 0;
 }
 
@@ -97,6 +117,14 @@ int core_wait (void * args)
 		victim -> hold = NULL;
 	}
 	/* victim -> vpu_id = -1; */
+
+#if ENABLE_DAEDLOCK_DETECT
+
+  // TODO: add this victim into a global waiting queue
+  //  for easy, we just keep one suspended thread per vpu now!!
+  vpu -> current_wait = victim;
+
+#endif
 	return 0;
 }
 
@@ -172,6 +200,13 @@ void vpu_initialize (int vpu_mp_count)
 	// global queues initialization
 	atomic_queue_init (& vpu_manager . xt[vpu_manager . xt_index]);
 
+#ifdef ENABLE_DAEDLOCK_DETECT
+    vpu_manager . alive = vpu_mp_count;
+
+    pthread_cond_init (& vpu_manager . cond, NULL);
+    pthread_mutex_init (& vpu_manager . lock, NULL);
+#endif
+
 	TSC_BARRIER_INIT(vpu_manager . xt_index + 1);
 	TSC_TLS_INIT();
 	TSC_SIGNAL_MASK_INIT();
@@ -200,6 +235,8 @@ void vpu_ready (struct thread * thread)
 
 	thread -> status = TSC_THREAD_READY;
 	atomic_queue_add (& vpu_manager . xt[thread -> vpu_affinity], & thread -> status_link);
+    
+    vpu_wakeup_all ();
 }
 
 void vpu_syscall (int (*pfn)(void *)) 
@@ -235,6 +272,13 @@ void vpu_syscall (int (*pfn)(void *))
 		assert (0); 
 	}
 
+#if ENABLE_DAEDLOCK_DETECT
+    /* check if grouine is returned for backtrace */
+    if (self && self -> backtrace) {
+        thread_backtrace (self);
+    }
+#endif 
+
 	return ;
 }
 
@@ -268,3 +312,36 @@ void vpu_clock_handler (int signal)
     if (++(vpu -> watchdog) > TSC_RESCHED_THRESHOLD)
         vpu_syscall (core_yield);
 }
+
+void vpu_wakeup_all (void)
+{
+#ifdef ENABLE_DAEDLOCK_DETECT
+    pthread_mutex_lock (& vpu_manager . lock);
+    if (vpu_manager . alive < vpu_manager . xt_index) {
+        pthread_cond_signal (& vpu_manager . cond);
+    }
+    pthread_mutex_unlock (& vpu_manager . lock);
+#endif
+}
+
+#ifdef ENABLE_DAEDLOCK_DETECT
+void vpu_backtrace (int id)
+{
+  fprintf (stderr, "All threads are sleep, daedlock may happen!\n\n");
+  // TODO : foreach sleep threads, backtrace whose call stack ..
+  int i;
+  for (i = 0; i < vpu_manager . xt_index; i++) {
+      thread_t wait_thr = vpu_manager . vpu[i] . current_wait;
+      if (wait_thr && wait_thr != vpu_manager . main_thread) {
+          wait_thr -> backtrace = true;
+          // schedule the rescent suspended one, 
+          // in order to traceback whose call stack..
+          atomic_queue_add(& vpu_manager . xt[id], & wait_thr -> status_link);
+      }
+  }
+  // schedule the main thread at last ..
+  vpu_manager . main_thread -> backtrace = true;
+  atomic_queue_add(& vpu_manager . xt[id], 
+                   & (vpu_manager . main_thread -> status_link) );
+}
+#endif
