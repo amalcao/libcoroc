@@ -21,6 +21,7 @@ int main (int argc, char **argv)
     vpu_initialize (n);
     clock_initialize ();
     tsc_intertimer_initialize ();
+    tsc_vfs_initialize ();
 
     // -- TODO : more modules later .. --
     //

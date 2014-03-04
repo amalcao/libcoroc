@@ -99,6 +99,40 @@ int timer_start (tsc_timer_t);
 int timer_stop (tsc_timer_t);
 int timer_reset (tsc_timer_t, uint64_t);
 
+/* -- Vitual FS API -- */
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+struct tsc_vfs_driver;
+typedef struct tsc_vfs_driver *tsc_vfs_driver_t;
+
+// the userspace APIs ..
+int __tsc_vfs_open (const char *name, int flags, bool sync, tsc_vfs_driver_t drv);
+void __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv);
+void __tsc_vfs_flush (int fd, bool sync, tsc_vfs_driver_t drv);
+ssize_t __tsc_vfs_read (int fd, void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
+ssize_t __tsc_vfs_write (int fd, void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
+off_t __tsc_vfs_lseek (int fd, off_t offset, int whence, bool sync, tsc_vfs_driver_t drv);
+
+// asynchronized APIs
+#define tsc_vfs_open(...) __tsc_vfs_open(__VA_ARGS__, false, NULL)
+#define tsc_vfs_close(fd) __tsc_vfs_close(fd, false, NULL)
+#define tsc_vfs_flush(fd) __tsc_vfs_flush(fd, false, NULL)
+#define tsc_vfs_read(...) __tsc_vfs_read(__VA_ARGS__, false, NULL)
+#define tsc_vfs_write(...) __tsc_vfs_write(__VA_ARGS__, false, NULL)
+#define tsc_vfs_lseek(...) __tsc_vfs_lseek(__VA_ARGS__, false, NULL)
+
+// synchronized APIs
+#define tsc_vfs_open_sync(...) __tsc_vfs_open(__VA_ARGS__, true, NULL)
+#define tsc_vfs_close_sync(fd) __tsc_vfs_close(fd, true, NULL)
+#define tsc_vfs_flush_sync(fd) __tsc_vfs_flush(fd, true, NULL)
+#define tsc_vfs_read_sync(...) __tsc_vfs_read(__VA_ARGS__, true, NULL)
+#define tsc_vfs_write_sync(...) __tsc_vfs_write(__VA_ARGS__, true, NULL)
+#define tsc_vfs_lseek_sync(...) __tsc_vfs_lseek(__VA_ARGS__, true, NULL)
+
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

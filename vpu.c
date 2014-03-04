@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "vpu.h"
+#include "vfs.h"
 #include "lock.h"
 
 
@@ -45,6 +46,11 @@ static void core_sched (void)
       candidate = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
       if (candidate == NULL) 
         candidate = core_elect (vpu); 
+
+#if ENABLE_VFS
+      if (candidate == NULL)
+        candidate = tsc_vfs_get_thread();
+#endif // ENABLE_VFS
 
       if (candidate != NULL) {
 #if 0   /* the timeslice is not used in this version */
