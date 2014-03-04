@@ -81,6 +81,6 @@ off_t __tsc_vfs_lseek (int fd, off_t offset, int whence, bool sync, tsc_vfs_driv
 #define tsc_vfs_flush_sync(fd) __tsc_vfs_flush(fd, true, NULL)
 #define tsc_vfs_read_sync(...) __tsc_vfs_read(__VA_ARGS__, true, NULL)
 #define tsc_vfs_write_sync(...) __tsc_vfs_write(__VA_ARGS__, true, NULL)
-#define tsc_vfs_lseek_sync(...) __tsc_vfs_lseek(__ARGS__, true, NULL)
+#define tsc_vfs_lseek_sync(...) __tsc_vfs_lseek(__VA_ARGS__, true, NULL)
 
 #endif // _TSC_VFS_H_
