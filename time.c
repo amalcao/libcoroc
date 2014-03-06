@@ -192,7 +192,7 @@ static int tsc_intertimer_routine (void *unused)
 
         // no alive timers here, just suspend myself ..
         if (__size == 0) {
-            vpu_suspend (NULL, & tsc_intertimer_manager . lock, 
+            vpu_suspend (NULL, (void*)(& tsc_intertimer_manager . lock), 
                         (unlock_hander_t)(lock_release));
         } else {
             lock_release (& tsc_intertimer_manager . lock);
@@ -228,7 +228,7 @@ int tsc_add_intertimer (tsc_inter_timer_t *timer)
         tsc_intertimer_manager . cap *= 2;
         void *p = tsc_intertimer_manager . timers;
         tsc_intertimer_manager . timers = 
-            TSC_REALLOC(p, tsc_intertimer_manager . cap); 
+            TSC_REALLOC(p, tsc_intertimer_manager . cap * sizeof (void*)); 
     }
     
     tsc_inter_timer_t **__timers = tsc_intertimer_manager . timers;

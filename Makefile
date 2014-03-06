@@ -60,12 +60,12 @@ libTSC.a: $(TSC_OBJS)
 	ar r $@ $(TSC_OBJS)
 
 %.o:%.S
-	$(CC) -c ${CFLAGS} $<
+	$(CC) -c ${CFLAGS} -Werror $<
 
 %.o:%.c
-	$(CC) -c ${CFLAGS} $<
+	$(CC) -c ${CFLAGS} -Werror $<
 
-%.run:%.o libTSC.a
+%.run:%.c libTSC.a
 	$(CC) $< ${CFLAGS} -L. -lTSC -lpthread -lm -o $@
 
 .PHONY:clean

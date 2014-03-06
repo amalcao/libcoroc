@@ -168,7 +168,7 @@ int __tsc_vfs_open (const char *name, int flags, bool sync, tsc_vfs_driver_t drv
         return drv -> open (name, flags);
 
     tsc_vfs_ops ops;
-    __tsc_vfs_init_ops (& ops, TSC_VFS_OPEN, 0, flags, 0, name, drv);
+    __tsc_vfs_init_ops (& ops, TSC_VFS_OPEN, 0, flags, 0, (void*)name, drv);
 
     // this call will suspend currrent thread ..
     __tsc_vfs_add_ops (& ops);
@@ -177,7 +177,7 @@ int __tsc_vfs_open (const char *name, int flags, bool sync, tsc_vfs_driver_t drv
     return (int)(ops . arg0);
 }
 
-void __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv)
+int __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv)
 {
     if (drv == NULL) 
         drv = & tsc_vfs_file_drv;
@@ -230,7 +230,7 @@ ssize_t __tsc_vfs_read (int fd, void *buf, size_t size, bool sync,
     return (ssize_t)(ops . arg0);
 }
 
-ssize_t __tsc_vfs_write (int fd, void *buf, size_t size, bool sync,
+ssize_t __tsc_vfs_write (int fd, const void *buf, size_t size, bool sync,
     tsc_vfs_driver_t drv)
 {
     if (drv == NULL)
@@ -240,7 +240,7 @@ ssize_t __tsc_vfs_write (int fd, void *buf, size_t size, bool sync,
         return drv -> write(fd, buf, size);
 
     tsc_vfs_ops ops;
-    __tsc_vfs_init_ops (& ops, TSC_VFS_WRITE, fd, size, 0, buf, drv);
+    __tsc_vfs_init_ops (& ops, TSC_VFS_WRITE, fd, size, 0, (void*)buf, drv);
 
     __tsc_vfs_add_ops (& ops);
 

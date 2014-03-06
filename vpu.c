@@ -151,8 +151,8 @@ static void * per_vpu_initalize (void * vpu_id)
   thread_t scheduler;
   thread_attributes_t attr;
 
-  vpu_t * vpu = & vpu_manager . vpu[((int)vpu_id)];
-  vpu -> id = (int)vpu_id;
+  vpu_t * vpu = & vpu_manager . vpu[((uint64_t)vpu_id)];
+  vpu -> id = (int)((uint64_t)vpu_id);
   vpu -> ticks = 0;
   vpu -> watchdog = 0;
 
@@ -224,7 +224,7 @@ void vpu_initialize (int vpu_mp_count)
   // TSC_SIGNAL_MASK();
 
   // VPU initialization
-  int index = 0;
+  uint64_t index = 0;
   for (; index < vpu_manager . xt_index; ++index) {
       TSC_OS_THREAD_ATTR attr;
       TSC_OS_THREAD_ATTR_INIT (&attr);

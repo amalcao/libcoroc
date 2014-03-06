@@ -26,16 +26,17 @@ enum {
 
 // define the callback handlers' types 
 typedef int (*open_callback_t) (const char*, int, ...);
-typedef ssize_t (*rdwr_callback_t) (int, void*, size_t);
+typedef ssize_t (*read_callback_t) (int, void*, size_t);
+typedef ssize_t (*write_callback_t) (int, const void*, size_t);
 typedef off_t (*lseek_callback_t) (int, off_t, int);
 typedef void (*flush_callback_t) (int);
-typedef void (*close_callback_t) (int);
+typedef int (*close_callback_t) (int);
 
 // the file operation driver
 typedef struct tsc_vfs_driver {
     open_callback_t open;
-    rdwr_callback_t read;
-    rdwr_callback_t write;
+    read_callback_t read;
+    write_callback_t write;
     lseek_callback_t lseek;
     flush_callback_t flush;
     close_callback_t close;
@@ -61,10 +62,10 @@ void tsc_vfs_initialize ();
 
 // the APIs ..
 int __tsc_vfs_open (const char *name, int flags, bool sync, tsc_vfs_driver_t drv);
-void __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv);
+int __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv);
 void __tsc_vfs_flush (int fd, bool sync, tsc_vfs_driver_t drv);
 ssize_t __tsc_vfs_read (int fd, void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
-ssize_t __tsc_vfs_write (int fd, void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
+ssize_t __tsc_vfs_write (int fd, const void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
 off_t __tsc_vfs_lseek (int fd, off_t offset, int whence, bool sync, tsc_vfs_driver_t drv);
 
 // asynchronized APIs

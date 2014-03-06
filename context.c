@@ -10,6 +10,7 @@ extern int __argc;
 extern char ** __argv;
 
 typedef int (* main_entry_t) (int, char **);
+typedef void (* boot_entry_t) ();
 
 static void bootstrap (uint32_t low, uint32_t high)
 {
@@ -51,5 +52,5 @@ void TSC_CONTEXT_INIT (TSC_CONTEXT * ctx, void *stack, size_t stack_sz,
 	ctx -> uc_sigmask = mask;
 #endif
 
-	TSC_CONTEXT_MAKE (ctx, bootstrap, 2, low, high);
+	TSC_CONTEXT_MAKE (ctx, (boot_entry_t)bootstrap, 2, low, high);
 }

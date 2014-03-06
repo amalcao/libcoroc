@@ -110,10 +110,10 @@ typedef struct tsc_vfs_driver *tsc_vfs_driver_t;
 
 // the userspace APIs ..
 int __tsc_vfs_open (const char *name, int flags, bool sync, tsc_vfs_driver_t drv);
-void __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv);
+int __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv);
 void __tsc_vfs_flush (int fd, bool sync, tsc_vfs_driver_t drv);
 ssize_t __tsc_vfs_read (int fd, void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
-ssize_t __tsc_vfs_write (int fd, void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
+ssize_t __tsc_vfs_write (int fd, const void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
 off_t __tsc_vfs_lseek (int fd, off_t offset, int whence, bool sync, tsc_vfs_driver_t drv);
 
 // asynchronized APIs
