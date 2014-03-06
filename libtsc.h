@@ -133,6 +133,18 @@ off_t __tsc_vfs_lseek (int fd, off_t offset, int whence, bool sync, tsc_vfs_driv
 #define tsc_vfs_lseek_sync(...) __tsc_vfs_lseek(__VA_ARGS__, true, NULL)
 
 
+/* --- NET API --- */
+
+int tsc_net_nonblock (int fd);
+int tsc_net_read (int fd, void *buf, int size);
+int tsc_net_write (int fd, void *buf, int size);
+int tsc_net_wait (int fd, int mode);
+
+int tsc_net_announce (bool istcp, char *server, int port);
+int tsc_net_accept (int fd, char *server, int *port);
+int tsc_net_lookup (char *name, uint32_t *ip);
+int tsc_net_dial (bool istcp, char *server, int port);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

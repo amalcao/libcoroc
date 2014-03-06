@@ -22,6 +22,7 @@ int main (int argc, char **argv)
     clock_initialize ();
     tsc_intertimer_initialize ();
     tsc_vfs_initialize ();
+    tsc_netpoll_initialize ();
 
     // -- TODO : more modules later .. --
     //

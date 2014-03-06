@@ -47,6 +47,10 @@ static void core_sched (void)
       if (candidate == NULL) 
         candidate = core_elect (vpu); 
 
+      // polling the async net IO ..
+      if (__tsc_netpoll_polling (false))
+        continue;
+
 #if ENABLE_VFS
       if (candidate == NULL)
         candidate = tsc_vfs_get_thread();
