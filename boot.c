@@ -14,7 +14,15 @@ char ** __argv;
 
 int main (int argc, char **argv)
 {
-	int n = TSC_NP_ONLINE();
+	int n = 0;
+    char *endp = NULL;
+    const char *env = getenv("TSC_NP");
+
+    if (env != NULL)
+        n = strtol (env, &endp, 0);
+    if (n <= 0 || endp == env)
+        n = TSC_NP_ONLINE();
+
 	__argc = argc;
 	__argv = argv;
 
