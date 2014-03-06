@@ -46,6 +46,8 @@ Some examples are provided for users to test the library:
 - **ticker.c**          for testing the ticker/timer API
 - **file.c**            for testing the file API
 - **primes.c**	 		example migrated from libtask
+- **tcpproxy.c**        example migrated from libtask
+- **httpload.c**        example migrated from libtask
 - **mandelbrot.c**		benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
 - **spectral-norm.c**	benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
 
@@ -55,7 +57,7 @@ There are lots of things needed to improve both the functionality and the perfor
 
 - A more efficient way for work-stealing among the schedulers
 - Wrappers for the system calls which may suspend the current scheduler
-- Asynchronous API for socket IO operations
+- Asynchronous API for socket IO operations (**DNOE**)
 - [Segment-stack](http://gcc.gnu.org/wiki/SplitStacks) support for coroutines (**DONE**)
 - A more efficient memory management module, like [tc_malloc](http://goog-perftools.sourceforge.net/doc/tcmalloc.html)
 - Garbage-Collection mechanism for auto deallocation

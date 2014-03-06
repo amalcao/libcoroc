@@ -1,19 +1,26 @@
 
-APPS := findmax.run primes.run timeshare.run select.run ticker.run file.run
-APPS += mandelbrot.run spectral-norm.run
+APPS := findmax.run timeshare.run select.run ticker.run file.run 
+APPS += primes.run httpload.run tcpproxy.run ## modify from examples in LibTask
+APPS += mandelbrot.run spectral-norm.run ## modify from benchmarkgame.org
 
 OS := $(shell uname)
 
 CC := gcc-4.8
 
-TSC_HEADERS:= clock.h channel.h context.h lock.h queue.h support.h thread.h vpu.h time.h vfs.h
-TSC_CFILES := boot.c channel.c clock.c context.c thread.c vpu.c time.c vfs.c
+TSC_HEADERS:= clock.h channel.h context.h lock.h queue.h support.h thread.h vpu.h time.h vfs.h netpoll.h
+TSC_CFILES := boot.c channel.c clock.c context.c thread.c vpu.c time.c vfs.c netpoll.c net.c
 
 ifeq (${OS}, Darwin)
-TSC_HEADERS += pthread_barrier.h pthread_spinlock.h amd64-ucontext.h 386-ucontext.h power-ucontext.h
+TSC_HEADERS += pthread_barrier.h pthread_spinlock.h amd64-ucontext.h 386-ucontext.h power-ucontext.h 
 TSC_CFILES += pthread_barrier.c ucontext.c
 TSC_OBJS := asm.o
 use_clang := 1
+endif
+
+ifeq (${OS}, Linux)
+TSC_CFILES += netpoll_epoll.c
+else
+TSC_CFILES += netpoll_poll.c
 endif
 
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
