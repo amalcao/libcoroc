@@ -37,22 +37,27 @@ int tsc_net_write (int fd, void *buf, int n)
   return total;
 }
 
-int tsc_net_wait (int fd, int mode)
+static void __tsc_poll_desc_init (tsc_poll_desc_t desc, int fd, int mode)
 {
-  tsc_poll_desc_t desc = malloc(sizeof(struct tsc_poll_desc));
   desc -> done = false;
   desc -> ok = false;
   desc -> fd = fd;
   desc -> mode = mode;
   desc -> wait = thread_self();
   lock_init (& desc -> lock);
+}
+
+int tsc_net_wait (int fd, int mode)
+{
+  struct tsc_poll_desc desc;
+  __tsc_poll_desc_init (& desc, fd, mode);
 
   TSC_SIGNAL_MASK();
   // calling the low level Netpoll APIs to add ..
-  lock_acquire (& desc -> lock);
-  __tsc_netpoll_add (desc);
+  lock_acquire (& desc . lock);
+  __tsc_netpoll_add (& desc);
   // then suspend current thread ..
-  vpu_suspend (NULL, & desc -> lock, lock_release);
+  vpu_suspend (NULL, & desc . lock, lock_release);
 
   TSC_SIGNAL_UNMASK();
   return 0;
