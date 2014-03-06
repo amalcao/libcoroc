@@ -29,7 +29,7 @@ static uint64_t tsc_getcurtime (void)
 
    gettimeofday (& tv, & tz);
    
-   return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+   return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
 tsc_timer_t timer_allocate (uint32_t period, void (*func)(void))
