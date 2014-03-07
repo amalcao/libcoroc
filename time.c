@@ -70,8 +70,10 @@ channel_t timer_at (tsc_timer_t t, uint64_t when)
 
 int timer_start (tsc_timer_t t)
 {
-    if (t->timer.when == 0)
+    if (t->timer.when <= tsc_getcurtime()) {
+        tsc_send_timer (t); 
         return -1;
+    }
 
     return tsc_add_intertimer (& t->timer);
 }
