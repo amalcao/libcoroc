@@ -56,7 +56,7 @@ void renderRow (channel_t * chans)
 #define WORK_CHAN 0
 #define FINISH_CHAN 1
 
-void user_main (int argc, char ** argv)
+void main (int argc, char ** argv)
 {
 	int size, y;
 	channel_t chans[2];

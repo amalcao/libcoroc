@@ -4,7 +4,7 @@
 const char wbuf[] = "Hello the world!\n";
 char rbuf[100];
 
-int user_main (int argc, char **argv)
+int main (int argc, char **argv)
 {
     int fd = tsc_vfs_open("/tmp/123.txt", O_RDWR | O_APPEND | O_CREAT);
     tsc_vfs_write(fd, wbuf, sizeof(wbuf));

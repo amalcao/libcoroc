@@ -12,7 +12,7 @@ char *url;
 
 int fetchtask(void*);
 
-int user_main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 	int i, n;
 	

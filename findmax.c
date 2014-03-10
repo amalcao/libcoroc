@@ -73,7 +73,7 @@ int find_max (channel_t chan)
 }
 
 /* -- the user entry -- */
-int user_main (int argc, char ** argv)
+int main (int argc, char ** argv)
 {
 	int max = 0, size = MAX, start = 0;
 	array = malloc (size * sizeof(int));

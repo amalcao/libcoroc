@@ -8,7 +8,7 @@ void callback (void)
     printf ("\ttime out!\n");
 }
 
-int user_main (int argc, char ** argv)
+int main (int argc, char ** argv)
 {
     uint64_t awaken = 0;
     int i = 0;

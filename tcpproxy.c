@@ -28,7 +28,7 @@ int* mkfd2 (int fd1, int fd2)
     return a;
 }
 
-int user_main (int argc, char **argv)
+int main (int argc, char **argv)
 {
     int cfd, fd;
     int rport;

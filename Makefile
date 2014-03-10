@@ -30,6 +30,8 @@ CFLAGS += -DENABLE_WORKSTEALING
 CFLAGS += -DENABLE_CHANNEL_SELECT
 CFLAGS += -DENABLE_VFS
 
+APP_CFLAGS := -Dmain=user_main
+
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
 endif
@@ -66,7 +68,7 @@ libTSC.a: $(TSC_OBJS)
 	$(CC) -c ${CFLAGS} -Werror $<
 
 %.run:%.c libTSC.a
-	$(CC) $< ${CFLAGS} -L. -lTSC -lpthread -lm -o $@
+	$(CC) $< ${CFLAGS} ${APP_CFLAGS} -L. -lTSC -lpthread -lm -o $@
 
 .PHONY:clean
 clean:

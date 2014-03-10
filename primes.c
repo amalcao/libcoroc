@@ -34,8 +34,7 @@ int primetask(void *arg)
 	return 0;
 }
 
-void
-user_main(int argc, char ** argv)
+void main(int argc, char ** argv)
 {
 	unsigned long i;
 	channel_t c;

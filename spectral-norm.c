@@ -125,7 +125,7 @@ double SpectralNorm (int n)
 	return sqrt (dot_uv / dot_vv);
 }
 
-void user_main (int argc, char ** argv)
+void main (int argc, char ** argv)
 {
 	if (argc > 1)
 		Num = atoi (argv[1]);
