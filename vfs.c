@@ -47,7 +47,7 @@ void *tsc_vfs_routine (void *unused)
         case TSC_VFS_OPEN:
             {
               int fd = 
-                ops -> driver -> open((char*)(ops->buf), (int)(ops->arg0));
+                ops -> driver -> open((char*)(ops->buf), (int)(ops->arg0), 0644);
               ops -> arg0 = fd;
               break;
             }
