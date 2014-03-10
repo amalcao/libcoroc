@@ -145,6 +145,10 @@ int tsc_net_accept (int fd, char *server, int *port);
 int tsc_net_lookup (char *name, uint32_t *ip);
 int tsc_net_dial (bool istcp, char *server, int port);
 
+/* --- libtsc startup call --- */
+int tsc_boot (int argc, char **argv, int np, thread_handler_t entry);
+extern thread_t init;
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

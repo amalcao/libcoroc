@@ -6,27 +6,23 @@
 #include "clock.h"
 #include "thread.h"
 
-extern int user_main (void*);
+extern void vpu_initialize (int);
+extern void clock_initialize (void);
 extern void tsc_intertimer_initialize (void);
+extern void tsc_vfs_initialize (void);
+extern void tsc_netpoll_initialize (void);
 
 int __argc;
 char ** __argv;
 
-int main (int argc, char **argv)
+thread_t init = NULL;
+
+int tsc_boot (int argc, char **argv, int np, thread_handler_t entry)
 {
-	int n = 0;
-    char *endp = NULL;
-    const char *env = getenv("TSC_NP");
-
-    if (env != NULL)
-        n = strtol (env, &endp, 0);
-    if (n <= 0 || endp == env)
-        n = TSC_NP_ONLINE();
-
 	__argc = argc;
 	__argv = argv;
 
-    vpu_initialize (n);
+    vpu_initialize (np);
     clock_initialize ();
     tsc_intertimer_initialize ();
     tsc_vfs_initialize ();
@@ -34,8 +30,9 @@ int main (int argc, char **argv)
 
     // -- TODO : more modules later .. --
     //
-    thread_t init = thread_allocate ((thread_handler_t)user_main,
-								NULL, "init", TSC_THREAD_MAIN, NULL);
+    if (entry != NULL)
+        init = thread_allocate (entry, NULL, "init", 
+                    TSC_THREAD_MAIN, NULL);
 
     clock_routine(); // never return ..
 

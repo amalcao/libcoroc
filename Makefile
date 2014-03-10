@@ -8,7 +8,7 @@ OS := $(shell uname)
 CC := gcc-4.8
 
 TSC_HEADERS:= clock.h channel.h context.h lock.h queue.h support.h thread.h vpu.h time.h vfs.h netpoll.h
-TSC_CFILES := boot.c channel.c clock.c context.c thread.c vpu.c time.c vfs.c netpoll.c net.c
+TSC_CFILES := boot.c channel.c clock.c context.c thread.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c
 
 ifeq (${OS}, Darwin)
 TSC_HEADERS += pthread_barrier.h pthread_spinlock.h amd64-ucontext.h 386-ucontext.h power-ucontext.h 
