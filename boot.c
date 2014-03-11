@@ -22,6 +22,16 @@ int tsc_boot (int argc, char **argv, int np, thread_handler_t entry)
 	__argc = argc;
 	__argv = argv;
 
+    if (np <= 0) {
+        const char *env = getenv("TSC_NP");
+        char *endp = NULL;
+
+        if (env != NULL)
+            np = strtol(env, &endp, 0);
+        if (np <= 0 || endp == env)
+            np = TSC_NP_ONLINE();
+    }
+
     vpu_initialize (np);
     clock_initialize ();
     tsc_intertimer_initialize ();
