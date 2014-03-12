@@ -30,7 +30,8 @@ typedef struct vpu_manager {
 #ifdef ENABLE_DAEDLOCK_DETECT
     pthread_cond_t cond;
     pthread_mutex_t lock;
-    uint32_t alive;
+    uint16_t alive;
+    uint16_t idle;
     queue_t wait_list;
 #endif
 } vpu_manager_t;
@@ -41,7 +42,7 @@ extern int core_wait (void *);
 extern int core_yield (void *);
 extern int core_exit (void *);
 
-extern void vpu_initialize (int cpu_mp_count);
+extern void vpu_initialize (int cpu_mp_count, thread_handler_t entry);
 extern void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler); 
 extern void vpu_ready (struct thread * thread);
 extern void vpu_syscall (int (*pfn)(void *));

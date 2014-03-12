@@ -118,4 +118,7 @@ __exit_polling:
   return ret;
 }
 
-
+int __tsc_netpoll_size (void)
+{
+    return tsc_netpoll_manager . size;
+}

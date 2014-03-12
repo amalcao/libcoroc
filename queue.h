@@ -46,6 +46,15 @@ static inline void atomic_queue_init (queue_t * queue) {
 	queue_init (queue);
 }
 
+static inline int atomic_queue_size (queue_t * queue) {
+    int size;
+    lock_acquire(& queue -> lock);
+    size = queue -> status;
+    lock_release(& queue -> lock);
+    
+    return size;
+}
+
 /*---- Add functions ----*/
 static inline void queue_add (queue_t * queue, queue_item_t * item) {
 	/*---- Clean the links ----*/

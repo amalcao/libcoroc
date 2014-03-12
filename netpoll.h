@@ -27,6 +27,7 @@ int __tsc_netpoll_init (int max);
 int __tsc_netpoll_add (tsc_poll_desc_t desc);
 int __tsc_netpoll_rem (tsc_poll_desc_t desc);
 int __tsc_netpoll_fini (void);
+int __tsc_netpoll_size (void);
 bool __tsc_netpoll_polling (bool block);
 
 void tsc_netpoll_initialize (void);

@@ -6,6 +6,9 @@
 #include "vfs.h"
 #include "lock.h"
 
+#ifdef ENABLE_DAEDLOCK_DETECT
+# define MAX_SPIN_LOOP_NUM 2
+#endif // ENABLE_DAEDLOCK_DETECT
 
 // the VPU manager instance.
 vpu_manager_t vpu_manager;
@@ -14,6 +17,8 @@ TSC_BARRIER_DEFINE
 TSC_TLS_DEFINE
 TSC_SIGNAL_MASK_DEFINE
 
+// TODO : improve the strategy of work-stealing,
+// e.g. , using the random way to reduce the overhead of locks.
 static inline thread_t core_elect (vpu_t * vpu)
 {
   thread_t candidate = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
@@ -32,13 +37,29 @@ static inline thread_t core_elect (vpu_t * vpu)
   return candidate;
 }
 
+// try to find and schedule a runnable coroutine.
+// search order is :
+// 1) the private running queue of current VPU
+// 2) the global running queue
+// 3) stealing other VPUs' running queues
+// 4) try to polling the async net IO 
+//
+// TODO : since the busy loop will make CPUs busy
+// and may cause the performance degradation,
+// so if no corouine is found for a relative "long" time,
+// the VPU thread should go to sleep and wait for other
+// to wakeup it. 
+//
 static void core_sched (void)
 {
   vpu_t * vpu = TSC_TLS_GET();
   thread_t candidate = NULL;
   int idle_loops = 0;
 
-  /* clean the watchdog tick */
+  // atomic inc the all idle thread number
+  TSC_ATOMIC_INC(vpu_manager . idle);
+  
+  // clean the watchdog tick
   vpu -> watchdog = 0;
 
   /* --- the actual loop -- */
@@ -61,6 +82,9 @@ static void core_sched (void)
           if (candidate -> rem_timeslice == 0)
             candidate -> rem_timeslice = candidate -> init_timeslice;
 #endif
+          // atomic dec the total idle number
+          TSC_ATOMIC_DEC(vpu_manager . idle);
+
           candidate -> syscall = false;
           candidate -> status = TSC_THREAD_RUNNING;
           candidate -> vpu_id = vpu -> id;
@@ -76,24 +100,31 @@ static void core_sched (void)
           TSC_CONTEXT_LOAD(& candidate -> ctx);
       }
 #ifdef ENABLE_DAEDLOCK_DETECT
-      if (++idle_loops > 10000000) {
+      if (++idle_loops > MAX_SPIN_LOOP_NUM) {
           pthread_mutex_lock (& vpu_manager . lock);
           vpu_manager . alive --;
 
-          if (vpu_manager . alive == 0) {
+          if (vpu_manager . alive == 0 && 
+              __tsc_netpoll_size() == 0 &&
+              !tsc_vfs_working() ) {
               vpu_backtrace (vpu -> id);
-          } else {
+          } else if (vpu_manager . alive > 0) {
               pthread_cond_wait (& vpu_manager . cond, & vpu_manager . lock);
               // wake up by other vpu ..
-              vpu_manager . alive ++;
-              idle_loops = 0;
-              pthread_mutex_unlock (& vpu_manager . lock);
           }
+          
+          idle_loops = 0;
+          vpu_manager . alive ++;
+          pthread_mutex_unlock (& vpu_manager . lock);
       }
 #endif
   }
 }
 
+// destroy a given coroutine and its stack context.
+// since the stack may always be used during the lifetime
+// of the coroutine, so this destruction must be a syscall
+// which called by system (idle) corouine on the system context.
 int core_exit (void * args)
 {
   vpu_t * vpu = TSC_TLS_GET();
@@ -108,8 +139,8 @@ int core_exit (void * args)
   return 0;
 }
 
-/* called on scheduler's context 
- * let the given thread waiting for some event */
+// called on scheduler's context 
+// let the given thread waiting for some event
 int core_wait (void * args)
 {
   vpu_t * vpu = TSC_TLS_GET();
@@ -136,6 +167,8 @@ int core_wait (void * args)
   return 0;
 }
 
+// stop current coroutine and try to schedule others.
+// NOTE : must link current one to the global running queue!
 int core_yield (void * args)
 {
   vpu_t * vpu = TSC_TLS_GET();
@@ -146,6 +179,10 @@ int core_yield (void * args)
   return 0;
 }
 
+// init every vpu thread, and make current stack context
+// as the system (idle) corouine's stack context.
+// all system calls must run on those contexts 
+// via the `vpu_syscall()' .
 static void * per_vpu_initalize (void * vpu_id)
 {
   thread_t scheduler;
@@ -195,7 +232,9 @@ static void * per_vpu_initalize (void * vpu_id)
   core_sched ();
 }
 
-void vpu_initialize (int vpu_mp_count)
+// init the vpu sub-system with the hint of
+// how many OS threads will be used.
+void vpu_initialize (int vpu_mp_count, thread_handler_t entry)
 {
   // schedulers initialization
   size_t stacksize = 1024 + PTHREAD_STACK_MIN;
@@ -212,6 +251,7 @@ void vpu_initialize (int vpu_mp_count)
   atomic_queue_init (& vpu_manager . wait_list);
 
   vpu_manager . alive = vpu_mp_count;
+  vpu_manager . idle = 0;
 
   pthread_cond_init (& vpu_manager . cond, NULL);
   pthread_mutex_init (& vpu_manager . lock, NULL);
@@ -221,7 +261,8 @@ void vpu_initialize (int vpu_mp_count)
   TSC_TLS_INIT();
   TSC_SIGNAL_MASK_INIT();
 
-  // TSC_SIGNAL_MASK();
+  // create the first coroutine, "init" ..
+  thread_t init = thread_allocate (entry, NULL, "init", TSC_THREAD_MAIN, 0); 
 
   // VPU initialization
   uint64_t index = 0;
@@ -239,6 +280,8 @@ void vpu_initialize (int vpu_mp_count)
   TSC_BARRIER_WAIT();
 }
 
+// make the given coroutine runnable,
+// change its state and link it to the running queue.
 void vpu_ready (struct thread * thread)
 {
   assert (thread != NULL);
@@ -252,6 +295,8 @@ void vpu_ready (struct thread * thread)
   vpu_wakeup_one ();
 }
 
+// call the core functions on a system (idle) coroutine's stack context,
+// in order to prevent the conpetition among the VPUs.
 void vpu_syscall (int (*pfn)(void *)) 
 {
   vpu_t * vpu = TSC_TLS_GET();
@@ -295,6 +340,12 @@ void vpu_syscall (int (*pfn)(void *))
   return ;
 }
 
+// suspend current coroutine on a given wait queue,
+// the `queue' is nil means the coroutine has already been
+// saved in somewhere.
+// the `lock' must be hold until the context be saved completely,
+// in order to prevent other VPU to load the context in an ill state.
+// the `handler' tells the VPU how to release the `lock'.
 void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler)
 {
   thread_t self = thread_self ();
@@ -329,8 +380,10 @@ void vpu_clock_handler (int signal)
 void vpu_wakeup_one (void)
 {
 #ifdef ENABLE_DAEDLOCK_DETECT
+  // wakeup a VPU thread who waiting the pthread_cond_t.
   pthread_mutex_lock (& vpu_manager . lock);
-  if (vpu_manager . alive < vpu_manager . xt_index) {
+  if (vpu_manager . alive < vpu_manager . xt_index && 
+        vpu_manager . idle < 1) {
       pthread_cond_signal (& vpu_manager . cond);
   }
   pthread_mutex_unlock (& vpu_manager . lock);
@@ -342,6 +395,9 @@ void vpu_backtrace (int id)
 {
   fprintf (stderr, "All threads are sleep, daedlock may happen!\n\n");
 
+  // the libc's `backtrace()' can only trace the frame of the caller,
+  // so we must schedule the suspended coroutine to a running OS thread
+  // and then calling the `backtrace()' ..
   thread_t wait_thr;
   while (wait_thr = atomic_queue_rem (& vpu_manager . wait_list)) {
       if (wait_thr != vpu_manager . main_thread) {
@@ -352,7 +408,8 @@ void vpu_backtrace (int id)
       }
   }
 
-  // schedule the main thread at last ..
+  // schedule the main thread at last,
+  // because the main thread exits will kill the program.
   vpu_manager . main_thread -> backtrace = true;
   atomic_queue_add(& vpu_manager . xt[id], 
                    & (vpu_manager . main_thread -> status_link) );

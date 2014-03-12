@@ -7,6 +7,7 @@
 
 
 static int __tsc_epfd = -1;
+static int __tsc_num_op = 0;
 
 int __tsc_netpoll_init (int max)
 {
@@ -37,11 +38,13 @@ static inline int __tsc_netpoll_ctl (tsc_poll_desc_t desc, int op)
 
 int __tsc_netpoll_add (tsc_poll_desc_t desc)
 {
+  TSC_ATOMIC_INC( __tsc_num_op);
   return __tsc_netpoll_ctl (desc, EPOLL_CTL_ADD);
 }
 
 int __tsc_netpoll_rem (tsc_poll_desc_t desc)
 {
+  TSC_ATOMIC_INC(__tsc_num_op);
   return __tsc_netpoll_ctl (desc, EPOLL_CTL_DEL);
 }
 
@@ -79,4 +82,8 @@ bool __tsc_netpoll_polling (bool block)
   return true;
 }
 
+int __tsc_netpoll_size (void)
+{
+    return __tsc_num_op;
+}
 

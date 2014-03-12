@@ -108,29 +108,32 @@ int timer_reset (tsc_timer_t, uint64_t);
 struct tsc_vfs_driver;
 typedef struct tsc_vfs_driver *tsc_vfs_driver_t;
 
-// the userspace APIs ..
-int __tsc_vfs_open (const char *name, int flags, bool sync, tsc_vfs_driver_t drv);
-int __tsc_vfs_close (int fd, bool sync, tsc_vfs_driver_t drv);
-void __tsc_vfs_flush (int fd, bool sync, tsc_vfs_driver_t drv);
-ssize_t __tsc_vfs_read (int fd, void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
-ssize_t __tsc_vfs_write (int fd, const void *buf, size_t size, bool sync, tsc_vfs_driver_t drv);
-off_t __tsc_vfs_lseek (int fd, off_t offset, int whence, bool sync, tsc_vfs_driver_t drv);
+// the APIs ..
+int __tsc_vfs_open (tsc_vfs_driver_t drv, bool sync, const char *name, int flags, ...);
+int __tsc_vfs_close (tsc_vfs_driver_t drv, bool sync, int fd);
+int __tsc_vfs_ioctl (tsc_vfs_driver_t drv, bool sync, int fd, int cmd, ...);
+void __tsc_vfs_flush (tsc_vfs_driver_t drv, bool sync, int fd);
+ssize_t __tsc_vfs_read (tsc_vfs_driver_t drv, bool sync, int fd, void *buf, size_t size);
+ssize_t __tsc_vfs_write (tsc_vfs_driver_t drv, bool sync, int fd, const void *buf, size_t size);
+off_t __tsc_vfs_lseek (tsc_vfs_driver_t drv, bool sync, int fd, off_t offset, int whence);
 
 // asynchronized APIs
-#define tsc_vfs_open(...) __tsc_vfs_open(__VA_ARGS__, false, NULL)
-#define tsc_vfs_close(fd) __tsc_vfs_close(fd, false, NULL)
-#define tsc_vfs_flush(fd) __tsc_vfs_flush(fd, false, NULL)
-#define tsc_vfs_read(...) __tsc_vfs_read(__VA_ARGS__, false, NULL)
-#define tsc_vfs_write(...) __tsc_vfs_write(__VA_ARGS__, false, NULL)
-#define tsc_vfs_lseek(...) __tsc_vfs_lseek(__VA_ARGS__, false, NULL)
+#define tsc_vfs_open(...) __tsc_vfs_open(NULL, false, __VA_ARGS__)
+#define tsc_vfs_close(fd) __tsc_vfs_close(NULL, false, fd)
+#define tsc_vfs_flush(fd) __tsc_vfs_flush(NULL, false, fd)
+#define tsc_vfs_read(...) __tsc_vfs_read(NULL, false, __VA_ARGS__)
+#define tsc_vfs_write(...) __tsc_vfs_write(NULL, false, __VA_ARGS__)
+#define tsc_vfs_lseek(...) __tsc_vfs_lseek(NULL, false, __VA_ARGS__)
+#define tsc_vfs_ioctl(...) __tsc_vfs_ioctl(NULL, false, __VA_ARGS__)
 
 // synchronized APIs
-#define tsc_vfs_open_sync(...) __tsc_vfs_open(__VA_ARGS__, true, NULL)
-#define tsc_vfs_close_sync(fd) __tsc_vfs_close(fd, true, NULL)
-#define tsc_vfs_flush_sync(fd) __tsc_vfs_flush(fd, true, NULL)
-#define tsc_vfs_read_sync(...) __tsc_vfs_read(__VA_ARGS__, true, NULL)
-#define tsc_vfs_write_sync(...) __tsc_vfs_write(__VA_ARGS__, true, NULL)
-#define tsc_vfs_lseek_sync(...) __tsc_vfs_lseek(__VA_ARGS__, true, NULL)
+#define tsc_vfs_open_sync(...) __tsc_vfs_open(NULL, true, __VA_ARGS__)
+#define tsc_vfs_close_sync(fd) __tsc_vfs_close(NULL, true, fd)
+#define tsc_vfs_flush_sync(fd) __tsc_vfs_flush(NULL, true, fd)
+#define tsc_vfs_read_sync(...) __tsc_vfs_read(NULL, true, __VA_ARGS__)
+#define tsc_vfs_write_sync(...) __tsc_vfs_write(NULL, true, __VA_ARGS__)
+#define tsc_vfs_lseek_sync(...) __tsc_vfs_lseek(NULL, true, __VA_ARGS__)
+#define tsc_vfs_ioctl_sync(...) __tsc_vfs_ioctl(NULL, true, __VA_ARGS__)
 
 
 /* --- NET API --- */

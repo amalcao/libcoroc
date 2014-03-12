@@ -13,8 +13,7 @@ int main (int argc, char **argv)
         thread_exit(-1);
     }
 
-
-    fd = tsc_vfs_open(argv[1], O_RDWR | O_APPEND | O_CREAT);
+    fd = tsc_vfs_open(argv[1], O_RDWR | O_APPEND | O_CREAT, 0644);
     tsc_vfs_write(fd, wbuf, sizeof(wbuf));
     tsc_vfs_flush(fd);
     tsc_vfs_close(fd);

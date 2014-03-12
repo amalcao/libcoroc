@@ -66,6 +66,8 @@ int tsc_net_wait (int fd, int mode)
 int tsc_netpoll_wakeup (tsc_poll_desc_t desc, bool ok)
 {
   lock_acquire (& desc -> lock);
+
+  // hazard checking, maybe not neccessary..
   if (desc -> done)
     goto __exit_netpoll_wakeup;
 

@@ -114,6 +114,9 @@ void tsc_intertimer_initialize (void)
         TSC_DEFAULT_INTERTIMERS_CAP * sizeof(void*));
 }
 
+// adjust the heap using a top-down strategy,
+// `cur' is index of the given top, 
+// and `size' is whole size of the heap array..
 static void __down_adjust_heap (tsc_inter_timer_t **timers, uint32_t cur, uint32_t size)
 {
     uint32_t left, right, tmp;
@@ -138,6 +141,10 @@ static void __down_adjust_heap (tsc_inter_timer_t **timers, uint32_t cur, uint32
     }
 }
 
+// adjust the heap using down-up strategy,
+// where the `cur' is the index to handle,
+// no other argument is needed since the concurrent call
+// will stop when reach the top index, 0.
 static void __up_adjust_heap (tsc_inter_timer_t **timers, uint32_t cur)
 {
     if (cur == 0)
@@ -155,6 +162,8 @@ static void __up_adjust_heap (tsc_inter_timer_t **timers, uint32_t cur)
     }
 }
 
+// a special corouine will running this,
+// geting a timer which is ready and triger its callback..
 static int tsc_intertimer_routine (void *unused)
 {
     // once this routine is started,
@@ -207,6 +216,7 @@ static int tsc_intertimer_routine (void *unused)
     return 0;
 }
 
+// start the "timer" corouine when first add a timer.
 static void tsc_intertimer_start (void)
 {
     assert (tsc_intertimer_manager . daemon == NULL);

@@ -25,7 +25,6 @@ endif
 
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
-#CFLAGS += -DENABLE_QUICK_RESPONSE
 CFLAGS += -DENABLE_WORKSTEALING
 CFLAGS += -DENABLE_CHANNEL_SELECT
 CFLAGS += -DENABLE_VFS
@@ -51,7 +50,7 @@ ifeq (${enable_splitstack}, 1)
 	CFLAGS += -fsplit-stack
 endif
 
-ifeq (${enable_daedlock_detect}, 1)
+ifneq (${enable_daedlock_detect}, 0)
 	CFLAGS += -DENABLE_DAEDLOCK_DETECT
 	CFLAGS += -rdynamic
 endif
