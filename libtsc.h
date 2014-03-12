@@ -150,7 +150,6 @@ int tsc_net_dial (bool istcp, char *server, int port);
 
 /* --- libtsc startup call --- */
 int tsc_boot (int argc, char **argv, int np, thread_handler_t entry);
-extern thread_t init;
 
 #ifdef __cplusplus
 }
