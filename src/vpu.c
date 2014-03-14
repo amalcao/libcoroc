@@ -21,7 +21,8 @@ TSC_SIGNAL_MASK_DEFINE
 // e.g. , using the random way to reduce the overhead of locks.
 static inline tsc_coroutine_t core_elect (vpu_t * vpu)
 {
-  tsc_coroutine_t candidate = atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
+  tsc_coroutine_t candidate = 
+    atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
 #ifdef ENABLE_WORKSTEALING
   if (candidate == NULL) {
@@ -65,17 +66,19 @@ static void core_sched (void)
   /* --- the actual loop -- */
   while (true) {
       candidate = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
-      if (candidate == NULL) 
-        candidate = core_elect (vpu); 
 
-      // polling the async net IO ..
-      if (__tsc_netpoll_polling (false))
-        continue;
+      if (candidate == NULL) {
+          // polling the async net IO ..
+          __tsc_netpoll_polling (false);
 
+          // try to fetch tasks from the global queue,
+          // or stealing from other VPUs' queue ..
+          candidate = core_elect (vpu); 
 #if ENABLE_VFS
-      if (candidate == NULL)
-        candidate = tsc_vfs_get_coroutine();
+          if (candidate == NULL)
+            candidate = tsc_vfs_get_coroutine();
 #endif // ENABLE_VFS
+      }
 
       if (candidate != NULL) {
 #if 0   /* the timeslice is not used in this version */
@@ -88,6 +91,8 @@ static void core_sched (void)
           candidate -> syscall = false;
           candidate -> status = TSC_COROUTINE_RUNNING;
           candidate -> vpu_id = vpu -> id;
+          // FIXME : how to decide the affinity ?
+          candidate -> vpu_affinity = vpu -> id;
 
           /* restore the sigmask nested level */
           TSC_SIGNAL_STATE_LOAD(& candidate -> sigmask_nest);
@@ -112,7 +117,7 @@ static void core_sched (void)
               pthread_cond_wait (& vpu_manager . cond, & vpu_manager . lock);
               // wake up by other vpu ..
           }
-          
+
           idle_loops = 0;
           vpu_manager . alive ++;
           pthread_mutex_unlock (& vpu_manager . lock);
@@ -383,7 +388,7 @@ void vpu_wakeup_one (void)
   // wakeup a VPU thread who waiting the pthread_cond_t.
   pthread_mutex_lock (& vpu_manager . lock);
   if (vpu_manager . alive < vpu_manager . xt_index && 
-        vpu_manager . idle < 1) {
+      vpu_manager . idle < 1) {
       pthread_cond_signal (& vpu_manager . cond);
   }
   pthread_mutex_unlock (& vpu_manager . lock);
