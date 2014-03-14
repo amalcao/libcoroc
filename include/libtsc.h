@@ -99,6 +99,8 @@ int tsc_timer_start (tsc_timer_t);
 int tsc_timer_stop (tsc_timer_t);
 int tsc_timer_reset (tsc_timer_t, uint64_t);
 
+void tsc_udelay (uint64_t us);
+
 /* -- Vitual FS API -- */
 #include <unistd.h>
 #include <sys/types.h>
