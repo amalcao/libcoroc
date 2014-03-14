@@ -288,3 +288,12 @@ int tsc_del_intertimer (tsc_inter_timer_t *timer)
 
     return ret;
 }
+
+void tsc_udelay (uint64_t us)
+{
+    // TODO : provide static declare way to 
+    // initialize a tsc_timer on stack !!
+    tsc_timer_t timer = tsc_timer_allocate(0, 0);
+    tsc_chan_recv(tsc_timer_after(timer, us), NULL);
+    tsc_timer_dealloc(timer);
+}
