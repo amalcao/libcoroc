@@ -30,21 +30,59 @@ static inline void quantum_init (quantum * q, tsc_chan_t chan, tsc_coroutine_t c
   queue_item_init (& q -> link, q);
 }
 
+static bool __tsc_copy_to_buff (tsc_chan_t chan, void *buf) 
+{
+    tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
+    
+    if (bchan -> nbuf < bchan -> bufsize) {
+        uint8_t * p = bchan -> buf;
+        p += (chan -> elemsize) * (bchan -> sendx ++);
+        __chan_memcpy (p, buf, chan -> elemsize);
+        (bchan -> sendx) %= (bchan -> bufsize);
+        bchan -> nbuf ++;
+
+        return true;
+    }
+    return false;
+}
+
+static bool __tsc_copy_from_buff (tsc_chan_t chan, void *buf)
+{
+    tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
+
+    if (bchan -> nbuf > 0) {
+        uint8_t * p = bchan -> buf;
+        p += (chan -> elemsize) * (bchan -> recvx ++);
+        __chan_memcpy (buf, p, chan -> elemsize);
+        (bchan -> recvx) %= (bchan -> bufsize);
+        bchan -> nbuf --;
+        return true;
+    }
+    return false;
+}
+
 tsc_chan_t tsc_chan_allocate (int32_t elemsize, int32_t bufsize)
 {
-  struct tsc_chan * chan = TSC_ALLOC (sizeof(struct tsc_chan) + elemsize * bufsize);
-  assert (chan != NULL);
+  struct tsc_chan *chan;
 
-  chan -> elemsize = elemsize;
-  chan -> bufsize = bufsize;	
-  chan -> buf = (uint8_t *)(chan + 1);
-  chan -> nbuf = 0;
-  chan -> recvx = chan -> sendx = 0;
+  if (bufsize > 0) {
+      tsc_buffered_chan_t bchan = 
+        TSC_ALLOC (sizeof(struct tsc_buffered_chan) + elemsize * bufsize);
+      // init the general channel with the callbacks ..
+      tsc_chan_init ((tsc_chan_t)bchan, elemsize, 
+        __tsc_copy_to_buff, __tsc_copy_from_buff);
+      
+      // init the buffered channel ..
+      bchan -> bufsize = bufsize;
+      bchan -> buf = (uint8_t*)(bchan + 1);
+      bchan -> nbuf = 0;
+      bchan -> recvx = bchan -> sendx = 0;
 
-  lock_init(& chan -> lock);
-
-  queue_init (& chan -> recv_que);
-  queue_init (& chan -> send_que);
+      chan = (tsc_chan_t)bchan;
+  } else {
+      chan = TSC_ALLOC (sizeof(struct tsc_chan));
+      tsc_chan_init (chan, elemsize, NULL, NULL);
+  }
 
   return chan;
 }
@@ -81,14 +119,10 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
       return CHAN_SUCCESS;
   }
   // check if there're any buffer slots ..
-  if (chan -> nbuf < chan -> bufsize) {
-      uint8_t * p = chan -> buf;
-      p += (chan -> elemsize) * (chan -> sendx ++);
-      __chan_memcpy (p, buf, chan -> elemsize);
-      (chan -> sendx) %= (chan -> bufsize);
-      chan -> nbuf ++;
+  if (chan -> copy_to_buff && 
+      chan -> copy_to_buff(chan, buf)) 
       return CHAN_SUCCESS;
-  }
+  
   // block or return CHAN_BUSY ..
   if (block) {
       // the async way ..
@@ -115,14 +149,10 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
       return CHAN_SUCCESS;
   }
   // check if there're any empty slots ..
-  if (chan -> nbuf > 0) {
-      uint8_t * p = chan -> buf;
-      p += (chan -> elemsize) * (chan -> recvx ++);
-      __chan_memcpy (buf, p, chan -> elemsize);
-      (chan -> recvx) %= (chan -> bufsize);
-      chan -> nbuf --;
+  if (chan -> copy_from_buff &&
+      chan -> copy_from_buff(chan, buf) )
       return CHAN_SUCCESS;
-  }
+
   // block or return CHAN_BUSY
   if (block) {
       // async way ..

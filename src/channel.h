@@ -12,18 +12,43 @@ enum {
     CHAN_BUSY,
 };
 
+struct tsc_chan;
+typedef bool (*tsc_chan_handler)(struct tsc_chan*, void*);
+
+// the general channel type ..
 typedef struct tsc_chan {
-    bool	select;
+    bool    select;
+    lock    lock;
     int32_t elemsize;
+    queue_t recv_que;
+    queue_t send_que;
+    tsc_chan_handler copy_to_buff;
+    tsc_chan_handler copy_from_buff;
+} * tsc_chan_t;
+
+// the buffered channel ..
+typedef struct tsc_buffered_chan {
+    struct  tsc_chan _chan;
     int32_t bufsize;
     int32_t nbuf;
     int32_t recvx;
     int32_t sendx;
-    queue_t recv_que;
-    queue_t send_que;
-    uint8_t * buf;
-    lock lock;
-} * tsc_chan_t;
+    uint8_t *buf;
+} * tsc_buffered_chan_t;
+
+// init the general channel ..
+static inline void tsc_chan_init (
+    tsc_chan_t ch, int32_t elemsize,
+    tsc_chan_handler to, tsc_chan_handler from) {
+    ch -> select = false;
+    ch -> elemsize = elemsize;
+    ch -> copy_to_buff = to;
+    ch -> copy_from_buff = from;
+
+    lock_init (& ch -> lock);
+    queue_init (& ch -> recv_que);
+    queue_init (& ch -> send_que);
+}
 
 tsc_chan_t tsc_chan_allocate (int32_t elemsize, int32_t bufsize);
 void tsc_chan_dealloc (tsc_chan_t chan);

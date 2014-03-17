@@ -2,9 +2,11 @@
 #define _TSC_CORE_COROUTINE_H_
 
 #include <stdint.h>
+
 #include "support.h"
 #include "context.h"
 #include "queue.h"
+#include "message.h"
 
 typedef int32_t (* tsc_coroutine_handler_t) (void *args);
 typedef void (* unlock_hander_t) (void *lock);
@@ -21,6 +23,8 @@ typedef struct tsc_coroutine_attributes {
 } tsc_coroutine_attributes_t;
 
 typedef struct tsc_coroutine {
+    struct tsc_async_chan _chan;
+
     tsc_coroutine_id_t id;
 	tsc_coroutine_id_t pid; // DEBUG
     char name[TSC_NAME_LENGTH];

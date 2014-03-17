@@ -51,15 +51,13 @@ tsc_coroutine_t tsc_coroutine_self (void);
 /* tsc_chan API */
 
 enum {
-	CHAN_SUCCESS = 0,
-	CHAN_AWAKEN,
-	CHAN_BUSY,
+    CHAN_SUCCESS = 0,
+    CHAN_AWAKEN,
+    CHAN_BUSY,
 };
-struct tsc_chan;
-struct tsc_chan_set;
 
-typedef struct tsc_chan* tsc_chan_t ;
-typedef struct tsc_chan_set* tsc_chan_set_t ;
+struct tsc_chan;
+typedef struct tsc_chan * tsc_chan_t;
 
 tsc_chan_t tsc_chan_allocate (int32_t elemsize, int32_t bufsize);
 void tsc_chan_dealloc (tsc_chan_t chan);
@@ -72,6 +70,8 @@ extern int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block);
 #define tsc_chan_nbsend(chan, buf) _tsc_chan_send(chan, buf, false)
 #define tsc_chan_nbrecv(chan, buf) _tsc_chan_recv(chan, buf, false)
 
+typedef struct tsc_chan_set * tsc_chan_set_t;
+
 /* multi-channel send / recv , like select clause in GoLang .. */
 tsc_chan_set_t tsc_chan_set_allocate (void);
 void tsc_chan_set_dealloc (tsc_chan_set_t set);
@@ -83,6 +83,17 @@ extern int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * ac
 
 #define tsc_chan_set_select(set, pchan) _tsc_chan_set_select(set, true, pchan)
 #define tsc_chan_set_nbselect(set, pchan) _tsc_chan_set_select(set, false, pchan)
+
+
+/* -- Asynchronzied Message APIs -- */
+typedef struct tsc_msg {
+    int32_t size;
+    void * msg;
+} tsc_msg_t;
+
+extern int tsc_send (struct tsc_coroutine*, void *, int32_t);
+extern int tsc_recv (void **, int32_t *, bool);
+
 
 /* -- Ticker/Timer API -- */
 struct tsc_timer;

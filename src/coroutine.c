@@ -47,6 +47,9 @@ tsc_coroutine_t tsc_coroutine_allocate (
 	memset (& coroutine -> ctx, 0, sizeof (TSC_CONTEXT));
 
     if (coroutine != NULL) {
+        // init the interal channel ..
+        tsc_async_chan_init ((tsc_async_chan_t)coroutine);
+
         strcpy (coroutine -> name, name);
         coroutine -> type = type;
         coroutine -> id = TSC_ALLOC_TID();
