@@ -25,4 +25,7 @@ extern int tsc_async_chan_init (tsc_async_chan_t);
 extern int tsc_send (struct tsc_coroutine*, void *, int32_t);
 extern int tsc_recv (void *, int32_t , bool);
 
+extern int tsc_sendp (struct tsc_coroutine*, void *, int32_t);
+extern int tsc_recvp (void **, int32_t*, bool);
+
 #endif // _TSC_CORE_MESSAGE_H_

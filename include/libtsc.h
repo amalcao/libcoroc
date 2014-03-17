@@ -94,6 +94,9 @@ typedef struct tsc_msg {
 extern int tsc_send (struct tsc_coroutine*, void *, int32_t);
 extern int tsc_recv (void *, int32_t, bool);
 
+extern int tsc_sendp (struct tsc_coroutine*, void *, int32_t);
+extern int tsc_recvp (void **, int32_t*, bool);
+
 
 /* -- Ticker/Timer API -- */
 struct tsc_timer;

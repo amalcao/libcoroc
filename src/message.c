@@ -71,3 +71,22 @@ int tsc_recv (void *buf, int32_t size, bool block)
 
   return ret;
 }
+
+int tsc_sendp (tsc_coroutine_t target, void *ptr, int32_t size)
+{
+  assert (target != NULL);
+  struct tsc_msg _msg = { size, ptr };
+
+  _tsc_chan_send ((tsc_chan_t)target, & _msg, true);
+  return CHAN_SUCCESS;
+}
+
+int tsc_recvp (void **ptr, int32_t *size, bool block)
+{
+  struct tsc_msg _msg;
+  int ret = _tsc_chan_recv (NULL, & _msg, block);
+  *ptr = _msg . msg;
+  *size = _msg . size;
+
+  return ret;
+}
