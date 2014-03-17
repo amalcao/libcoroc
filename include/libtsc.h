@@ -92,7 +92,7 @@ typedef struct tsc_msg {
 } tsc_msg_t;
 
 extern int tsc_send (struct tsc_coroutine*, void *, int32_t);
-extern int tsc_recv (void **, int32_t *, bool);
+extern int tsc_recv (void *, int32_t, bool);
 
 
 /* -- Ticker/Timer API -- */
