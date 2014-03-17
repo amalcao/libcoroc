@@ -40,17 +40,17 @@ LibTSC is built as a static library now, in order to use it, you need to link it
 
 Some examples are provided for users to test the library:
 
-- [findmax.c](src/master/examples/findmax.c): for testing the basic thread and channel API
-- [findmax_msg.c](src/master/examples/findmax_msg.c): for testing the message-passing API
-- [timeshare.c](src/master/examples/timeshare.c): for testing the time-sharing mechanism
-- [select.c](src/master/examples/select.c): for testing the select operation among multi-channels
-- [ticker.c](src/master/examples/ticker.c): for testing the ticker/timer API
-- [file.c](src/master/examples/file.c): for testing the file API
-- [primes.c](src/master/examples/primes.c): example migrated from libtask
-- [tcpproxy.c](src/master/examples/tcpproxy.c): example migrated from libtask
-- [httpload.c](src/master/examples/httpload.c): example migrated from libtask
-- [mandelbrot.c](src/master/examples/mandelbrot.c)): benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
-- [spectral-norm.c](src/master/examples/spectral-norm.c): benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
+- [findmax.c](master/examples/findmax.c): for testing the basic thread and channel API
+- [findmax_msg.c](master/examples/findmax_msg.c): for testing the message-passing API
+- [timeshare.c](master/examples/timeshare.c): for testing the time-sharing mechanism
+- [select.c](master/examples/select.c): for testing the select operation among multi-channels
+- [ticker.c](master/examples/ticker.c): for testing the ticker/timer API
+- [file.c](master/examples/file.c): for testing the file API
+- [primes.c](master/examples/primes.c): example migrated from libtask
+- [tcpproxy.c](master/examples/tcpproxy.c): example migrated from libtask
+- [httpload.c](master/examples/httpload.c): example migrated from libtask
+- [mandelbrot.c](master/examples/mandelbrot.c)): benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
+- [spectral-norm.c](master/examples/spectral-norm.c): benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
 
 ## TODO
 
