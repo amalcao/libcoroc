@@ -131,7 +131,8 @@ static inline void queue_extract (queue_t * queue, queue_item_t * item) {
 
 	queue -> status -= 1;
 #else
-    assert (item -> que == queue && queue -> status);
+    if (item -> que != queue) return;
+    assert(queue -> status > 0);
     
     if (item -> prev) 
         item -> prev -> next = item -> next;

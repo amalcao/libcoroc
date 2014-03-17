@@ -4,26 +4,25 @@
 #include <stdint.h>
 #include "support.h"
 #include "queue.h"
-#include "coroutine.h"
 #include "lock_chain.h"
 
 enum {
-	CHAN_SUCCESS = 0,
-	CHAN_AWAKEN,
-	CHAN_BUSY,
+    CHAN_SUCCESS = 0,
+    CHAN_AWAKEN,
+    CHAN_BUSY,
 };
 
 typedef struct tsc_chan {
-	bool	select;
-	int32_t elemsize;
-	int32_t bufsize;
-	int32_t nbuf;
-	int32_t recvx;
-	int32_t sendx;
-	queue_t recv_que;
-	queue_t send_que;
-	uint8_t * buf;
-	lock lock;
+    bool	select;
+    int32_t elemsize;
+    int32_t bufsize;
+    int32_t nbuf;
+    int32_t recvx;
+    int32_t sendx;
+    queue_t recv_que;
+    queue_t send_que;
+    uint8_t * buf;
+    lock lock;
 } * tsc_chan_t;
 
 tsc_chan_t tsc_chan_allocate (int32_t elemsize, int32_t bufsize);
@@ -39,8 +38,8 @@ extern int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block);
 
 #if defined(ENABLE_CHANNEL_SELECT)
 typedef struct tsc_chan_set {
-	queue_t sel_que;
-	lock_chain_t locks;
+    queue_t sel_que;
+    lock_chain_t locks;
 } * tsc_chan_set_t;
 
 /* multi-channel send / recv , like select clause in GoLang .. */
