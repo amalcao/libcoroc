@@ -185,8 +185,11 @@ int _tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
 int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
 {
   TSC_SIGNAL_MASK();
-
   int ret;
+
+  // if the `chan' is nil, start the message passing mode..
+  if (chan == NULL)
+    chan = (tsc_chan_t)tsc_coroutine_self();
   lock_acquire (& chan -> lock);
   ret = __tsc_chan_recv (chan, buf, block);
   if (ret != CHAN_AWAKEN) // !! 
@@ -249,7 +252,11 @@ void tsc_chan_set_send (tsc_chan_set_t set, tsc_chan_t chan, void * buf)
 
 void tsc_chan_set_recv (tsc_chan_set_t set, tsc_chan_t chan, void * buf)
 {
-  assert (set != NULL && chan != NULL);
+  assert (set != NULL);
+  // if the `chan' is nil, start the message-passing mode ..
+  if (chan == NULL) 
+    chan = (tsc_chan_t)tsc_coroutine_self();
+
   chan -> select = true;
   lock_chain_add (& set -> locks, & chan -> lock);
   elem_t e = elem_alloc (CHAN_RECV, chan, buf);

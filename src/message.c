@@ -62,9 +62,7 @@ int tsc_send (tsc_coroutine_t target, void *buf, int32_t size)
 int tsc_recv (void *buf, int32_t size, bool block) 
 {
   struct tsc_msg _msg;
-  tsc_coroutine_t self = tsc_coroutine_self();
-
-  int ret = _tsc_chan_recv((tsc_chan_t)self, & _msg, block);
+  int ret = _tsc_chan_recv(NULL, & _msg, block);
 
   // TODO : note the memory has been allocated and copied twice,
   // sometimes we can optimize this by just copying a pointer, maybe ..
