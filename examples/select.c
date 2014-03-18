@@ -15,10 +15,13 @@ int sub_task (tsc_chan_t chan)
 
 int sub_task2 (tsc_coroutine_t parent)
 {
-  int id = 12345;
+  // note: since the `&id' is sent just as a pointer,
+  // so the `id' must be allocated on DATA segment (using static keyword), 
+  // not on the stack which released after tsc_coroutine_exit..
+  static int id = 12345;
 
   tsc_udelay (10000);
-  tsc_send (parent, &id, sizeof(int));
+  tsc_sendp (parent, &id, sizeof(int));
 
   tsc_coroutine_exit (0);
 }
@@ -49,7 +52,6 @@ int main (int argc, char ** argv)
 
       if (ch == me) {
           id = *(int*)(message.msg);
-          free(message.msg); // FIXME
       } 
 
       if (ch != NULL) {

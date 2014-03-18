@@ -30,7 +30,7 @@ static inline void quantum_init (quantum * q, tsc_chan_t chan, tsc_coroutine_t c
   queue_item_init (& q -> link, q);
 }
 
-static bool __tsc_copy_to_buff (tsc_chan_t chan, void *buf) 
+bool __tsc_copy_to_buff (tsc_chan_t chan, void *buf) 
 {
     tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
     
@@ -46,7 +46,7 @@ static bool __tsc_copy_to_buff (tsc_chan_t chan, void *buf)
     return false;
 }
 
-static bool __tsc_copy_from_buff (tsc_chan_t chan, void *buf)
+bool __tsc_copy_from_buff (tsc_chan_t chan, void *buf)
 {
     tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
 
@@ -68,16 +68,8 @@ tsc_chan_t tsc_chan_allocate (int32_t elemsize, int32_t bufsize)
   if (bufsize > 0) {
       tsc_buffered_chan_t bchan = 
         TSC_ALLOC (sizeof(struct tsc_buffered_chan) + elemsize * bufsize);
-      // init the general channel with the callbacks ..
-      tsc_chan_init ((tsc_chan_t)bchan, elemsize, 
-        __tsc_copy_to_buff, __tsc_copy_from_buff);
-      
       // init the buffered channel ..
-      bchan -> bufsize = bufsize;
-      bchan -> buf = (uint8_t*)(bchan + 1);
-      bchan -> nbuf = 0;
-      bchan -> recvx = bchan -> sendx = 0;
-
+      tsc_buffered_chan_init (bchan, elemsize, bufsize);
       chan = (tsc_chan_t)bchan;
   } else {
       chan = TSC_ALLOC (sizeof(struct tsc_chan));

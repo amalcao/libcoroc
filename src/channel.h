@@ -39,15 +39,33 @@ typedef struct tsc_buffered_chan {
 // init the general channel ..
 static inline void tsc_chan_init (
     tsc_chan_t ch, int32_t elemsize,
-    tsc_chan_handler to, tsc_chan_handler from) {
-    ch -> select = false;
-    ch -> elemsize = elemsize;
-    ch -> copy_to_buff = to;
-    ch -> copy_from_buff = from;
+    tsc_chan_handler to, tsc_chan_handler from)
+{
+  ch -> select = false;
+  ch -> elemsize = elemsize;
+  ch -> copy_to_buff = to;
+  ch -> copy_from_buff = from;
 
-    lock_init (& ch -> lock);
-    queue_init (& ch -> recv_que);
-    queue_init (& ch -> send_que);
+  lock_init (& ch -> lock);
+  queue_init (& ch -> recv_que);
+  queue_init (& ch -> send_que);
+}
+
+extern bool __tsc_copy_to_buff (tsc_chan_t, void*);
+extern bool __tsc_copy_from_buff (tsc_chan_t, void*);
+
+// init the buffered channel ..
+static inline void tsc_buffered_chan_init (
+    tsc_buffered_chan_t ch, 
+    int32_t elemsize, int32_t bufsize) 
+{
+  tsc_chan_init ((tsc_chan_t)ch, elemsize, 
+                 __tsc_copy_to_buff, __tsc_copy_from_buff);
+
+  ch -> bufsize = bufsize;
+  ch -> buf = (uint8_t*)(ch + 1);
+  ch -> nbuf = 0;
+  ch -> recvx = ch -> sendx = 0;
 }
 
 tsc_chan_t tsc_chan_allocate (int32_t elemsize, int32_t bufsize);

@@ -6,18 +6,22 @@
 #include "channel.h"
 #include "coroutine.h"
 
+struct tsc_timer;
+
 /* internal timer type */
 typedef struct {
     uint64_t when;
     uint32_t period;
     void (*func)(void*);
     void* args;
+    struct tsc_timer *owner;
 } tsc_inter_timer_t; 
 
 /* userspace timer type */
 typedef struct tsc_timer {
+    struct tsc_buffered_chan _chan;
+    uint64_t _buffer;
     tsc_inter_timer_t timer;
-    tsc_chan_t chan;
 } *tsc_timer_t;
 
 /* userspace api */
