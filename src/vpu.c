@@ -114,8 +114,10 @@ static void core_sched (void)
               !tsc_vfs_working() ) {
               vpu_backtrace (vpu -> id);
           } else if (vpu_manager . alive > 0) {
+              TSC_ATOMIC_DEC(vpu_manager . idle);
               pthread_cond_wait (& vpu_manager . cond, & vpu_manager . lock);
               // wake up by other vpu ..
+              TSC_ATOMIC_INC(vpu_manager . idle);
           }
 
           idle_loops = 0;

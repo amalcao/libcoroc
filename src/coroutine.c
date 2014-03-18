@@ -28,9 +28,9 @@ TSC_SIGNAL_MASK_DECLARE
 
 void tsc_coroutine_attr_init (tsc_coroutine_attributes_t * attr)
 {
-    attr -> stack_size = TSC_DEFAULT_STACK_SIZE;
-    attr -> timeslice = TSC_DEFAULT_TIMESLICE;
-    attr -> affinity = TSC_DEFAULT_AFFINITY;
+  attr -> stack_size = TSC_DEFAULT_STACK_SIZE;
+  attr -> timeslice = TSC_DEFAULT_TIMESLICE;
+  attr -> affinity = TSC_DEFAULT_AFFINITY;
 }
 
 tsc_coroutine_t tsc_coroutine_allocate (
@@ -38,122 +38,123 @@ tsc_coroutine_t tsc_coroutine_allocate (
     const char * name, uint32_t type, 
     tsc_coroutine_attributes_t * attr)
 {
-    TSC_SIGNAL_MASK();
+  TSC_SIGNAL_MASK();
 
-    size_t size;
-    vpu_t * vpu = TSC_TLS_GET();
-    tsc_coroutine_t coroutine = TSC_ALLOC(sizeof (struct tsc_coroutine)) ;
-	memset (coroutine, 0, sizeof(struct tsc_coroutine));
-	memset (& coroutine -> ctx, 0, sizeof (TSC_CONTEXT));
+  size_t size;
+  vpu_t * vpu = TSC_TLS_GET();
+  tsc_coroutine_t coroutine = TSC_ALLOC(sizeof (struct tsc_coroutine)) ;
+  memset (coroutine, 0, sizeof(struct tsc_coroutine));
+  memset (& coroutine -> ctx, 0, sizeof (TSC_CONTEXT));
 
-    if (coroutine != NULL) {
-        // init the interal channel ..
-        tsc_async_chan_init ((tsc_async_chan_t)coroutine);
+  if (coroutine != NULL) {
+      // init the interal channel ..
+      tsc_async_chan_init ((tsc_async_chan_t)coroutine);
 
-        strcpy (coroutine -> name, name);
-        coroutine -> type = type;
-        coroutine -> id = TSC_ALLOC_TID();
-        coroutine -> entry = entry;
-        coroutine -> arguments = arguments;
-		coroutine -> syscall = false;
-		coroutine -> wait = NULL;
-        coroutine -> sigmask_nest = 0;
+      strcpy (coroutine -> name, name);
+      coroutine -> type = type;
+      coroutine -> id = TSC_ALLOC_TID();
+      coroutine -> entry = entry;
+      coroutine -> arguments = arguments;
+      coroutine -> syscall = false;
+      coroutine -> wait = NULL;
+      coroutine -> sigmask_nest = 0;
 
-        if (attr != NULL) {
-            coroutine -> stack_size = attr -> stack_size;
-            coroutine -> vpu_affinity = attr -> affinity;
-            coroutine -> init_timeslice = attr -> timeslice;
-        } else {
-            coroutine -> stack_size = TSC_DEFAULT_STACK_SIZE;
-            coroutine -> vpu_affinity = TSC_DEFAULT_AFFINITY;
-            coroutine -> init_timeslice = TSC_DEFAULT_TIMESLICE;
-        }
+      if (attr != NULL) {
+          coroutine -> stack_size = attr -> stack_size;
+          coroutine -> vpu_affinity = attr -> affinity;
+          coroutine -> init_timeslice = attr -> timeslice;
+      } else {
+          coroutine -> stack_size = TSC_DEFAULT_STACK_SIZE;
+          coroutine -> vpu_affinity = TSC_DEFAULT_AFFINITY;
+          coroutine -> init_timeslice = TSC_DEFAULT_TIMESLICE;
+      }
 
-		if (coroutine -> stack_size > 0) {
+      if (coroutine -> stack_size > 0) {
 #ifdef ENABLE_SPLITSTACK
-            coroutine -> stack_base =
-                TSC_STACK_CONTEXT_MAKE(coroutine ->stack_size, & coroutine->ctx, & size);
+          coroutine -> stack_base =
+            TSC_STACK_CONTEXT_MAKE(coroutine ->stack_size, & coroutine->ctx, & size);
 #else
-            size = coroutine -> stack_size;
-			coroutine -> stack_base = TSC_ALLOC(coroutine -> stack_size);
+          size = coroutine -> stack_size;
+          coroutine -> stack_base = TSC_ALLOC(coroutine -> stack_size);
 #endif
-			assert (coroutine -> stack_base != NULL);
-		}
-		coroutine -> rem_timeslice = coroutine -> init_timeslice;
+          assert (coroutine -> stack_base != NULL);
+      }
+      coroutine -> rem_timeslice = coroutine -> init_timeslice;
 
-		queue_item_init (& coroutine -> status_link, coroutine);
-		queue_item_init (& coroutine -> wait_link, coroutine);
-	}
+      queue_item_init (& coroutine -> status_link, coroutine);
+      queue_item_init (& coroutine -> wait_link, coroutine);
+  }
 
-    if (coroutine -> type == TSC_COROUTINE_MAIN) {
-        vpu_manager . main = coroutine;
-    }
+  if (coroutine -> type == TSC_COROUTINE_MAIN) {
+      vpu_manager . main = coroutine;
+  }
 
-	if (coroutine -> type != TSC_COROUTINE_IDLE) { 
-        vpu_wakeup_one ();
-		TSC_CONTEXT_INIT (& coroutine -> ctx, coroutine -> stack_base, size, coroutine);
-		atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], 
-            & coroutine -> status_link);
-	}
+  if (coroutine -> type != TSC_COROUTINE_IDLE) { 
+      TSC_CONTEXT_INIT (& coroutine -> ctx, coroutine -> stack_base, size, coroutine);
+      atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], 
+                        & coroutine -> status_link);
 
-    TSC_SIGNAL_UNMASK();
-	return coroutine;
+      vpu_wakeup_one ();
+  }
+
+  TSC_SIGNAL_UNMASK();
+  return coroutine;
 }
 
 void tsc_coroutine_deallocate (tsc_coroutine_t coroutine)
 {
-	// TODO : reclaim the coroutine elements ..
+  // TODO : reclaim the coroutine elements ..
 #ifdef ENABLE_SPLITSTACK
-    __splitstack_releasecontext (& coroutine->ctx.stack_ctx[0]);
+  __splitstack_releasecontext (& coroutine->ctx.stack_ctx[0]);
 #else
-	if (coroutine -> stack_size > 0)
-		TSC_DEALLOC (coroutine -> stack_base);
+  if (coroutine -> stack_size > 0)
+    TSC_DEALLOC (coroutine -> stack_base);
 #endif
 
-	TSC_DEALLOC (coroutine);
+  TSC_DEALLOC (coroutine);
 }
 
 void tsc_coroutine_exit (int value)
 {
-	TSC_SIGNAL_MASK();
-	vpu_syscall (core_exit);
-	TSC_SIGNAL_UNMASK();
+  TSC_SIGNAL_MASK();
+  vpu_syscall (core_exit);
+  TSC_SIGNAL_UNMASK();
 }
 
 void tsc_coroutine_yield (void)
 {
-	TSC_SIGNAL_MASK();
-	vpu_syscall (core_yield);
-	TSC_SIGNAL_UNMASK();
+  TSC_SIGNAL_MASK();
+  vpu_syscall (core_yield);
+  TSC_SIGNAL_UNMASK();
 }
 
 tsc_coroutine_t tsc_coroutine_self (void)
 {   
-	tsc_coroutine_t self = NULL;
-	TSC_SIGNAL_MASK ();
-	vpu_t * vpu = TSC_TLS_GET();
-	self = vpu -> current;
-	TSC_SIGNAL_UNMASK ();
+  tsc_coroutine_t self = NULL;
+  TSC_SIGNAL_MASK ();
+  vpu_t * vpu = TSC_TLS_GET();
+  self = vpu -> current;
+  TSC_SIGNAL_UNMASK ();
 
-	return self;
+  return self;
 }
 
 void tsc_coroutine_backtrace (tsc_coroutine_t self)
 {
-    int level;
-    void *buffer[TSC_BACKTRACE_LEVEL];
+  int level;
+  void *buffer[TSC_BACKTRACE_LEVEL];
 
-    TSC_SIGNAL_MASK();
+  TSC_SIGNAL_MASK();
 
-    fprintf (stderr, "The \"%s\"<#%d> coroutine's stack trace:\n", 
-        self -> name, self -> id);
+  fprintf (stderr, "The \"%s\"<#%d> coroutine's stack trace:\n", 
+           self -> name, self -> id);
 
-    level = backtrace (buffer, TSC_BACKTRACE_LEVEL);
-    backtrace_symbols_fd (buffer, level, STDERR_FILENO);
+  level = backtrace (buffer, TSC_BACKTRACE_LEVEL);
+  backtrace_symbols_fd (buffer, level, STDERR_FILENO);
 
-    fprintf (stderr, "\n");
+  fprintf (stderr, "\n");
 
-    vpu_syscall (core_exit);
-    TSC_SIGNAL_UNMASK();
+  vpu_syscall (core_exit);
+  TSC_SIGNAL_UNMASK();
 }
 
