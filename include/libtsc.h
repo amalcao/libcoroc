@@ -167,6 +167,39 @@ int tsc_net_dial (bool istcp, char *server, int port);
 /* --- libtsc startup call --- */
 int tsc_boot (int argc, char **argv, int np, tsc_coroutine_handler_t entry);
 
+
+/* --- some macro for external library func calling --- */
+#ifdef ENABLE_TIMER
+
+extern sigset_t __vpu_sigmask;
+extern __thread int __vpu_sigmask_nest;
+
+# define TSC_SIGNAL_MASK()  do {    \
+    if (__vpu_sigmask_nest++ == 0)  \
+        sigprocmask (SIG_BLOCK, &__vpu_sigmask, NULL); } while (0)
+
+# define TSC_SIGNAL_UNMASK() do {   \
+    if (--__vpu_sigmask_nest == 0)  \
+        sigprocmask (SIG_UNBLOCK, &__vpu_sigmask, NULL); } while (0)
+
+# define TSC_SAFE_CALL(func, type, ...) ({\
+    TSC_SIGNAL_MASK(); \
+    type __ret = func(__VA_ARGS__); \
+    TSC_SIGNAL_UNMASK(); \
+    __ret; })
+
+# define TSC_SAFE_CALL_NO_RET(func, ...) ({\
+    TSC_SIGNAL_MASK(); \
+    func(__VA_ARGS__); \
+    TSC_SIGNAL_UNMASK(); })
+
+#else
+
+# define TSC_SAFE_CALL(func, type, ...) func(__VA_ARGS__)
+# define TSC_SAFE_CALL_NO_RET(func, ...) func(__VA_ARGS__)
+
+#endif // ENABLE_TIMER
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

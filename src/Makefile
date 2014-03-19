@@ -47,8 +47,8 @@ ifeq (${enable_splitstack}, 1)
 	CFLAGS += -fsplit-stack
 endif
 
-ifneq (${enable_daedlock_detect}, 0)
-	CFLAGS += -DENABLE_DAEDLOCK_DETECT
+ifneq (${enable_deadlock_detect}, 0)
+	CFLAGS += -DENABLE_DEADLOCK_DETECT
 	CFLAGS += -rdynamic
 endif
 

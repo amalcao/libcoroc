@@ -27,7 +27,7 @@ typedef struct vpu_manager {
     uint32_t last_pid;
     tsc_coroutine_t main;
     queue_t coroutine_list;
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
     pthread_cond_t cond;
     pthread_mutex_t lock;
     uint16_t alive;
@@ -49,7 +49,7 @@ extern void vpu_ready (tsc_coroutine_t coroutine);
 extern void vpu_syscall (int (*pfn)(void *));
 extern void vpu_clock_handler (int);
 extern void vpu_wakeup_one (void);
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
 extern void vpu_backtrace (int);
 #endif
 

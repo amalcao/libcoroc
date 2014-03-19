@@ -6,9 +6,9 @@
 #include "vfs.h"
 #include "lock.h"
 
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
 # define MAX_SPIN_LOOP_NUM 2
-#endif // ENABLE_DAEDLOCK_DETECT
+#endif // ENABLE_DEADLOCK_DETECT
 
 // the VPU manager instance.
 vpu_manager_t vpu_manager;
@@ -57,10 +57,10 @@ static void core_sched (void)
   tsc_coroutine_t candidate = NULL;
   int idle_loops = 0;
 
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
   // atomic inc the all idle thread number
   TSC_ATOMIC_INC(vpu_manager . idle);
-#endif // ENABLE_DAEDLOCK_DETECT
+#endif // ENABLE_DEADLOCK_DETECT
   
   // clean the watchdog tick
   vpu -> watchdog = 0;
@@ -87,10 +87,10 @@ static void core_sched (void)
           if (candidate -> rem_timeslice == 0)
             candidate -> rem_timeslice = candidate -> init_timeslice;
 #endif
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
           // atomic dec the total idle number
           TSC_ATOMIC_DEC(vpu_manager . idle);
-#endif //ENABLE_DAEDLOCK_DETECT
+#endif //ENABLE_DEADLOCK_DETECT
 
           candidate -> syscall = false;
           candidate -> status = TSC_COROUTINE_RUNNING;
@@ -108,7 +108,7 @@ static void core_sched (void)
           /* swap to the candidate's context */
           TSC_CONTEXT_LOAD(& candidate -> ctx);
       }
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
       if (++idle_loops > MAX_SPIN_LOOP_NUM) {
           pthread_mutex_lock (& vpu_manager . lock);
           vpu_manager . alive --;
@@ -157,7 +157,7 @@ int core_wait (void * args)
   vpu_t * vpu = TSC_TLS_GET();
   tsc_coroutine_t victim = (tsc_coroutine_t)args;
 
-#if ENABLE_DAEDLOCK_DETECT
+#if ENABLE_DEADLOCK_DETECT
   // add this victim into a global waiting queue
   atomic_queue_add (& vpu_manager . wait_list, & victim -> wait_link);
 #endif
@@ -258,7 +258,7 @@ void tsc_vpu_initialize (int vpu_mp_count, tsc_coroutine_handler_t entry)
   // global queues initialization
   atomic_queue_init (& vpu_manager . xt[vpu_manager . xt_index]);
 
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
   atomic_queue_init (& vpu_manager . wait_list);
 
   vpu_manager . alive = vpu_mp_count;
@@ -298,7 +298,7 @@ void vpu_ready (tsc_coroutine_t coroutine)
   assert (coroutine != NULL);
 
   coroutine -> status = TSC_COROUTINE_READY;
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
   atomic_queue_extract (& vpu_manager . wait_list, & coroutine -> wait_link);
 #endif
   atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], & coroutine -> status_link);
@@ -341,7 +341,7 @@ void vpu_syscall (int (*pfn)(void *))
       assert (0); 
   }
 
-#if ENABLE_DAEDLOCK_DETECT
+#if ENABLE_DEADLOCK_DETECT
   /* check if grouine is returned for backtrace */
   if (self && self -> backtrace) {
       tsc_coroutine_backtrace (self);
@@ -390,7 +390,7 @@ void vpu_clock_handler (int signal)
 
 void vpu_wakeup_one (void)
 {
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
   // wakeup a VPU thread who waiting the pthread_cond_t.
   pthread_mutex_lock (& vpu_manager . lock);
   if (vpu_manager . alive < vpu_manager . xt_index && 
@@ -401,7 +401,7 @@ void vpu_wakeup_one (void)
 #endif
 }
 
-#ifdef ENABLE_DAEDLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
 void vpu_backtrace (int id)
 {
   fprintf (stderr, "All threads are sleep, daedlock may happen!\n\n");

@@ -103,14 +103,18 @@ tsc_coroutine_t tsc_coroutine_allocate (
 
 void tsc_coroutine_deallocate (tsc_coroutine_t coroutine)
 {
-  // TODO : reclaim the coroutine elements ..
+  assert (coroutine -> status == TSC_COROUTINE_RUNNING);
 #ifdef ENABLE_SPLITSTACK
   __splitstack_releasecontext (& coroutine->ctx.stack_ctx[0]);
 #else
-  if (coroutine -> stack_size > 0)
+  if (coroutine -> stack_size > 0) {
     TSC_DEALLOC (coroutine -> stack_base);
+    coroutine -> stack_base = 0;
+  }
 #endif
 
+  // TODO : reclaim the coroutine elements ..
+  coroutine -> status = TSC_COROUTINE_EXIT;
   TSC_DEALLOC (coroutine);
 }
 

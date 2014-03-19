@@ -26,8 +26,12 @@ ifeq (${enable_splitstack}, 1)
 endif
 
 ifneq (${enable_daedlock_detect}, 0)
-	CFLAGS += -DENABLE_DAEDLOCK_DETECT
+	CFLAGS += -DENABLE_DEADLOCK_DETECT
 	CFLAGS += -rdynamic
+endif
+
+ifeq (${enable_timer}, 1)
+	CFLAGS += -DENABLE_TIMER
 endif
 
 all: ${APPS}
