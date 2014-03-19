@@ -57,8 +57,10 @@ static void core_sched (void)
   tsc_coroutine_t candidate = NULL;
   int idle_loops = 0;
 
+#ifdef ENABLE_DAEDLOCK_DETECT
   // atomic inc the all idle thread number
   TSC_ATOMIC_INC(vpu_manager . idle);
+#endif // ENABLE_DAEDLOCK_DETECT
   
   // clean the watchdog tick
   vpu -> watchdog = 0;
@@ -85,8 +87,10 @@ static void core_sched (void)
           if (candidate -> rem_timeslice == 0)
             candidate -> rem_timeslice = candidate -> init_timeslice;
 #endif
+#ifdef ENABLE_DAEDLOCK_DETECT
           // atomic dec the total idle number
           TSC_ATOMIC_DEC(vpu_manager . idle);
+#endif //ENABLE_DAEDLOCK_DETECT
 
           candidate -> syscall = false;
           candidate -> status = TSC_COROUTINE_RUNNING;
