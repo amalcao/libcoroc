@@ -11,7 +11,7 @@
 # define TSC_DEFAULT_STACK_SIZE PTHREAD_STACK_MIN
 #else
 # ifdef __APPLE__
-#  define TSC_DEFAULT_STACK_SIZE (2 * 1024 * 1024) // 4MB
+#  define TSC_DEFAULT_STACK_SIZE (2 * 1024 * 1024) // 2MB
 # else
 #  define TSC_DEFAULT_STACK_SIZE  (1 * 1024 * 1024) // 1MB
 # endif

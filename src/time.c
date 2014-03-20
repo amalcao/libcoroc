@@ -76,7 +76,7 @@ tsc_chan_t tsc_timer_at (tsc_timer_t t, uint64_t when)
 int tsc_timer_start (tsc_timer_t t)
 {
   if (t->timer.when <= tsc_getcurtime()) {
-      tsc_send_timer (t); 
+      tsc_send_timer (& t->timer); 
       return -1;
   }
 
