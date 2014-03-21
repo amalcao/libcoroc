@@ -157,11 +157,6 @@ int core_wait (void * args)
   vpu_t * vpu = TSC_TLS_GET();
   tsc_coroutine_t victim = (tsc_coroutine_t)args;
 
-#if ENABLE_DEADLOCK_DETECT
-  // add this victim into a global waiting queue
-  atomic_queue_add (& vpu_manager . wait_list, & victim -> wait_link);
-#endif
-
   victim -> status = TSC_COROUTINE_WAIT;
   if (victim -> wait != NULL) {
       atomic_queue_add (victim -> wait, & victim -> status_link);
@@ -257,9 +252,9 @@ void tsc_vpu_initialize (int vpu_mp_count, tsc_coroutine_handler_t entry)
 
   // global queues initialization
   atomic_queue_init (& vpu_manager . xt[vpu_manager . xt_index]);
+  atomic_queue_init (& vpu_manager . coroutine_list);
 
 #ifdef ENABLE_DEADLOCK_DETECT
-  atomic_queue_init (& vpu_manager . wait_list);
 
   vpu_manager . alive = vpu_mp_count;
   vpu_manager . idle = 0;
@@ -298,9 +293,6 @@ void vpu_ready (tsc_coroutine_t coroutine)
   assert (coroutine != NULL);
 
   coroutine -> status = TSC_COROUTINE_READY;
-#ifdef ENABLE_DEADLOCK_DETECT
-  atomic_queue_extract (& vpu_manager . wait_list, & coroutine -> wait_link);
-#endif
   atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], & coroutine -> status_link);
 
   vpu_wakeup_one ();
@@ -410,7 +402,7 @@ void vpu_backtrace (int id)
   // so we must schedule the suspended coroutine to a running OS coroutine
   // and then calling the `backtrace()' ..
   tsc_coroutine_t wait_thr;
-  while (wait_thr = atomic_queue_rem (& vpu_manager . wait_list)) {
+  while (wait_thr = atomic_queue_rem (& vpu_manager . coroutine_list)) {
       if (wait_thr != vpu_manager . main) {
           wait_thr -> backtrace = true;
           // schedule the rescent suspended one, 

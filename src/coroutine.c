@@ -82,7 +82,7 @@ tsc_coroutine_t tsc_coroutine_allocate (
       coroutine -> rem_timeslice = coroutine -> init_timeslice;
 
       queue_item_init (& coroutine -> status_link, coroutine);
-      queue_item_init (& coroutine -> wait_link, coroutine);
+      queue_item_init (& coroutine -> trace_link, coroutine);
   }
 
   if (coroutine -> type == TSC_COROUTINE_MAIN) {
@@ -91,6 +91,8 @@ tsc_coroutine_t tsc_coroutine_allocate (
 
   if (coroutine -> type != TSC_COROUTINE_IDLE) { 
       TSC_CONTEXT_INIT (& coroutine -> ctx, coroutine -> stack_base, size, coroutine);
+      atomic_queue_add (& vpu_manager . coroutine_list,
+                        & coroutine -> trace_link);
       atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], 
                         & coroutine -> status_link);
 
@@ -104,6 +106,11 @@ tsc_coroutine_t tsc_coroutine_allocate (
 void tsc_coroutine_deallocate (tsc_coroutine_t coroutine)
 {
   assert (coroutine -> status == TSC_COROUTINE_RUNNING);
+  // TODO : reclaim the coroutine elements ..
+  coroutine -> status = TSC_COROUTINE_EXIT;
+  atomic_queue_extract (& vpu_manager . coroutine_list, 
+    & coroutine -> trace_link);
+
 #ifdef ENABLE_SPLITSTACK
   __splitstack_releasecontext (& coroutine->ctx.stack_ctx[0]);
 #else
@@ -113,8 +120,6 @@ void tsc_coroutine_deallocate (tsc_coroutine_t coroutine)
   }
 #endif
 
-  // TODO : reclaim the coroutine elements ..
-  coroutine -> status = TSC_COROUTINE_EXIT;
   TSC_DEALLOC (coroutine);
 }
 

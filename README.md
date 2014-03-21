@@ -52,6 +52,34 @@ Some examples are provided for users to test the library:
 - **mandelbrot.c**: benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
 - **spectral-norm.c**: benchmark migrated from the [benchmarksgame.org](http://benchmarksgame.alioth.debian.org)
 
+## Debug
+
+We provide a python script to enhance the GDB to debug the applications using libTSC.
+
+Make sure your GDB is compiled with the option "--with-python", 
+you can open GDB and type such command to test wheather python plugin is available for you:
+
+        (gdb) python print 1 + 1
+
+You can go through if it output "2"; otherwise, try to re-compile your gdb.
+
+At the beginning, you should load our simple script `src/gdb_hepler.py`:
+        
+        (gdb) source where/is/gdb_helper.py
+
+then, you can use the command `info coroutines` to list all the live coroutines.
+
+Further more, if you want to trace the stack frame of a given coroutine, you can type:
+
+        (gdb) coroutine id backtrace
+
+repace the *id* with the coroutine id number you want to trace, which can be found after running 
+the command `info coroutines`.
+
+This script is very simple and the functions provided are very limited now.
+We hope that lots of new features will be added in the future.
+
+
 ## TODO
 
 There are lots of things needed to improve both the functionality and the performance:

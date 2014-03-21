@@ -35,7 +35,7 @@ typedef struct tsc_coroutine {
     uint32_t vpu_id;
 
     queue_item_t status_link;
-    queue_item_t wait_link;
+    queue_item_t trace_link;
     queue_t * wait;
     void * hold;
 	unlock_hander_t unlock_handler;

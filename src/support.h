@@ -26,20 +26,35 @@ typedef pthread_t TSC_OS_THREAD_T;
 #define TSC_OS_THREAD_SENDSIG   pthread_kill
 
 // -- for thread local storages --
-#define TSC_TLS_DEFINE \
+#if USE_PTHREAD_TLS
+# define TSC_TLS_DEFINE \
    pthread_key_t __vpu_keys;
 
-#define TSC_TLS_DECLARE \
+# define TSC_TLS_DECLARE \
     extern TSC_TLS_DEFINE
 
-#define TSC_TLS_INIT() \
+# define TSC_TLS_INIT() \
     pthread_key_create (& __vpu_keys, NULL)
 
-#define TSC_TLS_SET(p) \
+# define TSC_TLS_SET(p) \
     pthread_setspecific (__vpu_keys, (p))
 
-#define TSC_TLS_GET() \
+# define TSC_TLS_GET() \
     pthread_getspecific (__vpu_keys)
+
+#else // USE_GCC_TLS
+# define TSC_TLS_DEFINE \
+    __thread vpu_t *__vpu;
+
+# define TSC_TLS_DECLARE \
+    extern TSC_TLS_DEFINE
+
+# define TSC_TLS_INIT() do {} while(0) 
+
+# define TSC_TLS_SET(p) __vpu = (vpu_t*)(p)
+
+# define TSC_TLS_GET() (__vpu)
+#endif
 
 // -- for thread barrier --
 #define TSC_BARRIER_DEFINE \
