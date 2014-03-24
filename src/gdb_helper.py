@@ -20,6 +20,7 @@ class CoroutinesCmd(gdb.Command):
         super(CoroutinesCmd, self).__init__("info coroutines", gdb.COMMAND_STACK, gdb.COMPLETE_NONE)
 
     def invoke(self, arg, form_tty):
+        arch = gdb.selected_frame().architecture()
         vp = gdb.lookup_type('void').pointer()
         head = gdb.parse_and_eval('vpu_manager.coroutine_list.head')
         for ptr in linked_list(head, 'next'):
@@ -30,8 +31,11 @@ class CoroutinesCmd(gdb.Command):
             if ptr['status'] == 0xBEEF: # running
                 s = '*'
             
-            ## sp = ptr['ctx']['uc_mcontext']['gregs'][15].cast(vp)
-            pc = ptr['ctx']['uc_mcontext']['gregs'][16].cast(vp)
+            if arch.name() == 'i386:x86-64':
+                pc = ptr['ctx']['uc_mcontext']['gregs'][16].cast(vp)
+            elif arch.name() == 'i386':
+                pc = ptr['ctx']['uc_mcontext']['gregs'][14].cast(vp)
+
             blk = gdb.block_for_pc(long(pc))
             sl = gdb.find_pc_line(long(pc))
 
@@ -54,13 +58,13 @@ def switch_context(pc, sp, bp):
         gdb.parse_and_eval('$rip = 0x%x' % long(pc))
         gdb.parse_and_eval('$rsp = 0x%x' % long(sp))
         gdb.parse_and_eval('$rbp = 0x%x' % long(bp))
-    elif arch.name() == 'i386:x86':
-        gdb.parse_and_eval('$save_pc = $pc')
-        gdb.parse_and_eval('$save_sp = $sp')
-        gdb.parse_and_eval('$save_bp = $bp')
-        gdb.parse_and_eval('$pc = 0x%x' % long(pc))
-        gdb.parse_and_eval('$sp = 0x%x' % long(sp))
-        gdb.parse_and_eval('$bp = 0x%x' % long(bp))
+    elif arch.name() == 'i386':
+        gdb.parse_and_eval('$save_pc = $eip')
+        gdb.parse_and_eval('$save_sp = $esp')
+        gdb.parse_and_eval('$save_bp = $ebp')
+        gdb.parse_and_eval('$eip = 0x%x' % long(pc))
+        gdb.parse_and_eval('$esp = 0x%x' % long(sp))
+        gdb.parse_and_eval('$ebp = 0x%x' % long(bp))
      
     # TODO : more arch ..
     return 
@@ -73,10 +77,10 @@ def resume_context():
         gdb.parse_and_eval('$rip = $save_pc')
         gdb.parse_and_eval('$rsp = $save_sp')
         gdb.parse_and_eval('$rbp = $save_bp')
-    elif arch.name() == 'i386:x86':
-        gdb.parse_and_eval('$pc = $save_pc')
-        gdb.parse_and_eval('$sp = $save_sp')
-        gdb.parse_and_eval('$bp = $save_bp')
+    elif arch.name() == 'i386':
+        gdb.parse_and_eval('$eip = $save_pc')
+        gdb.parse_and_eval('$esp = $save_sp')
+        gdb.parse_and_eval('$ebp = $save_bp')
     # TODO : more arch ..
     return
 
@@ -113,17 +117,22 @@ def find_running(cid):
     if not thr:
         return None, None, None
 
-    pc = long(gdb.parse_and_eval('$pc'))
-    sp = long(gdb.parse_and_eval('$sp'))
-    bp = long(gdb.parse_and_eval('$bp'))
     if arch.name() == 'i386:x86-64':
+        pc = long(gdb.parse_and_eval('$rip'))
+        sp = long(gdb.parse_and_eval('$rsp'))
         bp = long(gdb.parse_and_eval('$rbp'))
+    elif arch.name == 'i386':
+        pc = long(gdb.parse_and_eval('$eip'))
+        sp = long(gdb.parse_and_eval('$esp'))
+        bp = long(gdb.parse_and_eval('$ebp'))
+
     cur.switch()
     return pc, sp, bp
 
 
 
 def find_coroutine(cid):
+    arch = gdb.selected_frame().architecture()
     vp = gdb.lookup_type('void').pointer()
     head = gdb.parse_and_eval('vpu_manager.coroutine_list.head')
     for ptr in linked_list(head, 'next'):
@@ -132,9 +141,15 @@ def find_coroutine(cid):
         if ptr['id'] == cid:
             if ptr['status'] == 0xBEEF:
                 return find_running(cid)
-            bp = ptr['ctx']['uc_mcontext']['gregs'][10].cast(vp)
-            sp = ptr['ctx']['uc_mcontext']['gregs'][15].cast(vp)
-            pc = ptr['ctx']['uc_mcontext']['gregs'][16].cast(vp)
+            if arch.name() == 'i386:x86-64':
+                bp = ptr['ctx']['uc_mcontext']['gregs'][10].cast(vp)
+                sp = ptr['ctx']['uc_mcontext']['gregs'][15].cast(vp)
+                pc = ptr['ctx']['uc_mcontext']['gregs'][16].cast(vp)
+            elif arch.name() == 'i386':
+                bp = ptr['ctx']['uc_mcontext']['gregs'][6].cast(vp)
+                sp = ptr['ctx']['uc_mcontext']['gregs'][7].cast(vp)
+                pc = ptr['ctx']['uc_mcontext']['gregs'][14].cast(vp)
+                
             return pc, sp, bp
 
     return None, None, None
