@@ -58,10 +58,10 @@ libTSC.a: $(TSC_OBJS)
 	ar r $@ $(TSC_OBJS)
 
 %.o:%.S
-	$(CC) -c ${CFLAGS} -Werror $<
+	$(CC) -c ${CFLAGS} $<
 
 %.o:%.c
-	$(CC) -c ${CFLAGS} -Werror $<
+	$(CC) -c ${CFLAGS} $<
 
 .PHONY:clean install
 clean:
