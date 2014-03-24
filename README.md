@@ -76,7 +76,8 @@ Further more, if you want to trace the stack frame of a given coroutine, you can
 repace the *id* with the coroutine id number you want to trace, which can be found after running 
 the command `info coroutines`.
 
-If the *cmd* is omitted, and the coroutine with *id* is running, then you can switch to that coroutine.
+If the *cmd* (*backtrace* in previous example) is omitted, and the coroutine with *id* is running, 
+then you can switch to that coroutine.
 
 This script is very simple and the functions provided are very limited now.
 We hope that lots of new features will be added in the future.
