@@ -52,6 +52,7 @@ tsc_coroutine_t tsc_coroutine_allocate (
 
       strcpy (coroutine -> name, name);
       coroutine -> type = type;
+      coroutine -> status = TSC_COROUTINE_READY;
       coroutine -> id = TSC_ALLOC_TID();
       coroutine -> entry = entry;
       coroutine -> arguments = arguments;

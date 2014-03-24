@@ -35,8 +35,12 @@ class CoroutinesCmd(gdb.Command):
             blk = gdb.block_for_pc(long(pc))
             sl = gdb.find_pc_line(long(pc))
 
+            name = ptr['name'].string()
+            if len(name) == 0:
+                name = "<anno>"
+
             print s, ptr['id'], "%5s" % sts[long(ptr['status'])], \
-               "\"%8s\"" % ptr['name'].string().ljust(8), blk.function, sl.symtab, sl.line
+               "\"%s\"" % name, blk.function, sl.symtab, sl.line
 
 
 def switch_context(pc, sp, bp):
@@ -75,31 +79,48 @@ def resume_context():
         gdb.parse_and_eval('$bp = $save_bp')
     # TODO : more arch ..
     return
+
+
+def find_vpu_thread(cid):
+    num = gdb.parse_and_eval("vpu_manager.xt_index")
+    found = False
+    for index in range(0, num):
+        vpu = gdb.parse_and_eval("& vpu_manager.vpu[%d]" % index)
+        if long(vpu['current']['id']) == cid:
+            found = True
+            break
     
+    if not found:
+        return None
 
-def find_running(ptr):
-    arch = gdb.selected_frame().architecture()
-    vp = gdb.lookup_type('void').pointer()
-    ## get the vpu who runs the current coroutine.
-    vpu = gdb.parse_and_eval("& vpu_manager.vpu[%d]" % ptr['vpu_id'])
-
-    threads = gdb.selected_inferior().threads()
     cur = gdb.selected_thread()
+    threads = gdb.selected_inferior().threads()
 
     for thr in threads:
-        ## switch to the thr and check the TLS __vpu .
         thr.switch()
         if vpu == gdb.parse_and_eval('__vpu'):
-            pc = long(gdb.parse_and_eval('$pc'))
-            sp = long(gdb.parse_and_eval('$sp'))
-            bp = long(gdb.parse_and_eval('$bp'))
-            if arch.name() == 'i386:x86-64':
-                bp = long(gdb.parse_and_eval('$rbp'))
-            cur.switch()
-            return pc, sp, bp
+            return thr
 
     cur.switch()
-    return None, None, None
+    return None
+
+
+def find_running(cid):
+    arch = gdb.selected_frame().architecture()
+    cur = gdb.selected_thread()
+    thr = find_vpu_thread(cid)
+
+    if not thr:
+        return None, None, None
+
+    pc = long(gdb.parse_and_eval('$pc'))
+    sp = long(gdb.parse_and_eval('$sp'))
+    bp = long(gdb.parse_and_eval('$bp'))
+    if arch.name() == 'i386:x86-64':
+        bp = long(gdb.parse_and_eval('$rbp'))
+    cur.switch()
+    return pc, sp, bp
+
 
 
 def find_coroutine(cid):
@@ -110,7 +131,7 @@ def find_coroutine(cid):
             continue;
         if ptr['id'] == cid:
             if ptr['status'] == 0xBEEF:
-                return find_running(ptr)
+                return find_running(cid)
             bp = ptr['ctx']['uc_mcontext']['gregs'][10].cast(vp)
             sp = ptr['ctx']['uc_mcontext']['gregs'][15].cast(vp)
             pc = ptr['ctx']['uc_mcontext']['gregs'][16].cast(vp)
@@ -135,21 +156,37 @@ class CoroutineCmd(gdb.Command):
         super(CoroutineCmd, self).__init__("coroutine", gdb.COMMAND_STACK, gdb.COMPLETE_NONE)
 
     def invoke(self, arg, from_tty):
-        cid, cmd = arg.split(None, 1)
-        cid = gdb.parse_and_eval(cid)
-        pc, sp, bp = find_coroutine(int(cid))
-        if not pc:
-            print "No such coroutine: ", cid
+        __args = arg.split(None, 1)
+        if len(__args) == 0:
+            ## if no arg provided, just print current cid:
+            vpu = gdb.parse_and_eval("__vpu")
+            if vpu:
+                print vpu['current']['id']
             return
 
-        save_frame = gdb.selected_frame()
-        switch_context(pc, sp, bp)
-        try:
-            gdb.execute(cmd)
-        finally:
-            resume_context()
-            save_frame.select()
+        cid = gdb.parse_and_eval(__args[0])
+        if len(__args) > 1:
+            cmd = __args[1]
+            pc, sp, bp = find_coroutine(int(cid))
+            if not pc:
+                print "No such coroutine: ", cid
+                return
 
+            save_frame = gdb.selected_frame()
+            switch_context(pc, sp, bp)
+            try:
+                gdb.execute(cmd)
+            finally:
+                resume_context()
+                save_frame.select()
+        else:
+            ## try to switch to this coroutine
+            ## if it's running on another VPU
+            thr = find_vpu_thread(cid)
+            if not thr:
+                print "No such coroutine %d is running!" % long(cid)
+                return
+            thr.switch()
 #
 # Register all CLI commands
 CoroutinesCmd()
