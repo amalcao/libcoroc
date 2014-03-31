@@ -14,6 +14,7 @@ static inline void __chan_memcpy (void *dst, const void *src, size_t size)
 }
 
 typedef struct quantum {
+    bool close;
     bool select;
     tsc_chan_t chan;
     tsc_coroutine_t coroutine;
@@ -23,6 +24,7 @@ typedef struct quantum {
 
 static inline void quantum_init (quantum * q, tsc_chan_t chan, tsc_coroutine_t coroutine, void * buf, bool select)
 {
+  q -> close = false;
   q -> select = select;
   q -> chan = chan;
   q -> coroutine = coroutine;
@@ -103,12 +105,6 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
 {
   tsc_coroutine_t self = tsc_coroutine_self();
 
-  // check if the chan is closed by another coroutine
-  if (chan -> close) {
-    lock_release (& chan -> lock);
-    return CHAN_CLOSED;
-  }
-
   // check if there're any waiting coroutines ..
   quantum * qp = fetch_quantum (& chan -> recv_que);
   if (qp != NULL) {
@@ -120,6 +116,10 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
   if (chan -> copy_to_buff && 
       chan -> copy_to_buff(chan, buf)) 
       return CHAN_SUCCESS;
+ 
+  // check if the chan is closed by another coroutine
+  if (chan -> close) 
+    return CHAN_CLOSED;
   
   // block or return CHAN_BUSY ..
   if (block) {
@@ -129,7 +129,10 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
       queue_add (& chan -> send_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a receiver later ..
-      if (chan -> close) return CHAN_CLOSED;
+      TSC_SYNC_ALL();
+      lock_acquire (& chan -> lock);
+      if (chan -> close && q . close) 
+        return CHAN_CLOSED;
       return CHAN_AWAKEN;
   } 
 
@@ -140,12 +143,6 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
 {
   tsc_coroutine_t self = tsc_coroutine_self ();
 
-  // check if the chan is closed by another coroutine
-  if (chan -> close) {
-    lock_release (& chan -> lock);
-    return CHAN_CLOSED;
-  }
-  
   // check if there're any senders pending .
   quantum * qp = fetch_quantum (& chan -> send_que);
   if (qp != NULL) {
@@ -158,6 +155,10 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
       chan -> copy_from_buff(chan, buf) )
       return CHAN_SUCCESS;
 
+  // check if the chan is closed by another coroutine
+  if (chan -> close)
+    return CHAN_CLOSED;
+  
   // block or return CHAN_BUSY
   if (block) {
       // async way ..
@@ -166,7 +167,10 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
       queue_add (& chan -> recv_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a sender later ..
-      if (chan -> close) return CHAN_CLOSED;
+      TSC_SYNC_ALL();
+      lock_acquire (& chan -> lock);
+      if (chan -> close  && q . close) 
+        return CHAN_CLOSED;
       return CHAN_AWAKEN;
   }
 
@@ -181,8 +185,7 @@ int _tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
   int ret;
   lock_acquire (& chan -> lock);
   ret = __tsc_chan_send (chan, buf, block);
-  if (ret & (CHAN_AWAKEN | CHAN_CLOSED)) // !!
-    lock_release (& chan -> lock);
+  lock_release (& chan -> lock);
 
   TSC_SIGNAL_UNMASK();
   return ret;
@@ -198,8 +201,7 @@ int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
     chan = (tsc_chan_t)tsc_coroutine_self();
   lock_acquire (& chan -> lock);
   ret = __tsc_chan_recv (chan, buf, block);
-  if (ret & (CHAN_AWAKEN | CHAN_CLOSED)) // !! 
-    lock_release (& chan -> lock);
+  lock_release (& chan -> lock);
 
   TSC_SIGNAL_UNMASK();
   return ret;
@@ -218,11 +220,15 @@ int tsc_chan_close (tsc_chan_t chan)
         // wakeup all coroutines waiting for this chan
         quantum * qp = NULL;
         chan -> close = true;
-        while (qp = fetch_quantum (& chan -> send_que))
-          vpu_ready (qp -> coroutine);
+        while (qp = fetch_quantum (& chan -> send_que)) {
+            qp -> close = true;
+            vpu_ready (qp -> coroutine);
+        }
 
-        while (qp = fetch_quantum (& chan -> recv_que))
-          vpu_ready (qp -> coroutine);
+        while (qp = fetch_quantum (& chan -> recv_que)) {
+            qp -> close = true;
+            vpu_ready (qp -> coroutine);
+        }
     }
 
     lock_release (& chan -> lock);
@@ -353,7 +359,12 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
       }
 
       vpu_suspend (NULL, & set -> locks, lock_chain_release);
+      TSC_SYNC_ALL();
       lock_chain_acquire (& set -> locks);
+
+      // get the selected one
+      *active = (tsc_chan_t)(self -> qtag);
+      ret = CHAN_SUCCESS;
 
       // dequeue all unactive chans ..
       sel = set -> sel_que . head;
@@ -364,6 +375,10 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
           queue_t * que = & (e -> chan -> send_que);
           if (e -> type == CHAN_RECV)
             que = & (e -> chan -> recv_que);
+          
+          // check if the selected one is closed ..
+          if ((*active == pq -> chan) && pq -> close)
+            ret = CHAN_CLOSED;
 
           queue_extract (que, & pq -> link);				
           sel = sel -> next;
@@ -375,11 +390,6 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
 
       * active = (tsc_chan_t)(self -> qtag);
       self -> qtag = NULL;
-
-      if ((*active) -> close)
-        ret = CHAN_CLOSED;
-      else
-        ret = CHAN_SUCCESS;
   }
 
 __leave_select:

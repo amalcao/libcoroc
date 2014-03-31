@@ -129,11 +129,13 @@ typedef pthread_t TSC_OS_THREAD_T;
 #if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__)
 # define TSC_ATOMIC_INC(n) (++(n))  
 # define TSC_ATOMIC_DEC(n) (--(n))
+# define TSC_SYNC_ALL() 
 // TODO # define TSC_CAS(pval, old, new)  
 #else
 # define TSC_ATOMIC_INC(n) (__sync_add_and_fetch(&(n), 1))
 # define TSC_ATOMIC_DEC(n) (__sync_add_and_fetch(&(n), -1))
 # define TSC_CAS(pval, old, new) (__sync_bool_compare_and_swap(pval, old, new))
+# define TSC_SYNC_ALL() __sync_synchronize()
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
