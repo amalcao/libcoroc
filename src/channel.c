@@ -129,9 +129,8 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
       queue_add (& chan -> send_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a receiver later ..
-      TSC_SYNC_ALL();
       lock_acquire (& chan -> lock);
-      if (chan -> close && q . close) 
+      if (q.close) 
         return CHAN_CLOSED;
       return CHAN_AWAKEN;
   } 
@@ -167,9 +166,8 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
       queue_add (& chan -> recv_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a sender later ..
-      TSC_SYNC_ALL();
       lock_acquire (& chan -> lock);
-      if (chan -> close  && q . close) 
+      if (q.close) 
         return CHAN_CLOSED;
       return CHAN_AWAKEN;
   }
@@ -218,7 +216,7 @@ int tsc_chan_close (tsc_chan_t chan)
         ret = CHAN_CLOSED;
     } else {
         // wakeup all coroutines waiting for this chan
-        quantum * qp = NULL;
+        volatile quantum * qp = NULL;
         chan -> close = true;
         while (qp = fetch_quantum (& chan -> send_que)) {
             qp -> close = true;
@@ -359,7 +357,6 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
       }
 
       vpu_suspend (NULL, & set -> locks, lock_chain_release);
-      TSC_SYNC_ALL();
       lock_chain_acquire (& set -> locks);
 
       // get the selected one

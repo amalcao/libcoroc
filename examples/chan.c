@@ -5,9 +5,9 @@
 
 int subtask (tsc_chan_t chan)
 {
-    int id;
-    while (tsc_chan_recv (chan, &id) != CHAN_CLOSED) {
-        printf ("[subtask] recv id is %d.\n", id);
+    int ret, id;
+    while ((ret = tsc_chan_recv (chan, &id)) != CHAN_CLOSED) {
+        printf ("[subtask:%x] recv id is %d.\n", ret, id);
     }
 
     tsc_chan_dealloc (chan);
@@ -28,9 +28,9 @@ int main (int argc, char ** argv)
       tsc_chan_recv((tsc_chan_t)timer, &awaken);
       tsc_chan_send(chan, &i);
   }
-  tsc_chan_close (chan);
 
   printf ("release the timer ..\n");
+  tsc_chan_close (chan);
   tsc_timer_stop (timer);
   tsc_timer_dealloc (timer);
 
