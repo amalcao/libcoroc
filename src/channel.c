@@ -103,6 +103,12 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
 {
   tsc_coroutine_t self = tsc_coroutine_self();
 
+  // check if the chan is closed by another coroutine
+  if (chan -> close) {
+    lock_release (& chan -> lock);
+    return CHAN_CLOSED;
+  }
+
   // check if there're any waiting coroutines ..
   quantum * qp = fetch_quantum (& chan -> recv_que);
   if (qp != NULL) {
@@ -123,6 +129,7 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
       queue_add (& chan -> send_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a receiver later ..
+      if (chan -> close) return CHAN_CLOSED;
       return CHAN_AWAKEN;
   } 
 
@@ -133,6 +140,12 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
 {
   tsc_coroutine_t self = tsc_coroutine_self ();
 
+  // check if the chan is closed by another coroutine
+  if (chan -> close) {
+    lock_release (& chan -> lock);
+    return CHAN_CLOSED;
+  }
+  
   // check if there're any senders pending .
   quantum * qp = fetch_quantum (& chan -> send_que);
   if (qp != NULL) {
@@ -153,6 +166,7 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
       queue_add (& chan -> recv_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a sender later ..
+      if (chan -> close) return CHAN_CLOSED;
       return CHAN_AWAKEN;
   }
 
@@ -167,7 +181,7 @@ int _tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
   int ret;
   lock_acquire (& chan -> lock);
   ret = __tsc_chan_send (chan, buf, block);
-  if (ret != CHAN_AWAKEN) // !!
+  if (ret & (CHAN_AWAKEN | CHAN_CLOSED)) // !!
     lock_release (& chan -> lock);
 
   TSC_SIGNAL_UNMASK();
@@ -184,11 +198,37 @@ int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
     chan = (tsc_chan_t)tsc_coroutine_self();
   lock_acquire (& chan -> lock);
   ret = __tsc_chan_recv (chan, buf, block);
-  if (ret != CHAN_AWAKEN) // !! 
+  if (ret & (CHAN_AWAKEN | CHAN_CLOSED)) // !! 
     lock_release (& chan -> lock);
 
   TSC_SIGNAL_UNMASK();
   return ret;
+}
+
+int tsc_chan_close (tsc_chan_t chan)
+{
+    int ret = CHAN_SUCCESS;
+
+    TSC_SIGNAL_MASK();
+    lock_acquire (& chan -> lock);
+
+    if (chan -> close) {
+        ret = CHAN_CLOSED;
+    } else {
+        // wakeup all coroutines waiting for this chan
+        quantum * qp = NULL;
+        chan -> close = true;
+        while (qp = fetch_quantum (& chan -> send_que))
+          vpu_ready (qp -> coroutine);
+
+        while (qp = fetch_quantum (& chan -> recv_que))
+          vpu_ready (qp -> coroutine);
+    }
+
+    lock_release (& chan -> lock);
+    TSC_SIGNAL_UNMASK();
+
+    return ret;
 }
 
 #if defined(ENABLE_CHANNEL_SELECT)
@@ -335,7 +375,11 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
 
       * active = (tsc_chan_t)(self -> qtag);
       self -> qtag = NULL;
-      ret = CHAN_SUCCESS;
+
+      if ((*active) -> close)
+        ret = CHAN_CLOSED;
+      else
+        ret = CHAN_SUCCESS;
   }
 
 __leave_select:

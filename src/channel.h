@@ -8,8 +8,9 @@
 
 enum {
     CHAN_SUCCESS = 0,
-    CHAN_AWAKEN,
-    CHAN_BUSY,
+    CHAN_AWAKEN = 1,
+    CHAN_BUSY = 2,
+    CHAN_CLOSED = 4,
 };
 
 struct tsc_chan;
@@ -17,6 +18,7 @@ typedef bool (*tsc_chan_handler)(struct tsc_chan*, void*);
 
 // the general channel type ..
 typedef struct tsc_chan {
+    bool    close;
     bool    select;
     lock    lock;
     int32_t elemsize;
@@ -41,6 +43,7 @@ static inline void tsc_chan_init (
     tsc_chan_t ch, int32_t elemsize,
     tsc_chan_handler to, tsc_chan_handler from)
 {
+  ch -> close = false;
   ch -> select = false;
   ch -> elemsize = elemsize;
   ch -> copy_to_buff = to;
@@ -78,6 +81,8 @@ extern int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block);
 #define tsc_chan_recv(chan, buf) _tsc_chan_recv(chan, buf, true)
 #define tsc_chan_nbsend(chan, buf) _tsc_chan_send(chan, buf, false)
 #define tsc_chan_nbrecv(chan, buf) _tsc_chan_recv(chan, buf, false)
+
+extern int tsc_chan_close (tsc_chan_t chan);
 
 #if defined(ENABLE_CHANNEL_SELECT)
 typedef struct tsc_chan_set {
