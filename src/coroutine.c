@@ -49,7 +49,9 @@ tsc_coroutine_t tsc_coroutine_allocate (
   if (coroutine != NULL) {
       // init the interal channel ..
       tsc_async_chan_init ((tsc_async_chan_t)coroutine);
-
+#if ENABLE_REFCNT
+      tsc_refcnt_get ((tsc_refcnt_t)coroutine);
+#endif
       strcpy (coroutine -> name, name);
       coroutine -> type = type;
       coroutine -> status = TSC_COROUTINE_READY;
@@ -121,7 +123,12 @@ void tsc_coroutine_deallocate (tsc_coroutine_t coroutine)
   }
 #endif
 
+  tsc_async_chan_fini ((tsc_async_chan_t)coroutine);
+#ifdef ENABLE_REFCNT
+  tsc_refcnt_put ((tsc_refcnt_t)coroutine);
+#else
   TSC_DEALLOC (coroutine);
+#endif
 }
 
 void tsc_coroutine_exit (int value)

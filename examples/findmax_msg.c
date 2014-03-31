@@ -51,10 +51,10 @@ int find_max (void * arg)
           sz0 = size / 2;
           sz1 = size - sz0;
 
-          slave0 = tsc_coroutine_allocate (find_max, tsc_coroutine_self(), "s0", TSC_COROUTINE_NORMAL, 0);
+          slave0 = tsc_coroutine_allocate (find_max, tsc_refcnt_get(self), "s0", TSC_COROUTINE_NORMAL, 0);
           tsc_send (slave0, buf, sz0*sizeof(int));
 
-          slave1 = tsc_coroutine_allocate (find_max, tsc_coroutine_self(), "s1", TSC_COROUTINE_NORMAL, 0);
+          slave1 = tsc_coroutine_allocate (find_max, tsc_refcnt_get(self), "s1", TSC_COROUTINE_NORMAL, 0);
           tsc_send (slave1, buf + sz0, sz1*sizeof(int));
 
           tsc_recv (& buf[0], sizeof(int), true);
@@ -66,6 +66,8 @@ int find_max (void * arg)
   tsc_send (parent, buf, sizeof(int));
 
   free (buf);
+
+  tsc_refcnt_put ((tsc_refcnt_t)(parent));
   tsc_coroutine_exit (0);
 }
 
@@ -75,9 +77,10 @@ int main (void * arg)
   int max = 0, size = MAX;
   int * array = malloc (size * sizeof(int));
   tsc_coroutine_t slave = NULL;
+  tsc_coroutine_t self = tsc_coroutine_self();
 
   gen_array_elem (array, size);
-  slave = tsc_coroutine_allocate (find_max, tsc_coroutine_self(), "s", TSC_COROUTINE_NORMAL, 0);
+  slave = tsc_coroutine_allocate (find_max, tsc_refcnt_get(self), "s", TSC_COROUTINE_NORMAL, 0);
 
   tsc_send (slave, array, size * sizeof(int)); // tsc_send the content of array
   tsc_recv (&max, sizeof(int), true);

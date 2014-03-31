@@ -21,6 +21,7 @@ typedef struct {
 struct tsc_coroutine;
 
 extern int tsc_async_chan_init (tsc_async_chan_t);
+extern void tsc_async_chan_fini (tsc_async_chan_t);
 
 extern int tsc_send (struct tsc_coroutine*, void *, int32_t);
 extern int tsc_recv (void *, int32_t , bool);
