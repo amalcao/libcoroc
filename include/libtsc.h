@@ -203,6 +203,51 @@ extern __thread int __vpu_sigmask_nest;
 
 #endif // ENABLE_TIMER
 
+// -- for atomic add op --
+#if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__)
+# define TSC_ATOMIC_INC(n) (++(n))  
+# define TSC_ATOMIC_DEC(n) (--(n))
+# define TSC_SYNC_ALL() 
+#else
+# define TSC_ATOMIC_INC(n) (__sync_add_and_fetch(&(n), 1))
+# define TSC_ATOMIC_DEC(n) (__sync_add_and_fetch(&(n), -1))
+# define TSC_SYNC_ALL() __sync_synchronize()
+#endif
+
+#ifdef ENABLE_REFCNT
+/* -- inline APIs for reference counting mechanism -- */
+
+typedef void (* release_handler_t) (void *);
+
+typedef struct tsc_refcnt 
+{
+  uint32_t count;
+  release_handler_t release;
+} *tsc_refcnt_t;
+
+static inline void tsc_refcnt_init (tsc_refcnt_t ref,
+    release_handler_t release)
+{
+  ref -> count = 0;
+  ref -> release = release;
+}
+
+static inline void * tsc_refcnt_get (tsc_refcnt_t ref)
+{
+  TSC_ATOMIC_INC(ref -> count);
+  return (void*)ref;
+}
+
+static inline void tsc_refcnt_put (tsc_refcnt_t ref)
+{
+  TSC_ATOMIC_DEC(ref -> count);
+  if (ref -> count == 0)
+    (ref -> release)(ref);
+}
+
+#endif // ENABLE_REFCNT
+
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

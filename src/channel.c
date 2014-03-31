@@ -112,24 +112,26 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
       vpu_ready (qp -> coroutine);
       return CHAN_SUCCESS;
   }
+
+  // check if the chan is closed by another coroutine
+  if (chan -> close) 
+    return CHAN_CLOSED;
+  
   // check if there're any buffer slots ..
   if (chan -> copy_to_buff && 
       chan -> copy_to_buff(chan, buf)) 
       return CHAN_SUCCESS;
  
-  // check if the chan is closed by another coroutine
-  if (chan -> close) 
-    return CHAN_CLOSED;
-  
   // block or return CHAN_BUSY ..
   if (block) {
       // the async way ..
-      quantum q;
+      volatile quantum q;
       quantum_init (& q, chan, self, buf, false);
       queue_add (& chan -> send_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a receiver later ..
       lock_acquire (& chan -> lock);
+      TSC_SYNC_ALL();
       if (q.close) 
         return CHAN_CLOSED;
       return CHAN_AWAKEN;
@@ -161,12 +163,13 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
   // block or return CHAN_BUSY
   if (block) {
       // async way ..
-      quantum q;
+      volatile quantum q;
       quantum_init (& q, chan, self, buf, false);
       queue_add (& chan -> recv_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a sender later ..
       lock_acquire (& chan -> lock);
+      TSC_SYNC_ALL();
       if (q.close) 
         return CHAN_CLOSED;
       return CHAN_AWAKEN;
@@ -220,11 +223,13 @@ int tsc_chan_close (tsc_chan_t chan)
         chan -> close = true;
         while (qp = fetch_quantum (& chan -> send_que)) {
             qp -> close = true;
+            TSC_SYNC_ALL();
             vpu_ready (qp -> coroutine);
         }
 
         while (qp = fetch_quantum (& chan -> recv_que)) {
             qp -> close = true;
+            TSC_SYNC_ALL();
             vpu_ready (qp -> coroutine);
         }
     }

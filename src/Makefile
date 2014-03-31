@@ -30,6 +30,7 @@ CFLAGS += -DENABLE_VFS
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
+	TSC_HEADERS += refcnt.h
 endif
 
 ifeq (${use_clang}, 1)
@@ -50,6 +51,10 @@ endif
 ifneq (${enable_deadlock_detect}, 0)
 	CFLAGS += -DENABLE_DEADLOCK_DETECT
 	CFLAGS += -rdynamic
+endif
+
+ifneq (${enable_refcnt}, 0)
+	CFLAGS += -DENABLE_REFCNT
 endif
 
 all: libTSC.a

@@ -30,6 +30,10 @@ ifneq (${enable_daedlock_detect}, 0)
 	CFLAGS += -rdynamic
 endif
 
+ifneq (${enable_refcnt}, 0)
+	CFLAGS += -DENABLE_REFCNT
+endif
+
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
 endif
