@@ -46,6 +46,7 @@ Some examples are provided for users to test the library:
 - **select.c**: for testing the select operation among multi-channels
 - **ticker.c**: for testing the ticker/timer API
 - **file.c**: for testing the file API
+- **chan.c**: for testing the channel API
 - **primes.c**: example migrated from libtask
 - **tcpproxy.c**: example migrated from libtask
 - **httpload.c**: example migrated from libtask

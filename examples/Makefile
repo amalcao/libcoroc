@@ -1,5 +1,5 @@
 
-APPS := findmax.run timeshare.run select.run ticker.run file.run findmax_msg.run
+APPS := findmax.run timeshare.run select.run ticker.run file.run findmax_msg.run chan.run
 APPS += primes.run httpload.run tcpproxy.run ## modify from examples in LibTask
 APPS += mandelbrot.run spectral-norm.run ## modify from benchmarkgame.org
 
