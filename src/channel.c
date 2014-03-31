@@ -22,7 +22,7 @@ typedef struct quantum {
     queue_item_t link;
 } quantum;
 
-static inline void quantum_init (quantum * q, tsc_chan_t chan, tsc_coroutine_t coroutine, void * buf, bool select)
+static inline void quantum_init (volatile quantum * q, tsc_chan_t chan, tsc_coroutine_t coroutine, void * buf, bool select)
 {
   q -> close = false;
   q -> select = select;
@@ -125,7 +125,7 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
   // block or return CHAN_BUSY ..
   if (block) {
       // the async way ..
-      volatile quantum q;
+      quantum q;
       quantum_init (& q, chan, self, buf, false);
       queue_add (& chan -> send_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
@@ -163,13 +163,14 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
   // block or return CHAN_BUSY
   if (block) {
       // async way ..
-      volatile quantum q;
+      quantum q;
       quantum_init (& q, chan, self, buf, false);
       queue_add (& chan -> recv_que, & q . link);
       vpu_suspend (NULL, & chan -> lock, (unlock_hander_t)(lock_release));
       // awaken by a sender later ..
       lock_acquire (& chan -> lock);
       TSC_SYNC_ALL();
+
       if (q.close) 
         return CHAN_CLOSED;
       return CHAN_AWAKEN;
