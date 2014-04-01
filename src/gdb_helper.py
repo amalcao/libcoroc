@@ -2,7 +2,7 @@
 
 import sys
 
-print >>sys.stderr, "Loading the LibTSC runtime support.."
+sys.stderr.write("Loading the LibTSC runtime support..\n")
 
 sts = { 0xBAFF:"sleep", 0xFACE:"ready", 0xBEEF:"run", 0xBADD:"wait", 0xDEAD:"exit"}
 
@@ -35,16 +35,18 @@ class CoroutinesCmd(gdb.Command):
                 pc = ptr['ctx']['uc_mcontext']['gregs'][16].cast(vp)
             elif arch.name() == 'i386':
                 pc = ptr['ctx']['uc_mcontext']['gregs'][14].cast(vp)
+            elif arch.name() == 'arm':
+                pc = ptr['ctx']['uc_mcontext']['arm_pc'].cast(vp)
 
-            blk = gdb.block_for_pc(long(pc))
-            sl = gdb.find_pc_line(long(pc))
+            blk = gdb.block_for_pc(int(pc))
+            sl = gdb.find_pc_line(int(pc))
 
             name = ptr['name'].string()
             if len(name) == 0:
                 name = "<anno>"
 
-            print s, ptr['id'], "%5s" % sts[long(ptr['status'])], \
-               "\"%s\"" % name, blk.function, sl.symtab, sl.line
+            print (s, ptr['id'], "%5s" % sts[int(ptr['status'])], \
+               "\"%s\"" % name, blk.function, sl.symtab, sl.line)
 
 
 def switch_context(pc, sp, bp):
@@ -55,16 +57,24 @@ def switch_context(pc, sp, bp):
         gdb.parse_and_eval('$save_pc = $rip')
         gdb.parse_and_eval('$save_sp = $rsp')
         gdb.parse_and_eval('$save_bp = $rbp')
-        gdb.parse_and_eval('$rip = 0x%x' % long(pc))
-        gdb.parse_and_eval('$rsp = 0x%x' % long(sp))
-        gdb.parse_and_eval('$rbp = 0x%x' % long(bp))
+        gdb.parse_and_eval('$rip = 0x%x' % int(pc))
+        gdb.parse_and_eval('$rsp = 0x%x' % int(sp))
+        gdb.parse_and_eval('$rbp = 0x%x' % int(bp))
     elif arch.name() == 'i386':
         gdb.parse_and_eval('$save_pc = $eip')
         gdb.parse_and_eval('$save_sp = $esp')
         gdb.parse_and_eval('$save_bp = $ebp')
-        gdb.parse_and_eval('$eip = 0x%x' % long(pc))
-        gdb.parse_and_eval('$esp = 0x%x' % long(sp))
-        gdb.parse_and_eval('$ebp = 0x%x' % long(bp))
+        gdb.parse_and_eval('$eip = 0x%x' % int(pc))
+        gdb.parse_and_eval('$esp = 0x%x' % int(sp))
+        gdb.parse_and_eval('$ebp = 0x%x' % int(bp))
+    elif arch.name() == 'arm':
+        gdb.parse_and_eval('$save_pc = $pc')
+        gdb.parse_and_eval('$save_sp = $sp')
+        gdb.parse_and_eval('$save_bp = $r7')
+        gdb.parse_and_eval('$pc = 0x%x' % int(pc))
+        gdb.parse_and_eval('$sp = 0x%x' % int(sp))
+        gdb.parse_and_eval('$r7 = 0x%x' % int(bp))
+        
      
     # TODO : more arch ..
     return 
@@ -81,16 +91,20 @@ def resume_context():
         gdb.parse_and_eval('$eip = $save_pc')
         gdb.parse_and_eval('$esp = $save_sp')
         gdb.parse_and_eval('$ebp = $save_bp')
+    elif arch.name() == 'arm':
+        gdb.parse_and_eval('$pc = $save_pc')
+        gdb.parse_and_eval('$sp = $save_sp')
+        gdb.parse_and_eval('$r7 = $save_bp')
     # TODO : more arch ..
     return
 
 
 def find_vpu_thread(cid):
-    num = gdb.parse_and_eval("vpu_manager.xt_index")
+    num = int(gdb.parse_and_eval("vpu_manager.xt_index"))
     found = False
     for index in range(0, num):
         vpu = gdb.parse_and_eval("& vpu_manager.vpu[%d]" % index)
-        if long(vpu['current']['id']) == cid:
+        if int(vpu['current']['id']) == cid:
             found = True
             break
     
@@ -118,13 +132,17 @@ def find_running(cid):
         return None, None, None
 
     if arch.name() == 'i386:x86-64':
-        pc = long(gdb.parse_and_eval('$rip'))
-        sp = long(gdb.parse_and_eval('$rsp'))
-        bp = long(gdb.parse_and_eval('$rbp'))
-    elif arch.name == 'i386':
-        pc = long(gdb.parse_and_eval('$eip'))
-        sp = long(gdb.parse_and_eval('$esp'))
-        bp = long(gdb.parse_and_eval('$ebp'))
+        pc = int(gdb.parse_and_eval('$rip'))
+        sp = int(gdb.parse_and_eval('$rsp'))
+        bp = int(gdb.parse_and_eval('$rbp'))
+    elif arch.name() == 'i386':
+        pc = int(gdb.parse_and_eval('$eip'))
+        sp = int(gdb.parse_and_eval('$esp'))
+        bp = int(gdb.parse_and_eval('$ebp'))
+    elif arch.name() == 'arm':
+        pc = int(gdb.parse_and_eval('$pc'))
+        sp = int(gdb.parse_and_eval('$sp'))
+        bp = int(gdb.parse_and_eval('$r7'))
 
     cur.switch()
     return pc, sp, bp
@@ -149,6 +167,10 @@ def find_coroutine(cid):
                 bp = ptr['ctx']['uc_mcontext']['gregs'][6].cast(vp)
                 sp = ptr['ctx']['uc_mcontext']['gregs'][7].cast(vp)
                 pc = ptr['ctx']['uc_mcontext']['gregs'][14].cast(vp)
+            elif arch.name() == 'arm':
+                bp = ptr['ctx']['uc_mcontext']['arm_r7'].cast(vp)
+                sp = ptr['ctx']['uc_mcontext']['arm_sp'].cast(vp)
+                pc = ptr['ctx']['uc_mcontext']['arm_pc'].cast(vp)
                 
             return pc, sp, bp
 
@@ -176,7 +198,7 @@ class CoroutineCmd(gdb.Command):
             ## if no arg provided, just print current cid:
             vpu = gdb.parse_and_eval("__vpu")
             if vpu:
-                print vpu['current']['id']
+                print (vpu['current']['id'])
             return
 
         cid = gdb.parse_and_eval(__args[0])
@@ -184,7 +206,7 @@ class CoroutineCmd(gdb.Command):
             cmd = __args[1]
             pc, sp, bp = find_coroutine(int(cid))
             if not pc:
-                print "No such coroutine: ", cid
+                print ("No such coroutine: ", cid)
                 return
 
             save_frame = gdb.selected_frame()
@@ -199,7 +221,7 @@ class CoroutineCmd(gdb.Command):
             ## if it's running on another VPU
             thr = find_vpu_thread(cid)
             if not thr:
-                print "No such coroutine %d is running!" % long(cid)
+                print ("No such coroutine %d is running!" % int(cid))
                 return
             thr.switch()
 #
