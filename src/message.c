@@ -28,7 +28,7 @@ static bool __tsc_copy_from_mque (tsc_chan_t chan, void *buf)
   tsc_msg_item_t msg = queue_rem (& achan -> mque);
 
   if (msg != NULL) {
-      memcpy (buf, msg, sizeof(struct tsc_msg));
+      __chan_memcpy (buf, msg, sizeof(struct tsc_msg));
       // TODO : add a free msg_item list ..
       free (msg); 
       return true;
@@ -63,7 +63,7 @@ int tsc_send (tsc_coroutine_t target, void *buf, int32_t size)
 
   struct tsc_msg _msg;
   char *tmp = TSC_ALLOC (size);
-  memcpy (tmp, buf, size);
+  __chan_memcpy (tmp, buf, size);
 
   _msg . size = size;
   _msg . msg = tmp;
@@ -79,7 +79,7 @@ int tsc_recv (void *buf, int32_t size, bool block)
 
   // TODO : note the memory has been allocated and copied twice,
   // sometimes we can optimize this by just copying a pointer, maybe ..
-  memcpy (buf, _msg.msg, (size < _msg.size) ? size : _msg.size);
+  __chan_memcpy (buf, _msg.msg, (size < _msg.size) ? size : _msg.size);
   free (_msg.msg);
 
   return ret;

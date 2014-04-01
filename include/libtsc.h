@@ -240,8 +240,7 @@ static inline void * tsc_refcnt_get (tsc_refcnt_t ref)
 
 static inline void tsc_refcnt_put (tsc_refcnt_t ref)
 {
-  TSC_ATOMIC_DEC(ref -> count);
-  if (ref -> count == 0)
+  if (TSC_ATOMIC_DEC(ref -> count) == 0)
     (ref -> release)(ref);
 }
 

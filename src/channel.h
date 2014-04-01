@@ -113,6 +113,12 @@ extern int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * ac
 #define tsc_chan_set_select(set, pchan) _tsc_chan_set_select(set, true, pchan)
 #define tsc_chan_set_nbselect(set, pchan) _tsc_chan_set_select(set, false, pchan)
 
+static inline void __chan_memcpy (void *dst, const void *src, size_t size)
+{
+  if (dst && src)
+    memcpy (dst, src, size);
+}
+
 #endif // ENABLE_CHANNEL_SELECT
 
 #endif // _TSC_CORE_CHANNEL_H_

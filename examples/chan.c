@@ -3,23 +3,29 @@
 
 #include "libtsc.h"
 
+tsc_coroutine_t init;
+
 int subtask (tsc_chan_t chan)
 {
   int ret, id;
   while (1) {
       ret = tsc_chan_recv (chan, &id);
-      printf ("[subtask] %x\n", ret);
+      // printf ("[subtask] %x\n", ret);
       if (ret == CHAN_CLOSED) 
         break;
       printf ("[subtask] recv id is %d.\n", id);
   }
 
+  tsc_sendp (init, NULL, 0);
   tsc_refcnt_put ((tsc_refcnt_t)chan);
   tsc_coroutine_exit (0);
 }
 
+
 int main (int argc, char ** argv)
 {
+  init = tsc_coroutine_self();
+
   uint64_t awaken = 0;
   int i = 0;
   tsc_chan_t chan = (tsc_chan_t)tsc_refcnt_get(
@@ -42,7 +48,7 @@ int main (int argc, char ** argv)
   tsc_timer_stop (timer);
   tsc_timer_dealloc (timer);
 
-  tsc_coroutine_yield();
+  tsc_recv (NULL, 0, true);
 
   tsc_coroutine_exit (0);
 }

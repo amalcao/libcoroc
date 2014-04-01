@@ -7,11 +7,6 @@
 
 TSC_SIGNAL_MASK_DECLARE
 
-static inline void __chan_memcpy (void *dst, const void *src, size_t size)
-{
-  if (dst && src)
-    memcpy (dst, src, size);
-}
 
 typedef struct quantum {
     bool close;
