@@ -87,7 +87,7 @@ We hope that lots of new features will be added in the future.
 ## Platforms Requirement
 
 Linux on x86/x86-64 or armv7 using the GCC toolchain,
-if compiling with option `enable_splitstack=1`, you need to use GCC 4.6.0 or later, binutils 2.21 ot later with `--enable-gold`.
+if compiling with option `enable_splitstack=1`, you need to use GCC 4.6.0 or later, binutils 2.21 or later with `--enable-gold`.
 
 OS X on x86-64 using the GCC or XCode toolchain,
 the "splitstack" feature is not enable on OS X because we only support 64-bit arch, which not need the "splitstack".
