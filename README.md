@@ -11,13 +11,14 @@ The [Go](http://golang.org) and its ancestor [libtask](http://swtch.com/libtask/
 The LibTSC is yet another coroutine library just like the libtask and Go.
 Furthermore, our goal is to support both the multi-core platforms and time-sharing mechanism which not or not both supported in Go or libtask, or any other coroutine libraries.
 
-In current version, we use the [ucontext](http://en.wikipedia.org/wiki/Setcontext) API defined in GNU libc to implement the coroutine, called `thread_t` in our library and use the POSIX Threads API to support the OS-level threads. 
+In current version, we use the [ucontext](http://en.wikipedia.org/wiki/Setcontext) API defined in GNU libc to implement the coroutine, 
+called `tsc_coroutine_t` in our library and use the POSIX Threads API to support the OS-level threads. 
 And the per-thread signal mechanism is used to emulate the interrupt for computing-intensive coroutines, which is the basis of the time-sharing in libTSC.
 
 ## Build
 
 LibTSC is designed for all Unix like systems, include Linux, *BSD and Darwin,
-but only Linux (on x86 and amd64) and Darwin (amd64) have been tested now.
+but only Linux (x86, amd64 and armv7) and Darwin (amd64) have been tested now.
 
 It is simple to build the library and examples, just goto the root directory of the source code and type `make` in command line.
 
@@ -27,7 +28,7 @@ There are some building options:
 - `enable_optimize=1` to build the target with `-O2` option, if not use this option, the debug mode library and examples will be built.
 - `use_clang=1` to use the clang/llvm compiler to build the programs. This is the default setting for Darwin platform.
 - `enable_splitstack=1` to enable the split-stack feature, make sure your complier (gcc 4.6.0+) and linker (GNU gold) support that feature!
-- `enable_daedlock_detect=1` to enable the daedlock detecting. When all VPUs are sleep, the program will print the backtrace info for each suspended thread and quit.
+- `enable_deadlock_detect=1` to enable the deadlock detecting. When all VPUs are sleep, the program will print the backtrace info for each suspended thread and quit.
 
 To build an optimized library with time-sharing support, just use the command:
 		
@@ -58,7 +59,7 @@ Some examples are provided for users to test the library:
 We provide a python script to enhance the GDB to debug the applications using libTSC.
 
 Make sure your GDB is compiled with the option "--with-python", 
-you can open GDB and type such command to test wheather python plugin is available for you:
+you can open GDB and type such command to test whether python plugin is available for you:
 
         (gdb) python print 1 + 1
 
@@ -74,7 +75,7 @@ Further more, if you want to trace the stack frame of a given coroutine, you can
 
         (gdb) coroutine id backtrace
 
-repace the *id* with the coroutine id number you want to trace, which can be found after running 
+replace the *id* with the coroutine id number you want to trace, which can be found after running 
 the command `info coroutines`.
 
 If the *cmd* (*backtrace* in previous example) is omitted, and the coroutine with *id* is running, 
@@ -83,6 +84,16 @@ then you can switch to that coroutine.
 This script is very simple and the functions provided are very limited now.
 We hope that lots of new features will be added in the future.
 
+## Platforms Requirement
+
+Linux on x86/x86-64 or armv7 using the GCC toolchain,
+if compiling with option `enable_splitstack=1`, you need to use GCC 4.6.0 or later, binutils 2.21 ot later with `--enable-gold`.
+
+OS X on x86-64 using the GCC or XCode toolchain,
+the "splitstack" feature is not enable on OS X because we only support 64-bit arch, which not need the "splitstack".
+
+The GDB debug helper script is available for each supported platforms, however,
+make sure your GDB is version 7.0 or later and built with python enable.
 
 ## TODO
 
