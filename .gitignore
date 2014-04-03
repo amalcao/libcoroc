@@ -3,6 +3,7 @@
 *.so
 *.run
 *.swp
+*.dSYM
 core
 
 cscope.*

@@ -51,7 +51,7 @@ all: ${APPS}
 
 .PHONY:clean install
 clean:
-	rm -f *.o *.run
+	rm -rf *.o *.run*
 
 install: ${APPS}
 	mkdir -p ../bin

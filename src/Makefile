@@ -7,7 +7,7 @@ ifeq (${OS}, Darwin)
 TSC_HEADERS += darwin/pthread_barrier.h \
 				darwin/pthread_spinlock.h \
 				darwin/amd64-ucontext.h \
-				darwin/386-ucontext.h \ 
+				darwin/386-ucontext.h \
 				darwin/power-ucontext.h 
 TSC_CFILES += darwin/pthread_barrier.c darwin/ucontext.c
 TSC_OBJS := darwin/asm.o
@@ -63,10 +63,10 @@ libTSC.a: $(TSC_OBJS)
 	ar r $@ $(TSC_OBJS)
 
 %.o:%.S
-	$(CC) -c ${CFLAGS} $<
+	$(CC) -c ${CFLAGS} $< -o $@
 
 %.o:%.c
-	$(CC) -c ${CFLAGS} $<
+	$(CC) -c ${CFLAGS} $< -o $@
 
 .PHONY:clean install
 clean:
