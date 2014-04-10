@@ -162,4 +162,11 @@ static int inline TSC_NP_ONLINE(void) {
 # define TSC_NP_ONLINE() get_nprocs()
 #endif
 
+/* define the tsc_word_t which match the arch word size */
+#if __x86_64__ // the only 64-bit arch we support now is x86-64
+typedef long long tsc_word_t;
+#else // other such as i386, armv7 ..
+typedef long tsc_word_t;
+#endif
+
 #endif // _TSC_PLATFORM_SUPPORT_H_
