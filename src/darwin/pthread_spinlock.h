@@ -1,7 +1,7 @@
 #ifndef _PTHREAD_SPINLOCK_H_
 #define _PTHREAD_SPINLOCK_H_
 
-#define EBUSY -1
+#include <errno.h>
 /**
 enum {
 	PTHREAD_PROCESS_PRIVATE,

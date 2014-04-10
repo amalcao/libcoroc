@@ -16,6 +16,8 @@
 // This is the NET API wrapper for libtsc,
 // copy & modify from the LibTask project.
 
+int tsc_net_lookup (char *name, uint32_t *ip);
+
 int tsc_net_announce (bool istcp, char *server, int port)
 {
     int fd, n, proto;

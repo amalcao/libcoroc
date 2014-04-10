@@ -7,7 +7,10 @@ enable_optimize ?= 0
 enable_splitstack ?= 0
 enable_deadlock_detect ?= 1
 enable_refcnt ?= 1
-use_clang ?= 0
+
+ifeq ($(shell uname), Darwin)
+    use_clang ?= 1
+endif
 
 ARGS := enable_timer=${enable_timer} \
 	enable_optimize=${enable_optimize} \
@@ -18,7 +21,6 @@ ARGS := enable_timer=${enable_timer} \
 
 
 library:
-	echo ${ARGS}
 	cd src && make install $(ARGS)
 
 app:

@@ -1,4 +1,6 @@
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <assert.h>
 #include <stdarg.h>
 
@@ -198,7 +200,13 @@ int __tsc_vfs_open (tsc_vfs_driver_t drv, bool sync, const char *name, int flags
 
   if (flags & O_CREAT) {
       va_start(ap, flags);
+#ifdef __APPLE__
+      // FIXME: it is a BUG that mode_t in OS X is defned as a unsigned short,
+	  // which cannot be supported by var_arg in OS X, so we can only pass a int..
+	  mode = (mode_t)va_arg(ap, int);
+#else
       mode = va_arg(ap, mode_t);
+#endif
       va_end(ap);
   }
 

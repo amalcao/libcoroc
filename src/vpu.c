@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "vpu.h"
 #include "vfs.h"
+#include "netpoll.h"
 #include "lock.h"
 
 #ifdef ENABLE_DEADLOCK_DETECT
@@ -28,8 +29,10 @@ static inline tsc_coroutine_t core_elect (vpu_t * vpu)
   if (candidate == NULL) {
       int index = 0;
       for (; index < vpu_manager . xt_index; index++) {
-          if (index == vpu -> id) continue;
-          if (candidate = atomic_queue_rem (& vpu_manager . xt[index]))
+          if (index == vpu -> id) 
+		    continue;
+		  candidate = atomic_queue_rem (& vpu_manager . xt[index]);
+          if (candidate != NULL)
             break;
       }
   }
@@ -236,6 +239,8 @@ static void * per_vpu_initalize (void * vpu_id)
 
   // Spawn 
   core_sched ();
+
+  return NULL; // NEVER REACH HERE!!
 }
 
 // init the vpu sub-system with the hint of
@@ -402,7 +407,7 @@ void vpu_backtrace (int id)
   // so we must schedule the suspended coroutine to a running OS coroutine
   // and then calling the `backtrace()' ..
   tsc_coroutine_t wait_thr;
-  while (wait_thr = atomic_queue_rem (& vpu_manager . coroutine_list)) {
+  while ((wait_thr = atomic_queue_rem (& vpu_manager . coroutine_list)) != NULL) {
       if (wait_thr != vpu_manager . main) {
           wait_thr -> backtrace = true;
           // schedule the rescent suspended one, 

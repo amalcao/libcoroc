@@ -37,7 +37,7 @@ static bool __tsc_copy_from_mque (tsc_chan_t chan, void *buf)
   return false;
 }
 
-int tsc_async_chan_init (tsc_async_chan_t achan)
+void tsc_async_chan_init (tsc_async_chan_t achan)
 {
   tsc_chan_init ((tsc_chan_t)achan, sizeof(struct tsc_msg),
                  __tsc_copy_to_mque, __tsc_copy_from_mque);
@@ -49,7 +49,7 @@ void tsc_async_chan_fini (tsc_async_chan_t achan)
 {
   lock_acquire(& achan -> _chan . lock);
   tsc_msg_item_t msg = 0;
-  while (msg = queue_rem(& achan -> mque)) {
+  while ((msg = queue_rem(& achan -> mque)) != NULL) {
     // FIXME : memory leak may happen here !!
     free(msg);
   }

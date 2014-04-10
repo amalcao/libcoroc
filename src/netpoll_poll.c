@@ -66,6 +66,7 @@ int __tsc_netpoll_add (tsc_poll_desc_t desc)
   tsc_netpoll_manager . size ++;
 
   pthread_mutex_unlock (& tsc_netpoll_manager . mutex);
+  return 0;
 }
 
 int __tsc_netpoll_rem (tsc_poll_desc_t desc)
@@ -86,6 +87,7 @@ int __tsc_netpoll_rem (tsc_poll_desc_t desc)
   tsc_netpoll_manager . size --;
 
   // pthread_mutex_unlock (& tsc_netpoll_manager . mutex);
+  return 0;
 }
 
 bool __tsc_netpoll_polling (bool block)

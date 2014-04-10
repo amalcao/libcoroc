@@ -15,7 +15,6 @@ TSC_CFILES += darwin/pthread_barrier.c darwin/ucontext.c
 TSC_OBJS := darwin/asm.o
 
 CFLAGS += -Idarwin
-use_clang := 1
 endif
 
 ifeq (${OS}, Linux)
@@ -52,7 +51,9 @@ endif
 
 ifneq (${enable_deadlock_detect}, 0)
 	CFLAGS += -DENABLE_DEADLOCK_DETECT
+ifeq (${use_clang}, 0)
 	CFLAGS += -rdynamic
+endif
 endif
 
 ifneq (${enable_refcnt}, 0)
