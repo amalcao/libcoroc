@@ -4,7 +4,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stdarg.h>
-#include "context.h"
+#include "../context.h"
 
 #if defined(__APPLE__)
 #if defined(__i386__)

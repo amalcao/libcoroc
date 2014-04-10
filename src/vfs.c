@@ -230,7 +230,7 @@ int __tsc_vfs_close (tsc_vfs_driver_t drv, bool sync, int fd)
   __tsc_vfs_add_ops (& ops);
 
   // wake up ..
-  return;
+  return (int)(ops . arg0);
 }
 
 void __tsc_vfs_flush (tsc_vfs_driver_t drv, bool sync, int fd)
