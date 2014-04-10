@@ -31,7 +31,7 @@ int main (int argc, char ** argv)
   tsc_coroutine_t me = tsc_coroutine_self();
   tsc_coroutine_t thrds[SIZE];
   tsc_chan_t chans[SIZE];
-  tsc_chan_set_t set = tsc_chan_set_allocate ();
+  tsc_chan_set_t set = tsc_chan_set_allocate (SIZE + 1);
   tsc_msg_t message;
   int i = 0, id;
 

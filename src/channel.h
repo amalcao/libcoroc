@@ -96,13 +96,30 @@ extern int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block);
 extern int tsc_chan_close (tsc_chan_t chan);
 
 #if defined(ENABLE_CHANNEL_SELECT)
+enum {
+    CHAN_SEND = 0,
+    CHAN_RECV,
+};
+
+typedef struct {
+    int type;
+    tsc_chan_t chan;
+    void * buf;
+} tsc_scase_t;
+
 typedef struct tsc_chan_set {
-    queue_t sel_que;
-    lock_chain_t locks;
+    // this is a lock chain actrually ..
+    struct {
+        bool sorted;
+        int  volume;
+        int  size;
+        lock_t * locks;
+    };
+    tsc_scase_t  cases[0];
 } * tsc_chan_set_t;
 
 /* multi-channel send / recv , like select clause in GoLang .. */
-tsc_chan_set_t tsc_chan_set_allocate (void);
+tsc_chan_set_t tsc_chan_set_allocate (int n);
 void tsc_chan_set_dealloc (tsc_chan_set_t set);
 
 void tsc_chan_set_send (tsc_chan_set_t set, tsc_chan_t chan, void * buf);

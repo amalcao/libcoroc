@@ -76,7 +76,7 @@ extern int tsc_chan_close (tsc_chan_t chan);
 typedef struct tsc_chan_set * tsc_chan_set_t;
 
 /* multi-channel send / recv , like select clause in GoLang .. */
-tsc_chan_set_t tsc_chan_set_allocate (void);
+tsc_chan_set_t tsc_chan_set_allocate (int n);
 void tsc_chan_set_dealloc (tsc_chan_set_t set);
 
 void tsc_chan_set_send (tsc_chan_set_t set, tsc_chan_t chan, void * buf);

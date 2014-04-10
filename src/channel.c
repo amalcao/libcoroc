@@ -237,67 +237,60 @@ int tsc_chan_close (tsc_chan_t chan)
 }
 
 #if defined(ENABLE_CHANNEL_SELECT)
-enum {
-    CHAN_SEND,
-    CHAN_RECV,
-};
-
-typedef struct elem {
-    int type;
-    tsc_chan_t chan;
-    void * buf;
-    queue_item_t link;
-} * elem_t;
-
-static inline elem_t elem_alloc (int type, tsc_chan_t chan, void * buf)
-{
-  elem_t elem = TSC_ALLOC(sizeof (struct elem));
-  assert (elem != NULL);
-
-  elem -> type = type;
-  elem -> chan = chan;
-  elem -> buf = buf;
-  queue_item_init (& elem -> link, elem);
-  return elem;
-}
 
 /* -- the public APIs for channel select -- */
-tsc_chan_set_t tsc_chan_set_allocate (void)
+tsc_chan_set_t tsc_chan_set_allocate (int n)
 {
-  tsc_chan_set_t set = TSC_ALLOC(sizeof(struct tsc_chan_set));
+  tsc_chan_set_t set = TSC_ALLOC(sizeof(struct tsc_chan_set) +
+                        n*sizeof(tsc_scase_t) + n*sizeof(lock_t));
   assert (set != NULL);
-  lock_chain_init(& set -> locks);
-  queue_init (& set -> sel_que);
+
+  set -> sorted = false;
+  set -> volume = n;
+  set -> size = 0;
+  set -> locks = (lock_t*)(& set -> cases[n]);
 
   return set;
 }
 
 void tsc_chan_set_dealloc (tsc_chan_set_t set)
 {
-  lock_chain_fini (& set -> locks);
   TSC_DEALLOC(set);
 }
 
 void tsc_chan_set_send (tsc_chan_set_t set, tsc_chan_t chan, void * buf)
 {
   assert (set != NULL && chan != NULL);
+  assert (set -> size < set -> volume);
+
+  int i = set -> size ++;
+  tsc_scase_t *scase = & (set -> cases[i]);
+  
+  scase -> type = CHAN_SEND;
+  scase -> chan = chan;
+  scase -> buf = buf;
+ 
+  set -> locks[i] = & chan -> lock;
   chan -> select = true;
-  lock_chain_add (& set -> locks, & chan -> lock);
-  elem_t e = elem_alloc (CHAN_SEND, chan, buf);
-  queue_add (& set -> sel_que, & e -> link);
 }
 
 void tsc_chan_set_recv (tsc_chan_set_t set, tsc_chan_t chan, void * buf)
 {
   assert (set != NULL);
+  assert (set -> size < set -> volume);
   // if the `chan' is nil, start the message-passing mode ..
   if (chan == NULL) 
     chan = (tsc_chan_t)tsc_coroutine_self();
 
+  int i = set -> size ++;
+  tsc_scase_t *scase = & (set -> cases[i]);
+  
+  scase -> type = CHAN_RECV;
+  scase -> chan = chan;
+  scase -> buf = buf;
+ 
+  set -> locks[i] = & chan -> lock;
   chan -> select = true;
-  lock_chain_add (& set -> locks, & chan -> lock);
-  elem_t e = elem_alloc (CHAN_RECV, chan, buf);
-  queue_add (& set -> sel_que, & e -> link);
 }
 
 int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
@@ -305,18 +298,21 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
   assert (set != NULL);
   TSC_SIGNAL_MASK();
 
-  if (set -> sel_que . status == 0) {
+  if (set -> size == 0) {
       * active = NULL; 
       return -1;
   }
 
   int ret;
-  tsc_coroutine_t self = tsc_coroutine_self ();
-  lock_chain_acquire (& set -> locks);
+  tsc_coroutine_t self = tsc_coroutine_self();
 
-  queue_item_t * sel = set -> sel_que . head;
-  while (sel != NULL) {
-      elem_t e = (elem_t)(sel -> owner);
+  /* before lock the lock_chain, ensure that the locks in the chain
+   * are sorted by their address, to avoid the deadlock !! */
+  lock_chain_acquire ((lock_chain_t*)set);
+
+  int i;
+  for (i = 0; i < set -> size; i++) {
+      tsc_scase_t *e = & set -> cases[i];
 
       switch (e -> type) {
         case CHAN_SEND:
@@ -329,8 +325,6 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
           * active = e -> chan; 
           goto __leave_select;
       }
-
-      sel = sel -> next;
   }
 
   // got here means we can not get any active chan event
@@ -338,12 +332,11 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
   if (block) {
       // TODO : add quantums ..
       self -> qtag = NULL;
-      sel = set -> sel_que . head;
-      quantum * qarray = TSC_ALLOC((set -> sel_que . status) * sizeof (quantum));
+      quantum * qarray = TSC_ALLOC((set -> size) * sizeof (quantum));
       quantum * pq = qarray;
 
-      while (sel != NULL) {
-          elem_t e = (elem_t)(sel -> owner);
+      for (i = 0; i < set -> size; i++) {
+          tsc_scase_t *e = & set -> cases[i];
           quantum_init (pq, e -> chan, self, e -> buf, true);
           switch (e -> type) {
             case CHAN_SEND:
@@ -353,23 +346,21 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
               queue_add (& e -> chan -> recv_que, & pq -> link);
               break;
           }
-          sel = sel -> next;
           pq ++;
       }
 
-      vpu_suspend (NULL, & set -> locks, lock_chain_release);
-      lock_chain_acquire (& set -> locks);
+      vpu_suspend (NULL, set, lock_chain_release);
+      lock_chain_acquire ((lock_chain_t*)set);
 
       // get the selected one
       *active = (tsc_chan_t)(self -> qtag);
       ret = CHAN_SUCCESS;
 
       // dequeue all unactive chans ..
-      sel = set -> sel_que . head;
       pq = qarray;
 
-      while (sel != NULL) {
-          elem_t e = (elem_t)(sel -> owner);
+      for (i = 0; i < set -> size; i++) {
+          tsc_scase_t *e = & set -> cases[i];
           queue_t * que = & (e -> chan -> send_que);
           if (e -> type == CHAN_RECV)
             que = & (e -> chan -> recv_que);
@@ -379,7 +370,6 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
             ret = CHAN_CLOSED;
 
           queue_extract (que, & pq -> link);				
-          sel = sel -> next;
           pq ++;
       }
 
@@ -391,7 +381,7 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
   }
 
 __leave_select:
-  lock_chain_release (& set -> locks);
+  lock_chain_release ((lock_chain_t*)set);
   TSC_SIGNAL_UNMASK();
   return ret;
 }
