@@ -194,8 +194,8 @@ static void * per_vpu_initalize (void * vpu_id)
   tsc_coroutine_t scheduler;
   tsc_coroutine_attributes_t attr;
 
-  vpu_t * vpu = & vpu_manager . vpu[((uint64_t)vpu_id)];
-  vpu -> id = (int)((uint64_t)vpu_id);
+  vpu_t * vpu = & vpu_manager . vpu[((tsc_word_t)vpu_id)];
+  vpu -> id = (int)((tsc_word_t)vpu_id);
   vpu -> ticks = 0;
   vpu -> watchdog = 0;
 
@@ -271,7 +271,7 @@ void tsc_vpu_initialize (int vpu_mp_count, tsc_coroutine_handler_t entry)
   tsc_coroutine_t init = tsc_coroutine_allocate (entry, NULL, "init", TSC_COROUTINE_MAIN, 0); 
 
   // VPU initialization
-  uint64_t index = 0;
+  tsc_word_t index = 0;
   for (; index < vpu_manager . xt_index; ++index) {
       TSC_OS_THREAD_ATTR attr;
       TSC_OS_THREAD_ATTR_INIT (&attr);

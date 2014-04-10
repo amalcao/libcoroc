@@ -2,6 +2,7 @@
 #define _TSC_CORE_CHANNEL_H_
 
 #include <stdint.h>
+#include <string.h>
 #include "support.h"
 #include "queue.h"
 #include "lock_chain.h"
@@ -52,7 +53,8 @@ static inline void tsc_chan_init (
     tsc_chan_handler to, tsc_chan_handler from)
 {
 #ifdef ENABLE_REFCNT
-  tsc_refcnt_init (& ch -> refcnt, tsc_chan_dealloc);
+  tsc_refcnt_init (& ch -> refcnt, 
+    (release_handler_t)tsc_chan_dealloc);
 #endif
   ch -> close = false;
   ch -> select = false;

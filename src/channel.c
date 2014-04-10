@@ -17,7 +17,7 @@ typedef struct quantum {
     queue_item_t link;
 } quantum;
 
-static inline void quantum_init (volatile quantum * q, tsc_chan_t chan, tsc_coroutine_t coroutine, void * buf, bool select)
+static inline void quantum_init (quantum * q, tsc_chan_t chan, tsc_coroutine_t coroutine, void * buf, bool select)
 {
   q -> close = false;
   q -> select = select;
