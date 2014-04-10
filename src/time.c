@@ -209,7 +209,7 @@ static int tsc_intertimer_routine (void *unused)
       // no alive timers here, just suspend myself ..
       if (__size == 0) {
           vpu_suspend (NULL, (void*)(& tsc_intertimer_manager . lock), 
-                       (unlock_hander_t)(lock_release));
+                       (unlock_handler_t)(lock_release));
       } else {
           lock_release (& tsc_intertimer_manager . lock);
           tsc_coroutine_yield (); // let others run ..

@@ -184,7 +184,7 @@ static void __tsc_vfs_add_ops (tsc_vfs_ops * ops)
   // suspend current thread and release the lock ..
   vpu_suspend (NULL, 
                & tsc_vfs_manager . mutex,
-               (unlock_hander_t)pthread_mutex_unlock);
+               (unlock_handler_t)pthread_mutex_unlock);
 
   TSC_SIGNAL_UNMASK();
 }
