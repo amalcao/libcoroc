@@ -58,7 +58,7 @@ int tsc_net_wait (int fd, int mode)
   lock_acquire (& desc . lock);
   __tsc_netpoll_add (& desc);
   // then suspend current thread ..
-  vpu_suspend (NULL, & desc . lock, (release_handler_t)lock_release);
+  vpu_suspend (NULL, & desc . lock, (unlock_handler_t)lock_release);
 
   TSC_SIGNAL_UNMASK();
   return 0;

@@ -166,7 +166,7 @@ int core_wait (void * args)
       victim -> wait = NULL;
   }
   if (victim -> hold != NULL) {
-      unlock_hander_t unlock = victim -> unlock_handler;
+      unlock_handler_t unlock = victim -> unlock_handler;
       (* unlock) (victim -> hold);
       victim -> unlock_handler = NULL;
       victim -> hold = NULL;
@@ -354,7 +354,7 @@ void vpu_syscall (int (*pfn)(void *))
 // the `lock' must be hold until the context be saved completely,
 // in order to prevent other VPU to load the context in an ill state.
 // the `handler' tells the VPU how to release the `lock'.
-void vpu_suspend (queue_t * queue, void * lock, unlock_hander_t handler)
+void vpu_suspend (queue_t * queue, volatile void * lock, unlock_handler_t handler)
 {
   tsc_coroutine_t self = tsc_coroutine_self ();
   self -> wait = queue;
