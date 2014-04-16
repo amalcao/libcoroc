@@ -118,6 +118,27 @@ static inline void * atomic_queue_rem (queue_t * queue) {
 	return owner;
 }
 
+//Added by zhj
+static inline void * try_atomic_queue_rem (queue_t * queue) {
+        void * owner = NULL;
+
+        if (! queue -> status) return NULL;
+        
+        int lock_success;
+        
+        lock_success = try_lock_acquire(& queue -> lock);
+        
+        if(lock_success == 0)
+        {
+        owner = queue_rem (queue);
+        lock_release(& queue -> lock);
+        }
+
+        return owner;
+}
+//End added
+
+
 /*---- Extract function ----*/
 static inline void queue_extract (queue_t * queue, queue_item_t * item) {
 #if 0

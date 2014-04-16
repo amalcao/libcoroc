@@ -15,6 +15,8 @@ typedef struct vpu {
     bool initialized;
     uint32_t watchdog;
     uint32_t ticks;
+    unsigned rand_seed;
+    int failure_time;
     tsc_coroutine_t current;
 	tsc_coroutine_t scheduler;
 } vpu_t;
