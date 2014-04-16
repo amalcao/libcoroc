@@ -11,6 +11,8 @@
 # define MAX_SPIN_LOOP_NUM 2
 #endif // ENABLE_DEADLOCK_DETECT
 
+#define MAX_STEALING_FAIL_NUM  (1200 * (vpu_manager . xt_index))
+
 // the VPU manager instance.
 vpu_manager_t vpu_manager;
 
@@ -26,7 +28,7 @@ TSC_SIGNAL_MASK_DEFINE
 static const unsigned RNGMOD = ((1ULL << 32) - 5);
 static const unsigned RNGMUL = 69070U;
 
-static unsigned myrand(vpu_t* vpu)
+static inline unsigned __myrand(vpu_t* vpu)
 {
     unsigned state = vpu -> rand_seed;
     state = (unsigned)((RNGMUL * (unsigned long long)state) % RNGMOD);
@@ -34,26 +36,26 @@ static unsigned myrand(vpu_t* vpu)
     return state;
 }
 
-/*Initialize rand_seed*/
-static void mysrand(vpu_t* vpu, unsigned seed)
+/* initialize per-vpu rand_seed */
+static inline void __mysrand(vpu_t* vpu, unsigned seed)
 {
     seed %= RNGMOD;
     seed += (seed == 0); /* 0 does not belong to the multiplicative group.  Use 1 instead */
     vpu -> rand_seed = seed;
 }
 
-static inline void * random_steal(vpu_t* vpu){
+static inline void * __random_steal(vpu_t* vpu){
 
-    //creat victim_id by random
-    int victim_id = myrand(vpu) % (vpu_manager . xt_index);
+    // randomly select a victim to steal 
+    int victim_id = __myrand(vpu) % (vpu_manager . xt_index);
 
-    //if victim is itself return
-    if(victim_id == vpu -> id) return NULL;
-
-    //steal
-    tsc_coroutine_t candidate = try_atomic_queue_rem (& vpu_manager . xt[victim_id]);
-   
-    return candidate;
+#if 0
+    // ignore it if the victim is the current vpu ..
+    if (victim_id == vpu -> id) 
+        return NULL;
+#endif
+    // try to steal a work ..
+    return atomic_queue_try_rem (& vpu_manager . xt[victim_id]);
 }
 //End added 
 
@@ -62,18 +64,16 @@ static inline void * random_steal(vpu_t* vpu){
 static inline tsc_coroutine_t core_elect (vpu_t * vpu)
 {
   tsc_coroutine_t candidate = 
-   try_atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
+    atomic_queue_try_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
-//Changed by zhj
 #ifdef ENABLE_WORKSTEALING
+  // changed by zhj
   if (candidate == NULL) {
-       vpu -> failure_time = 0;
-      do{
-        candidate = random_steal(vpu);
-        if(candidate == NULL)
-        vpu -> failure_time++;
-        
-        }while((candidate == NULL)&&(vpu -> failure_time <= 1200 * vpu_manager . xt_index));
+      int failure_time = 0;
+      while ((candidate = __random_steal(vpu)) == NULL) {
+          if (failure_time++ > MAX_STEALING_FAIL_NUM)
+            break;
+      }
   }
 #endif // ENABLE_WORKSTEALING 
 
@@ -103,7 +103,7 @@ static void core_sched (void)
   // atomic inc the all idle thread number
   TSC_ATOMIC_INC(vpu_manager . idle);
 #endif // ENABLE_DEADLOCK_DETECT
-  
+
   // clean the watchdog tick
   vpu -> watchdog = 0;
 
@@ -241,9 +241,8 @@ static void * per_vpu_initalize (void * vpu_id)
   vpu -> ticks = 0;
   vpu -> watchdog = 0;
 
-  //Add by zhj,init the rand seed.
-  mysrand(vpu,vpu -> id+1);
-  //End added
+  // add by zhj, init the rand seed.
+  __mysrand (vpu, vpu -> id + 1);
 
   TSC_TLS_SET(vpu);
 

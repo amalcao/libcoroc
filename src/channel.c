@@ -30,33 +30,33 @@ static inline void quantum_init (quantum * q, tsc_chan_t chan, tsc_coroutine_t c
 
 bool __tsc_copy_to_buff (tsc_chan_t chan, void *buf) 
 {
-    tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
-    
-    if (bchan -> nbuf < bchan -> bufsize) {
-        uint8_t * p = bchan -> buf;
-        p += (chan -> elemsize) * (bchan -> sendx ++);
-        __chan_memcpy (p, buf, chan -> elemsize);
-        (bchan -> sendx) %= (bchan -> bufsize);
-        bchan -> nbuf ++;
+  tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
 
-        return true;
-    }
-    return false;
+  if (bchan -> nbuf < bchan -> bufsize) {
+      uint8_t * p = bchan -> buf;
+      p += (chan -> elemsize) * (bchan -> sendx ++);
+      __chan_memcpy (p, buf, chan -> elemsize);
+      (bchan -> sendx) %= (bchan -> bufsize);
+      bchan -> nbuf ++;
+
+      return true;
+  }
+  return false;
 }
 
 bool __tsc_copy_from_buff (tsc_chan_t chan, void *buf)
 {
-    tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
+  tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
 
-    if (bchan -> nbuf > 0) {
-        uint8_t * p = bchan -> buf;
-        p += (chan -> elemsize) * (bchan -> recvx ++);
-        __chan_memcpy (buf, p, chan -> elemsize);
-        (bchan -> recvx) %= (bchan -> bufsize);
-        bchan -> nbuf --;
-        return true;
-    }
-    return false;
+  if (bchan -> nbuf > 0) {
+      uint8_t * p = bchan -> buf;
+      p += (chan -> elemsize) * (bchan -> recvx ++);
+      __chan_memcpy (buf, p, chan -> elemsize);
+      (bchan -> recvx) %= (bchan -> bufsize);
+      bchan -> nbuf --;
+      return true;
+  }
+  return false;
 }
 
 tsc_chan_t tsc_chan_allocate (int32_t elemsize, int32_t bufsize)
@@ -112,12 +112,12 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
   // check if the chan is closed by another coroutine
   if (chan -> close) 
     return CHAN_CLOSED;
-  
+
   // check if there're any buffer slots ..
   if (chan -> copy_to_buff && 
       chan -> copy_to_buff(chan, buf)) 
-      return CHAN_SUCCESS;
- 
+    return CHAN_SUCCESS;
+
   // block or return CHAN_BUSY ..
   if (block) {
       // the async way ..
@@ -150,12 +150,12 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
   // check if there're any empty slots ..
   if (chan -> copy_from_buff &&
       chan -> copy_from_buff(chan, buf) )
-      return CHAN_SUCCESS;
+    return CHAN_SUCCESS;
 
   // check if the chan is closed by another coroutine
   if (chan -> close)
     return CHAN_CLOSED;
-  
+
   // block or return CHAN_BUSY
   if (block) {
       // async way ..
@@ -207,34 +207,34 @@ int _tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
 
 int tsc_chan_close (tsc_chan_t chan)
 {
-    int ret = CHAN_SUCCESS;
+  int ret = CHAN_SUCCESS;
 
-    TSC_SIGNAL_MASK();
-    lock_acquire (& chan -> lock);
+  TSC_SIGNAL_MASK();
+  lock_acquire (& chan -> lock);
 
-    if (chan -> close) {
-        ret = CHAN_CLOSED;
-    } else {
-        // wakeup all coroutines waiting for this chan
-        volatile quantum * qp = NULL;
-        chan -> close = true;
-        while ((qp = fetch_quantum (& chan -> send_que)) != NULL) {
-            qp -> close = true;
-            TSC_SYNC_ALL();
-            vpu_ready (qp -> coroutine);
-        }
+  if (chan -> close) {
+      ret = CHAN_CLOSED;
+  } else {
+      // wakeup all coroutines waiting for this chan
+      volatile quantum * qp = NULL;
+      chan -> close = true;
+      while ((qp = fetch_quantum (& chan -> send_que)) != NULL) {
+          qp -> close = true;
+          TSC_SYNC_ALL();
+          vpu_ready (qp -> coroutine);
+      }
 
-        while ((qp = fetch_quantum (& chan -> recv_que)) != NULL) {
-            qp -> close = true;
-            TSC_SYNC_ALL();
-            vpu_ready (qp -> coroutine);
-        }
-    }
+      while ((qp = fetch_quantum (& chan -> recv_que)) != NULL) {
+          qp -> close = true;
+          TSC_SYNC_ALL();
+          vpu_ready (qp -> coroutine);
+      }
+  }
 
-    lock_release (& chan -> lock);
-    TSC_SIGNAL_UNMASK();
+  lock_release (& chan -> lock);
+  TSC_SIGNAL_UNMASK();
 
-    return ret;
+  return ret;
 }
 
 #if defined(ENABLE_CHANNEL_SELECT)
@@ -243,7 +243,7 @@ int tsc_chan_close (tsc_chan_t chan)
 tsc_chan_set_t tsc_chan_set_allocate (int n)
 {
   tsc_chan_set_t set = TSC_ALLOC(sizeof(struct tsc_chan_set) +
-                        n*sizeof(tsc_scase_t) + n*sizeof(lock_t));
+                                 n*sizeof(tsc_scase_t) + n*sizeof(lock_t));
   assert (set != NULL);
 
   set -> sorted = false;
@@ -266,11 +266,11 @@ void tsc_chan_set_send (tsc_chan_set_t set, tsc_chan_t chan, void * buf)
 
   int i = set -> size ++;
   tsc_scase_t *scase = & (set -> cases[i]);
-  
+
   scase -> type = CHAN_SEND;
   scase -> chan = chan;
   scase -> buf = buf;
- 
+
   set -> locks[i] = & chan -> lock;
   chan -> select = true;
 }
@@ -285,11 +285,11 @@ void tsc_chan_set_recv (tsc_chan_set_t set, tsc_chan_t chan, void * buf)
 
   int i = set -> size ++;
   tsc_scase_t *scase = & (set -> cases[i]);
-  
+
   scase -> type = CHAN_RECV;
   scase -> chan = chan;
   scase -> buf = buf;
- 
+
   set -> locks[i] = & chan -> lock;
   chan -> select = true;
 }
@@ -365,7 +365,7 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
           queue_t * que = & (e -> chan -> send_que);
           if (e -> type == CHAN_RECV)
             que = & (e -> chan -> recv_que);
-          
+
           // check if the selected one is closed ..
           if ((*active == pq -> chan) && pq -> close)
             ret = CHAN_CLOSED;

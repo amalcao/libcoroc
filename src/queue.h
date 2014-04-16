@@ -118,23 +118,17 @@ static inline void * atomic_queue_rem (queue_t * queue) {
 	return owner;
 }
 
-//Added by zhj
-static inline void * try_atomic_queue_rem (queue_t * queue) {
-        void * owner = NULL;
+// added by zhj
+static inline void * atomic_queue_try_rem (queue_t * queue) {
+    void * owner = NULL;
 
-        if (! queue -> status) return NULL;
-        
-        int lock_success;
-        
-        lock_success = try_lock_acquire(& queue -> lock);
-        
-        if(lock_success == 0)
-        {
-        owner = queue_rem (queue);
-        lock_release(& queue -> lock);
-        }
+    if (! queue -> status || lock_try_acquire(& queue -> lock)) 
+      return NULL;
 
-        return owner;
+    owner = queue_rem (queue);
+    lock_release(& queue -> lock);
+
+    return owner;
 }
 //End added
 
@@ -142,29 +136,29 @@ static inline void * try_atomic_queue_rem (queue_t * queue) {
 /*---- Extract function ----*/
 static inline void queue_extract (queue_t * queue, queue_item_t * item) {
 #if 0
-	queue_item_t * kitem = queue -> head;
+    queue_item_t * kitem = queue -> head;
 
-	if (queue -> head == item) queue -> head = item -> next;
-	else {
-		while (kitem -> next != item) kitem = kitem -> next;
-		kitem -> next = item -> next;
-		if (kitem -> next == NULL) queue -> tail = kitem;
-	}
+    if (queue -> head == item) queue -> head = item -> next;
+    else {
+        while (kitem -> next != item) kitem = kitem -> next;
+        kitem -> next = item -> next;
+        if (kitem -> next == NULL) queue -> tail = kitem;
+    }
 
-	queue -> status -= 1;
+    queue -> status -= 1;
 #else
     if (item -> que != queue) return;
     assert(queue -> status > 0);
-    
+
     if (item -> prev) 
-        item -> prev -> next = item -> next;
+      item -> prev -> next = item -> next;
     else
-        queue -> head = item -> next;
+      queue -> head = item -> next;
 
     if (item -> next)
-        item -> next -> prev = item -> prev;
+      item -> next -> prev = item -> prev;
     else
-        queue -> tail = item -> prev;
+      queue -> tail = item -> prev;
 
     queue -> status --;
 
@@ -175,63 +169,63 @@ static inline void queue_extract (queue_t * queue, queue_item_t * item) {
 }
 
 static inline void atomic_queue_extract (queue_t * queue, queue_item_t * item) {
-	lock_acquire(& queue -> lock);
-	queue_extract (queue, item);
-	lock_release(& queue -> lock);	
+    lock_acquire(& queue -> lock);
+    queue_extract (queue, item);
+    lock_release(& queue -> lock);	
 }
 
 #if 0
 /*---- Lookup function ----*/
 static inline void * queue_lookup (queue_t * queue, bool (*inspector)(void *, void *), void * value) {
-	queue_item_t * item = queue -> head;
+    queue_item_t * item = queue -> head;
 
-	if (! queue -> status) return NULL;
+    if (! queue -> status) return NULL;
 
-	while (item != NULL) {
-		if (inspector (item -> owner, value)) return item -> owner;
-		item = item -> next;
-	}
+    while (item != NULL) {
+        if (inspector (item -> owner, value)) return item -> owner;
+        item = item -> next;
+    }
 
-	return NULL;
+    return NULL;
 }
 
 static inline void * atomic_queue_lookup (queue_t * queue, bool (*inspector)(void *, void *), void * value) {
-	void * owner = NULL;
+    void * owner = NULL;
 
-	if (! queue -> status) return NULL;
+    if (! queue -> status) return NULL;
 
-	lock_acquire(& queue -> lock);
-	owner = queue_lookup (queue, inspector, value);
-	lock_release(& queue -> lock);	
+    lock_acquire(& queue -> lock);
+    owner = queue_lookup (queue, inspector, value);
+    lock_release(& queue -> lock);	
 
-	return owner;
+    return owner;
 }
 #endif
 
 /*---- Walk function ----*/
 static inline void queue_walk (queue_t * queue, void (*inspector)(void *)) {
-	queue_item_t * item = queue -> head;
+    queue_item_t * item = queue -> head;
 
-	if (queue -> status) {;
-		while (item != NULL) {
-			inspector (item -> owner);
-			item = item -> next;
-		}
-	}
+    if (queue -> status) {;
+        while (item != NULL) {
+            inspector (item -> owner);
+            item = item -> next;
+        }
+    }
 }
 
 static inline void atomic_queue_walk (queue_t * queue, void (*inspector)(void *)) {
-	if (queue -> status) {;
-		lock_acquire(& queue -> lock);
-		queue_walk (queue, inspector);
-		lock_release(& queue -> lock);	
-	}
+    if (queue -> status) {;
+        lock_acquire(& queue -> lock);
+        queue_walk (queue, inspector);
+        lock_release(& queue -> lock);	
+    }
 }
 
 // -- general pointer inspector callback --
 static bool general_inspector (void * p0, void * p1)
 {
-	return p0 == p1;
+  return p0 == p1;
 }
 
 #endif // _TSC_SUPPORT_QUEUE_H_
