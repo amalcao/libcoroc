@@ -18,23 +18,62 @@ TSC_BARRIER_DEFINE
 TSC_TLS_DEFINE
 TSC_SIGNAL_MASK_DEFINE
 
+//Added by zhj
+/*
+*Used the pseudo-random generator defined by the congruence S' = 69070 * S% (2^32 - 5).  *Marsaglia, George.  "Remarks on choosing and implementingrandom number generators",  Com*munications of the ACM v 36n 7 (July 1993), p 105-107.
+*http://www.firstpr.com.au/dsp/rand31/p105-crawford.pdf
+*/
+static const unsigned RNGMOD = ((1ULL << 32) - 5);
+static const unsigned RNGMUL = 69070U;
+
+static unsigned myrand(vpu_t* vpu)
+{
+    unsigned state = vpu -> rand_seed;
+    state = (unsigned)((RNGMUL * (unsigned long long)state) % RNGMOD);
+    vpu -> rand_seed = state;
+    return state;
+}
+
+/*Initialize rand_seed*/
+static void mysrand(vpu_t* vpu, unsigned seed)
+{
+    seed %= RNGMOD;
+    seed += (seed == 0); /* 0 does not belong to the multiplicative group.  Use 1 instead */
+    vpu -> rand_seed = seed;
+}
+
+static inline void * random_steal(vpu_t* vpu){
+
+    //creat victim_id by random
+    int victim_id = myrand(vpu) % (vpu_manager . xt_index);
+
+    //if victim is itself return
+    if(victim_id == vpu -> id) return NULL;
+
+    //steal
+    tsc_coroutine_t candidate = try_atomic_queue_rem (& vpu_manager . xt[victim_id]);
+   
+    return candidate;
+}
+//End added 
+
 // TODO : improve the strategy of work-stealing,
 // e.g. , using the random way to reduce the overhead of locks.
 static inline tsc_coroutine_t core_elect (vpu_t * vpu)
 {
   tsc_coroutine_t candidate = 
-    atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
+   try_atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
+//Changed by zhj
 #ifdef ENABLE_WORKSTEALING
   if (candidate == NULL) {
-      int index = 0;
-      for (; index < vpu_manager . xt_index; index++) {
-          if (index == vpu -> id) 
-		    continue;
-		  candidate = atomic_queue_rem (& vpu_manager . xt[index]);
-          if (candidate != NULL)
-            break;
-      }
+       vpu -> failure_time = 0;
+      do{
+        candidate = random_steal(vpu);
+        if(candidate == NULL)
+        vpu -> failure_time++;
+        
+        }while((candidate == NULL)&&(vpu -> failure_time <= 1200 * vpu_manager . xt_index));
   }
 #endif // ENABLE_WORKSTEALING 
 
@@ -201,6 +240,10 @@ static void * per_vpu_initalize (void * vpu_id)
   vpu -> id = (int)((tsc_word_t)vpu_id);
   vpu -> ticks = 0;
   vpu -> watchdog = 0;
+
+  //Add by zhj,init the rand seed.
+  mysrand(vpu,vpu -> id+1);
+  //End added
 
   TSC_TLS_SET(vpu);
 
