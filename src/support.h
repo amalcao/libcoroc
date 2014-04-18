@@ -3,6 +3,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <pthread.h>
 
 #ifdef __APPLE__
@@ -132,11 +133,19 @@ typedef pthread_t TSC_OS_THREAD_T;
 # define TSC_SYNC_ALL() 
 // TODO # define TSC_CAS(pval, old, new)  
 #else
-# define TSC_ATOMIC_INC(n) (__sync_add_and_fetch(&(n), 1))
-# define TSC_ATOMIC_DEC(n) (__sync_add_and_fetch(&(n), -1))
-# define TSC_CAS(pval, old, new) (__sync_bool_compare_and_swap(pval, old, new))
+# define TSC_ATOMIC_INC(n) __sync_add_and_fetch(&(n), 1)
+# define TSC_ATOMIC_DEC(n) __sync_add_and_fetch(&(n), -1)
+# define TSC_CAS(pval, old, new) __sync_bool_compare_and_swap(pval, old, new)
+# define TSC_XCHG(pval, new) __atomic_exchange_n (pval, new, __ATOMIC_SEQ_CST)
 # define TSC_SYNC_ALL() __sync_synchronize()
 //# define TSC_SYNC_ALL() asm volatile("":::"memory")
+#endif
+
+#ifdef USE_FUTEX_LOCK
+#include <stdint.h>
+
+extern void _tsc_futex_sleep (uint32_t*, uint32_t, int64_t);
+extern void _tsc_futex_wakeup (uint32_t*, uint32_t);
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -168,5 +177,12 @@ typedef long long tsc_word_t;
 #else // other such as i386, armv7 ..
 typedef long tsc_word_t;
 #endif
+
+/* define the debug output interface */
+#ifdef ENABLE_DEBUG
+# define TSC_DEBUG(...) fprintf(stderr, __VA_ARGS__)
+#else
+# define TSC_DEBUG(...)
+#endif // ENABLE_DEBUG
 
 #endif // _TSC_PLATFORM_SUPPORT_H_

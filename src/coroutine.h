@@ -9,7 +9,7 @@
 #include "message.h"
 
 typedef int32_t (* tsc_coroutine_handler_t) (void *args);
-typedef void (* unlock_handler_t) (volatile void *lock);
+typedef void (* unlock_handler_t) (void *lock);
 
 typedef int32_t tsc_coroutine_id_t;
 
@@ -37,7 +37,7 @@ typedef struct tsc_coroutine {
     queue_item_t status_link;
     queue_item_t trace_link;
     queue_t * wait;
-    volatile void * hold;
+    void * hold;
 	unlock_handler_t unlock_handler;
 	bool syscall;
     bool backtrace; // wakeup for backtrace 

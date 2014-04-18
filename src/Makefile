@@ -1,6 +1,6 @@
 OS := $(shell uname)
 
-TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h
+TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h 
 TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c
 
 CFLAGS += -Werror
@@ -19,6 +19,9 @@ endif
 
 ifeq (${OS}, Linux)
 TSC_CFILES += netpoll_epoll.c
+TSC_HEADERS += futex_lock.h
+TSC_CFILES += futex_impl.c futex_lock.c
+CFLAGS += -DUSE_FUTEX_LOCK
 else
 TSC_CFILES += netpoll_poll.c
 endif
@@ -41,7 +44,7 @@ endif
 ifeq (${enable_optimize}, 1)
 	CFLAGS += -O2
 else
-	CFLAGS += -g3
+	CFLAGS += -g3 -DENABLE_DEBUG
 endif
 
 ifeq (${enable_splitstack}, 1)
@@ -68,7 +71,7 @@ libTSC.a: $(TSC_OBJS)
 %.o:%.S
 	$(CC) -c ${CFLAGS} $< -o $@
 
-%.o:%.c
+%.o:%.c ${TSC_HEADERS}
 	$(CC) -c ${CFLAGS} $< -o $@
 
 .PHONY:clean install

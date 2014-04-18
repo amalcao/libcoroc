@@ -150,7 +150,8 @@ tsc_coroutine_t tsc_coroutine_self (void)
   tsc_coroutine_t self = NULL;
   TSC_SIGNAL_MASK ();
   vpu_t * vpu = TSC_TLS_GET();
-  self = vpu -> current;
+
+  self = (vpu != NULL) ? vpu -> current : NULL;
   TSC_SIGNAL_UNMASK ();
 
   return self;

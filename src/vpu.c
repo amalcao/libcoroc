@@ -11,7 +11,7 @@
 # define MAX_SPIN_LOOP_NUM 2
 #endif // ENABLE_DEADLOCK_DETECT
 
-#define MAX_STEALING_FAIL_NUM  (1200 * (vpu_manager . xt_index))
+#define MAX_STEALING_FAIL_NUM  (2 * (vpu_manager . xt_index))
 
 // the VPU manager instance.
 vpu_manager_t vpu_manager;
@@ -55,7 +55,7 @@ static inline void * __random_steal(vpu_t* vpu){
         return NULL;
 #endif
     // try to steal a work ..
-    return atomic_queue_try_rem (& vpu_manager . xt[victim_id]);
+    return atomic_queue_rem (& vpu_manager . xt[victim_id]);
 }
 //End added 
 
@@ -64,7 +64,7 @@ static inline void * __random_steal(vpu_t* vpu){
 static inline tsc_coroutine_t core_elect (vpu_t * vpu)
 {
   tsc_coroutine_t candidate = 
-    atomic_queue_try_rem (& vpu_manager . xt[vpu_manager . xt_index]);
+    atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
 #ifdef ENABLE_WORKSTEALING
   // changed by zhj
@@ -205,10 +205,11 @@ int core_wait (void * args)
       victim -> wait = NULL;
   }
   if (victim -> hold != NULL) {
-      unlock_handler_t unlock = victim -> unlock_handler;
-      (* unlock) (victim -> hold);
-      victim -> unlock_handler = NULL;
+      TSC_DEBUG("[core_wait unlock %p] vid is %d, coid is %ld\n", victim->hold, vpu->id, (uint64_t)(victim->id));
+      void * lock = victim -> hold;
       victim -> hold = NULL;
+      assert (lock != NULL);
+      (victim -> unlock_handler) (lock);
   }
   /* victim -> vpu_id = -1; */
 
@@ -396,7 +397,7 @@ void vpu_syscall (int (*pfn)(void *))
 // the `lock' must be hold until the context be saved completely,
 // in order to prevent other VPU to load the context in an ill state.
 // the `handler' tells the VPU how to release the `lock'.
-void vpu_suspend (queue_t * queue, volatile void * lock, unlock_handler_t handler)
+void vpu_suspend (queue_t * queue, void * lock, unlock_handler_t handler)
 {
   tsc_coroutine_t self = tsc_coroutine_self ();
   self -> wait = queue;

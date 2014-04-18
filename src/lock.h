@@ -1,6 +1,22 @@
 #ifndef _TSC_SUPPORT_LOCK_H_
 #define _TSC_SUPPORT_LOCK_H_
 
+#ifdef USE_FUTEX_LOCK
+/* use a customized futex lock like Go */
+#include "futex_lock.h"
+
+typedef _tsc_futex_t lock;
+typedef lock * lock_t;
+
+#define lock_init _tsc_futex_init
+#define lock_acquire _tsc_futex_lock
+#define lock_try_acquire _tsc_futex_trylock
+#define lock_release _tsc_futex_unlock
+#define lock_fini _tsc_futex_destroy
+
+#else
+
+/* use pthread_spinlock */
 #include <pthread.h>
 #if defined(__APPLE__)
 #include "pthread_spinlock.h"
@@ -14,5 +30,7 @@ typedef lock * lock_t;
 #define lock_try_acquire pthread_spin_trylock
 #define lock_release pthread_spin_unlock
 #define lock_fini pthread_spin_destroy
+
+#endif // USE_FUTEX_LOCK
 
 #endif // _TSC_SUPPORT_LOCK_H_
