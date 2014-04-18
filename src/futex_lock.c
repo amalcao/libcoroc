@@ -4,17 +4,6 @@
 
 #include "coroutine.h"
 
-static inline void __procyield (uint32_t cnt)
-{
-  volatile uint32_t i;
-
-  for (i = 0; i < cnt; ++i) {
-#if defined(__i386) || defined(__x86_64__)
-      __asm__ __volatile__ ("pause\n":::);
-#endif
-  }
-}
-
 void _tsc_futex_init (volatile _tsc_futex_t *lock)
 {
   lock -> key = MUTEX_UNLOCKED;
@@ -23,7 +12,7 @@ void _tsc_futex_init (volatile _tsc_futex_t *lock)
 void _tsc_futex_lock (volatile _tsc_futex_t *lock)
 {
   uint32_t i, v, wait, spin;
-#ifdef ENABLE_DEBUG
+#if (ENABLE_DEBUG > 1)
   tsc_coroutine_t self = tsc_coroutine_self();
   uint64_t coid = (self != NULL) ? self -> id : (uint64_t)-1;
 #endif
@@ -60,7 +49,7 @@ void _tsc_futex_lock (volatile _tsc_futex_t *lock)
   }
 
 __lock_success:
-#ifdef ENABLE_DEBUG
+#if (ENABLE_DEBUG > 1)
   lock -> cookie = coid;
 #endif
   return;
@@ -70,7 +59,7 @@ void _tsc_futex_unlock (volatile _tsc_futex_t *lock)
 {
   uint32_t v;
 
-#ifdef ENABLE_DEBUG
+#if (ENABLE_DEBUG > 1)
   lock -> cookie = (uint64_t)-2;
 #endif
 

@@ -3,7 +3,7 @@
 all: library app
 
 enable_timer ?= 0
-enable_optimize ?= 0
+enable_debug ?= 1
 enable_splitstack ?= 0
 enable_deadlock_detect ?= 1
 enable_refcnt ?= 1
@@ -13,7 +13,7 @@ ifeq ($(shell uname), Darwin)
 endif
 
 ARGS := enable_timer=${enable_timer} \
-	enable_optimize=${enable_optimize} \
+	enable_debug=${enable_debug} \
 	enable_splitstack=${enable_splitstack} \
 	enable_deadlock_detect=${enable_deadlock_detect} \
 	enable_refcnt=${enable_refcnt} \

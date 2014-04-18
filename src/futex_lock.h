@@ -17,7 +17,7 @@ enum {
 
 typedef struct {
     uint32_t key;
-#ifdef ENABLE_DEBUG
+#if (ENABLE_DEBUG > 1)
     uint64_t cookie;
 #endif
 } _tsc_futex_t;

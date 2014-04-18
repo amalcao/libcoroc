@@ -135,8 +135,13 @@ typedef pthread_t TSC_OS_THREAD_T;
 #else
 # define TSC_ATOMIC_INC(n) __sync_add_and_fetch(&(n), 1)
 # define TSC_ATOMIC_DEC(n) __sync_add_and_fetch(&(n), -1)
+
+# define TSC_ATOMIC_READ(n) __atomic_load_n (&(n), __ATOMIC_SEQ_CST)
+# define TSC_ATOMIC_WRITE(n, v) __atomic_store_n (&(n), v, __ATOMIC_SEQ_CST)
+
 # define TSC_CAS(pval, old, new) __sync_bool_compare_and_swap(pval, old, new)
 # define TSC_XCHG(pval, new) __atomic_exchange_n (pval, new, __ATOMIC_SEQ_CST)
+
 # define TSC_SYNC_ALL() __sync_synchronize()
 //# define TSC_SYNC_ALL() asm volatile("":::"memory")
 #endif
@@ -178,8 +183,19 @@ typedef long long tsc_word_t;
 typedef long tsc_word_t;
 #endif
 
+static inline void __procyield (uint32_t cnt)
+{
+  volatile uint32_t i;
+
+  for (i = 0; i < cnt; ++i) {
+#if defined(__i386) || defined(__x86_64__)
+      __asm__ __volatile__ ("pause\n":::);
+#endif
+  }
+}
+
 /* define the debug output interface */
-#ifdef ENABLE_DEBUG
+#if (ENABLE_DEBUG > 1)
 # define TSC_DEBUG(...) fprintf(stderr, __VA_ARGS__)
 #else
 # define TSC_DEBUG(...)

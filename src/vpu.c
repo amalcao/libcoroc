@@ -7,11 +7,10 @@
 #include "netpoll.h"
 #include "lock.h"
 
-#ifdef ENABLE_DEADLOCK_DETECT
-# define MAX_SPIN_LOOP_NUM 2
-#endif // ENABLE_DEADLOCK_DETECT
+#define MAX_SPIN_LOOP_NUM 1
+#define WAKEUP_THRESHOLD (vpu_manager . xt_index)
 
-#define MAX_STEALING_FAIL_NUM  (2 * (vpu_manager . xt_index))
+#define MAX_STEALING_FAIL_NUM  (20 * (vpu_manager . xt_index))
 
 // the VPU manager instance.
 vpu_manager_t vpu_manager;
@@ -22,40 +21,40 @@ TSC_SIGNAL_MASK_DEFINE
 
 //Added by zhj
 /*
-*Used the pseudo-random generator defined by the congruence S' = 69070 * S% (2^32 - 5).  *Marsaglia, George.  "Remarks on choosing and implementingrandom number generators",  Com*munications of the ACM v 36n 7 (July 1993), p 105-107.
-*http://www.firstpr.com.au/dsp/rand31/p105-crawford.pdf
-*/
+ *Used the pseudo-random generator defined by the congruence S' = 69070 * S% (2^32 - 5).  *Marsaglia, George.  "Remarks on choosing and implementingrandom number generators",  Com*munications of the ACM v 36n 7 (July 1993), p 105-107.
+ *http://www.firstpr.com.au/dsp/rand31/p105-crawford.pdf
+ */
 static const unsigned RNGMOD = ((1ULL << 32) - 5);
 static const unsigned RNGMUL = 69070U;
 
 static inline unsigned __myrand(vpu_t* vpu)
 {
-    unsigned state = vpu -> rand_seed;
-    state = (unsigned)((RNGMUL * (unsigned long long)state) % RNGMOD);
-    vpu -> rand_seed = state;
-    return state;
+  unsigned state = vpu -> rand_seed;
+  state = (unsigned)((RNGMUL * (unsigned long long)state) % RNGMOD);
+  vpu -> rand_seed = state;
+  return state;
 }
 
 /* initialize per-vpu rand_seed */
 static inline void __mysrand(vpu_t* vpu, unsigned seed)
 {
-    seed %= RNGMOD;
-    seed += (seed == 0); /* 0 does not belong to the multiplicative group.  Use 1 instead */
-    vpu -> rand_seed = seed;
+  seed %= RNGMOD;
+  seed += (seed == 0); /* 0 does not belong to the multiplicative group.  Use 1 instead */
+  vpu -> rand_seed = seed;
 }
 
-static inline void * __random_steal(vpu_t* vpu){
-
-    // randomly select a victim to steal 
-    int victim_id = __myrand(vpu) % (vpu_manager . xt_index);
+static inline void * __random_steal(vpu_t* vpu)
+{
+  // randomly select a victim to steal 
+  int victim_id = __myrand(vpu) % (vpu_manager . xt_index);
 
 #if 0
-    // ignore it if the victim is the current vpu ..
-    if (victim_id == vpu -> id) 
-        return NULL;
+  // ignore it if the victim is the current vpu ..
+  if (victim_id == vpu -> id) 
+    return NULL;
 #endif
-    // try to steal a work ..
-    return atomic_queue_rem (& vpu_manager . xt[victim_id]);
+  // try to steal a work ..
+  return atomic_queue_rem (& vpu_manager . xt[victim_id]);
 }
 //End added 
 
@@ -63,6 +62,11 @@ static inline void * __random_steal(vpu_t* vpu){
 // e.g. , using the random way to reduce the overhead of locks.
 static inline tsc_coroutine_t core_elect (vpu_t * vpu)
 {
+#if 0
+  if (TSC_ATOMIC_READ(vpu_manager . total_ready) == 0)
+    return NULL;
+#endif
+
   tsc_coroutine_t candidate = 
     atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
@@ -99,17 +103,15 @@ static void core_sched (void)
   tsc_coroutine_t candidate = NULL;
   int idle_loops = 0;
 
-#ifdef ENABLE_DEADLOCK_DETECT
   // atomic inc the all idle thread number
   TSC_ATOMIC_INC(vpu_manager . idle);
-#endif // ENABLE_DEADLOCK_DETECT
 
   // clean the watchdog tick
   vpu -> watchdog = 0;
 
   /* --- the actual loop -- */
   while (true) {
-      candidate = atomic_queue_rem (& vpu_manager . xt[vpu -> id]);
+      candidate = atomic_queue_try_rem (& vpu_manager . xt[vpu -> id]);
 
       if (candidate == NULL) {
           // polling the async net IO ..
@@ -129,10 +131,11 @@ static void core_sched (void)
           if (candidate -> rem_timeslice == 0)
             candidate -> rem_timeslice = candidate -> init_timeslice;
 #endif
-#ifdef ENABLE_DEADLOCK_DETECT
           // atomic dec the total idle number
           TSC_ATOMIC_DEC(vpu_manager . idle);
-#endif //ENABLE_DEADLOCK_DETECT
+
+          // atomic dec the total ready jobs' number 
+          TSC_ATOMIC_DEC(vpu_manager . total_ready);
 
           candidate -> syscall = false;
           candidate -> status = TSC_COROUTINE_RUNNING;
@@ -150,15 +153,21 @@ static void core_sched (void)
           /* swap to the candidate's context */
           TSC_CONTEXT_LOAD(& candidate -> ctx);
       }
-#ifdef ENABLE_DEADLOCK_DETECT
       if (++idle_loops > MAX_SPIN_LOOP_NUM) {
           pthread_mutex_lock (& vpu_manager . lock);
           vpu_manager . alive --;
 
           if (vpu_manager . alive == 0 && 
-              __tsc_netpoll_size() == 0 &&
+              vpu_manager . total_ready == 0 &&
               !tsc_vfs_working() ) {
-              vpu_backtrace (vpu -> id);
+#ifdef ENABLE_DEADLOCK_DETECT
+              /* wait until one net job coming ..*/
+              if (__tsc_netpoll_size() > 0)
+                __tsc_netpoll_polling (true);
+              /* no any ready coroutines, just halt .. */
+              else
+                vpu_backtrace (vpu -> id);
+#endif
           } else if (vpu_manager . alive > 0) {
               TSC_ATOMIC_DEC(vpu_manager . idle);
               pthread_cond_wait (& vpu_manager . cond, & vpu_manager . lock);
@@ -170,7 +179,6 @@ static void core_sched (void)
           vpu_manager . alive ++;
           pthread_mutex_unlock (& vpu_manager . lock);
       }
-#endif
   }
 }
 
@@ -225,6 +233,8 @@ int core_yield (void * args)
 
   victim -> status = TSC_COROUTINE_READY;
   atomic_queue_add (& vpu_manager . xt[vpu_manager . xt_index], & victim -> status_link);
+  TSC_ATOMIC_INC(vpu_manager . total_ready);
+
   return 0;
 }
 
@@ -306,6 +316,7 @@ void tsc_vpu_initialize (int vpu_mp_count, tsc_coroutine_handler_t entry)
 
   vpu_manager . alive = vpu_mp_count;
   vpu_manager . idle = 0;
+  vpu_manager . total_ready = 0;
 
   pthread_cond_init (& vpu_manager . cond, NULL);
   pthread_mutex_init (& vpu_manager . lock, NULL);
@@ -342,6 +353,7 @@ void vpu_ready (tsc_coroutine_t coroutine)
 
   coroutine -> status = TSC_COROUTINE_READY;
   atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], & coroutine -> status_link);
+  TSC_ATOMIC_INC(vpu_manager . total_ready);
 
   vpu_wakeup_one ();
 }
@@ -430,15 +442,14 @@ void vpu_clock_handler (int signal)
 
 void vpu_wakeup_one (void)
 {
-#ifdef ENABLE_DEADLOCK_DETECT
   // wakeup a VPU thread who waiting the pthread_cond_t.
   pthread_mutex_lock (& vpu_manager . lock);
   if (vpu_manager . alive < vpu_manager . xt_index && 
-      vpu_manager . idle < 1) {
+      TSC_ATOMIC_READ(vpu_manager . idle) == 0 &&
+      TSC_ATOMIC_READ(vpu_manager . total_ready) > WAKEUP_THRESHOLD) {
       pthread_cond_signal (& vpu_manager . cond);
   }
   pthread_mutex_unlock (& vpu_manager . lock);
-#endif
 }
 
 #ifdef ENABLE_DEADLOCK_DETECT

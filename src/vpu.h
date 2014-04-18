@@ -33,6 +33,7 @@ typedef struct vpu_manager {
     pthread_mutex_t lock;
     uint16_t alive;
     uint16_t idle;
+    uint32_t total_ready;
 #endif
 } vpu_manager_t;
 

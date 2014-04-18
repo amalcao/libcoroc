@@ -41,11 +41,12 @@ ifeq (${use_clang}, 1)
 	CC := clang
 endif
 
-ifeq (${enable_optimize}, 1)
+ifeq (${enable_debug}, 0)
 	CFLAGS += -O2
 else
-	CFLAGS += -g3 -DENABLE_DEBUG
+	CFLAGS += -g3 
 endif
+CFLAGS += -DENABLE_DEBUG=${enable_debug}
 
 ifeq (${enable_splitstack}, 1)
 	CFLAGS += -DENABLE_SPLITSTACK

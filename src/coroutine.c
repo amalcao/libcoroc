@@ -96,10 +96,14 @@ tsc_coroutine_t tsc_coroutine_allocate (
       TSC_CONTEXT_INIT (& coroutine -> ctx, coroutine -> stack_base, size, coroutine);
       atomic_queue_add (& vpu_manager . coroutine_list,
                         & coroutine -> trace_link);
+#if 0
       atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], 
                         & coroutine -> status_link);
 
       vpu_wakeup_one ();
+#else
+      vpu_ready (coroutine);
+#endif
   }
 
   TSC_SIGNAL_UNMASK();
