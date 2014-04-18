@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <pthread.h>
 
 #ifdef __APPLE__
@@ -147,8 +148,6 @@ typedef pthread_t TSC_OS_THREAD_T;
 #endif
 
 #ifdef USE_FUTEX_LOCK
-#include <stdint.h>
-
 extern void _tsc_futex_sleep (uint32_t*, uint32_t, int64_t);
 extern void _tsc_futex_wakeup (uint32_t*, uint32_t);
 #endif

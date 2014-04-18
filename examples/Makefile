@@ -14,7 +14,7 @@ ifeq (${use_clang}, 1)
 	CC := clang
 endif
 
-ifeq (${enable_optimize}, 1)
+ifeq (${enable_debug}, 0)
 	CFLAGS += -O2
 else
 	CFLAGS += -g3
