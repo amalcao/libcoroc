@@ -14,7 +14,7 @@ typedef void (* boot_entry_t) ();
 
 static void bootstrap (uint32_t low, uint32_t high)
 {
-    uint64_t tmp = high << 16;
+    tsc_word_t tmp = high << 16;
     tmp <<= 16;
     tmp |= low;
 
@@ -30,7 +30,7 @@ void TSC_CONTEXT_INIT (TSC_CONTEXT * ctx, void *stack, size_t stack_sz,
  void * coroutine)
 {
     uint32_t low, high;
-    uint64_t tmp = (uint64_t)(coroutine);
+    uint64_t tmp = (tsc_word_t)(coroutine);
     sigset_t mask;
 
     low = tmp;
