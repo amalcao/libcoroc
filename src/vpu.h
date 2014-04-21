@@ -45,7 +45,7 @@ extern int core_exit (void *);
 
 extern void tsc_vpu_initialize (int cpu_mp_count, tsc_coroutine_handler_t entry);
 
-extern void vpu_suspend (queue_t * queue, void * lock, unlock_handler_t handler); 
+extern void vpu_suspend (queue_t * queue, volatile void * lock, unlock_handler_t handler); 
 extern void vpu_ready (tsc_coroutine_t coroutine);
 extern void vpu_syscall (int (*pfn)(void *));
 extern void vpu_clock_handler (int);

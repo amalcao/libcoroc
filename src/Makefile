@@ -19,9 +19,13 @@ endif
 
 ifeq (${OS}, Linux)
 TSC_CFILES += netpoll_epoll.c
+
+ifeq (${enable_futex}, 1)
 TSC_HEADERS += futex_lock.h
 TSC_CFILES += futex_impl.c futex_lock.c
 CFLAGS += -DUSE_FUTEX_LOCK
+endif
+
 else
 TSC_CFILES += netpoll_poll.c
 endif

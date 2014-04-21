@@ -5,6 +5,10 @@
 
 #include "support.h"
 
+/* The futex based lock mechanism, 
+ * we've imitated the golang's implementation.
+ * See [http://golang.org] to get the details .. */
+
 enum {
     MUTEX_UNLOCKED = 0,
     MUTEX_LOCKED = 1,
@@ -15,7 +19,7 @@ enum {
     PASSIVE_SPIN = 1,
 };
 
-typedef struct {
+typedef volatile struct {
     uint32_t key;
 #if (ENABLE_DEBUG > 1)
     uint64_t cookie;

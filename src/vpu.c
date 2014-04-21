@@ -19,10 +19,13 @@ TSC_BARRIER_DEFINE
 TSC_TLS_DEFINE
 TSC_SIGNAL_MASK_DEFINE
 
-//Added by zhj
-/*
- *Used the pseudo-random generator defined by the congruence S' = 69070 * S% (2^32 - 5).  *Marsaglia, George.  "Remarks on choosing and implementingrandom number generators",  Com*munications of the ACM v 36n 7 (July 1993), p 105-107.
- *http://www.firstpr.com.au/dsp/rand31/p105-crawford.pdf
+
+// added by ZHJ {{ 
+/* 
+ * Used the pseudo-random generator defined by the congruence S' = 69070 * S% (2^32 - 5).  
+ * Marsaglia, George.  "Remarks on choosing and implementingrandom number generators",  
+ * Communications of the ACM v 36n 7 (July 1993), p 105-107.
+ * http://www.firstpr.com.au/dsp/rand31/p105-crawford.pdf
  */
 static const unsigned RNGMOD = ((1ULL << 32) - 5);
 static const unsigned RNGMUL = 69070U;
@@ -56,7 +59,7 @@ static inline void * __random_steal(vpu_t* vpu)
   // try to steal a work ..
   return atomic_queue_rem (& vpu_manager . xt[victim_id]);
 }
-//End added 
+// }}
 
 // TODO : improve the strategy of work-stealing,
 // e.g. , using the random way to reduce the overhead of locks.
@@ -71,7 +74,7 @@ static inline tsc_coroutine_t core_elect (vpu_t * vpu)
     atomic_queue_rem (& vpu_manager . xt[vpu_manager . xt_index]);
 
 #ifdef ENABLE_WORKSTEALING
-  // changed by zhj
+  // update by ZHJ {{
   if (candidate == NULL) {
       int failure_time = 0;
       while ((candidate = __random_steal(vpu)) == NULL) {
@@ -79,6 +82,7 @@ static inline tsc_coroutine_t core_elect (vpu_t * vpu)
             break;
       }
   }
+  // }}
 #endif // ENABLE_WORKSTEALING 
 
   return candidate;
@@ -409,11 +413,11 @@ void vpu_syscall (int (*pfn)(void *))
 // the `lock' must be hold until the context be saved completely,
 // in order to prevent other VPU to load the context in an ill state.
 // the `handler' tells the VPU how to release the `lock'.
-void vpu_suspend (queue_t * queue, void * lock, unlock_handler_t handler)
+void vpu_suspend (queue_t * queue, volatile void * lock, unlock_handler_t handler)
 {
   tsc_coroutine_t self = tsc_coroutine_self ();
   self -> wait = queue;
-  self -> hold = lock;
+  self -> hold = (void*)lock;
   self -> unlock_handler = handler;
   vpu_syscall (core_wait);
 }

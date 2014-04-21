@@ -9,7 +9,7 @@
 #include "message.h"
 
 typedef int32_t (* tsc_coroutine_handler_t) (void *args);
-typedef void (* unlock_handler_t) (void *lock);
+typedef void (* unlock_handler_t) (volatile void *lock);
 
 typedef int32_t tsc_coroutine_id_t;
 

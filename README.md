@@ -25,14 +25,15 @@ It is simple to build the library and examples, just goto the root directory of 
 There are some building options:
 
 - `enable_timer=1` to enable the time-sharing mechanism, which is disable default.
-- `enable_optimize=1` to build the target with `-O2` option, if not use this option, the debug mode library and examples will be built.
+- `enable_debug=[0|1|2]` to set the debug level, 0 means no debug option but optimize the code with "-O2" option.
 - `use_clang=1` to use the clang/llvm compiler to build the programs. This is the default setting for Darwin platform.
 - `enable_splitstack=1` to enable the split-stack feature, make sure your complier (gcc 4.6.0+) and linker (GNU gold) support that feature!
 - `enable_deadlock_detect=1` to enable the deadlock detecting. When all VPUs are sleep, the program will print the backtrace info for each suspended thread and quit.
+- `enable_futex=1` to use the futex based lock mechanism instead of the pthread spinlock.
 
 To build an optimized library with time-sharing support, just use the command:
 		
-		make enable_timer=1 enable_optimize=1
+		make enable_timer=1 enable_debug=0
 
 
 ## Examples
@@ -61,7 +62,7 @@ We provide a python script to enhance the GDB to debug the applications using li
 Make sure your GDB is compiled with the option "--with-python", 
 you can open GDB and type such command to test whether python plugin is available for you:
 
-        (gdb) python print 1 + 1
+        (gdb) python print(1 + 1)
 
 You can go through if it output "2"; otherwise, try to re-compile your gdb.
 
@@ -99,10 +100,10 @@ make sure your GDB is version 7.0 or later and built with python enable.
 
 There are lots of things needed to improve both the functionality and the performance:
 
-- A more efficient way for work-stealing among the schedulers
+- A more efficient way for work-stealing among the schedulers (*A new random stealing mechanism is added by ZHJ*)
 - Wrappers for the system calls which may suspend the current scheduler
 - Asynchronous API for socket IO operations (**DNOE**)
 - [Segment-stack](http://gcc.gnu.org/wiki/SplitStacks) support for coroutines (**DONE**)
 - A more efficient memory management module, like [tc_malloc](http://goog-perftools.sourceforge.net/doc/tcmalloc.html)
-- Garbage-Collection mechanism for auto deallocation
+- Garbage-Collection mechanism for auto deallocation (*A simple reference-counting mechanism is provided now*)
 
