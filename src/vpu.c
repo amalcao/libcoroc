@@ -212,18 +212,13 @@ int core_wait (void * args)
   tsc_coroutine_t victim = (tsc_coroutine_t)args;
 
   victim -> status = TSC_COROUTINE_WAIT;
-  if (victim -> wait != NULL) {
-      atomic_queue_add (victim -> wait, & victim -> status_link);
-      victim -> wait = NULL;
+
+  if (vpu -> hold != NULL) {
+      TSC_DEBUG("[core_wait unlock %p] vid is %d, coid is %ld\n", vpu->hold, vpu->id, (uint64_t)(victim->id));
+      (vpu -> unlock_handler) (vpu -> hold);
+	  vpu -> hold = NULL;
+	  vpu -> unlock_handler = NULL;
   }
-  if (victim -> hold != NULL) {
-      TSC_DEBUG("[core_wait unlock %p] vid is %d, coid is %ld\n", victim->hold, vpu->id, (uint64_t)(victim->id));
-      void * lock = victim -> hold;
-      victim -> hold = NULL;
-      assert (lock != NULL);
-      (victim -> unlock_handler) (lock);
-  }
-  /* victim -> vpu_id = -1; */
 
   return 0;
 }
@@ -408,17 +403,15 @@ void vpu_syscall (int (*pfn)(void *))
 }
 
 // suspend current coroutine on a given wait queue,
-// the `queue' is nil means the coroutine has already been
-// saved in somewhere.
 // the `lock' must be hold until the context be saved completely,
 // in order to prevent other VPU to load the context in an ill state.
 // the `handler' tells the VPU how to release the `lock'.
-void vpu_suspend (queue_t * queue, volatile void * lock, unlock_handler_t handler)
+void vpu_suspend (volatile void * lock, unlock_handler_t handler)
 {
-  tsc_coroutine_t self = tsc_coroutine_self ();
-  self -> wait = queue;
-  self -> hold = (void*)lock;
-  self -> unlock_handler = handler;
+  vpu_t * vpu = TSC_TLS_GET();
+  vpu -> hold = (void*)lock;
+  vpu -> unlock_handler = handler;
+
   vpu_syscall (core_wait);
 }
 

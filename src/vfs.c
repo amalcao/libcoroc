@@ -182,8 +182,7 @@ static void __tsc_vfs_add_ops (tsc_vfs_ops * ops)
     pthread_cond_signal (& tsc_vfs_manager . cond);
 
   // suspend current thread and release the lock ..
-  vpu_suspend (NULL, 
-               & tsc_vfs_manager . mutex,
+  vpu_suspend (& tsc_vfs_manager . mutex,
                (unlock_handler_t)pthread_mutex_unlock);
 
   TSC_SIGNAL_UNMASK();

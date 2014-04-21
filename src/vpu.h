@@ -7,6 +7,9 @@
 #include "queue.h"
 #include "support.h"
 
+// The unlock handler type 
+typedef void (* unlock_handler_t) (volatile void *lock);
+
 // Type of VPU information,
 //  It's a OS Thread here!!
 typedef struct vpu {
@@ -18,6 +21,8 @@ typedef struct vpu {
     unsigned rand_seed;
     tsc_coroutine_t current;
 	tsc_coroutine_t scheduler;
+    void * hold;
+	unlock_handler_t unlock_handler;
 } vpu_t;
 
 // Type of the VPU manager
@@ -45,7 +50,7 @@ extern int core_exit (void *);
 
 extern void tsc_vpu_initialize (int cpu_mp_count, tsc_coroutine_handler_t entry);
 
-extern void vpu_suspend (queue_t * queue, volatile void * lock, unlock_handler_t handler); 
+extern void vpu_suspend (volatile void * lock, unlock_handler_t handler); 
 extern void vpu_ready (tsc_coroutine_t coroutine);
 extern void vpu_syscall (int (*pfn)(void *));
 extern void vpu_clock_handler (int);

@@ -124,7 +124,7 @@ static int __tsc_chan_send (tsc_chan_t chan, void * buf, bool block)
       quantum q;
       quantum_init (& q, chan, self, buf, false);
       queue_add (& chan -> send_que, & q . link);
-      vpu_suspend (NULL, & chan -> lock, (unlock_handler_t)(lock_release));
+      vpu_suspend (& chan -> lock, (unlock_handler_t)(lock_release));
       // awaken by a receiver later ..
       lock_acquire (& chan -> lock);
       TSC_SYNC_ALL();
@@ -162,7 +162,7 @@ static int __tsc_chan_recv (tsc_chan_t chan, void * buf, bool block)
       quantum q;
       quantum_init (& q, chan, self, buf, false);
       queue_add (& chan -> recv_que, & q . link);
-      vpu_suspend (NULL, & chan -> lock, (unlock_handler_t)(lock_release));
+      vpu_suspend (& chan -> lock, (unlock_handler_t)(lock_release));
       // awaken by a sender later ..
       lock_acquire (& chan -> lock);
       TSC_SYNC_ALL();
@@ -350,7 +350,7 @@ int _tsc_chan_set_select (tsc_chan_set_t set, bool block, tsc_chan_t * active)
           pq ++;
       }
 
-      vpu_suspend (NULL, set, (unlock_handler_t)lock_chain_release);
+      vpu_suspend (set, (unlock_handler_t)lock_chain_release);
       lock_chain_acquire ((lock_chain_t*)set);
 
       // get the selected one

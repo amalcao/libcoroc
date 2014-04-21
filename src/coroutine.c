@@ -59,7 +59,6 @@ tsc_coroutine_t tsc_coroutine_allocate (
       coroutine -> entry = entry;
       coroutine -> arguments = arguments;
       coroutine -> syscall = false;
-      coroutine -> wait = NULL;
       coroutine -> sigmask_nest = 0;
 
       if (attr != NULL) {
