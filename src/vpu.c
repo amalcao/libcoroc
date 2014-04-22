@@ -8,7 +8,7 @@
 #include "lock.h"
 
 #define MAX_SPIN_LOOP_NUM 1
-#define WAKEUP_THRESHOLD (vpu_manager . xt_index)
+#define WAKEUP_THRESHOLD  (vpu_manager . alive << 1)
 
 #define MAX_STEALING_FAIL_NUM  (20 * (vpu_manager . xt_index))
 
