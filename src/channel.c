@@ -128,6 +128,10 @@ static int __tsc_chan_send(tsc_chan_t chan, void *buf, bool block) {
 static int __tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
   tsc_coroutine_t self = tsc_coroutine_self();
 
+  // check if there're any empty slots ..
+  if (chan->copy_from_buff && chan->copy_from_buff(chan, buf))
+    return CHAN_SUCCESS;
+
   // check if there're any senders pending .
   quantum *qp = fetch_quantum(&chan->send_que);
   if (qp != NULL) {
@@ -135,9 +139,6 @@ static int __tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
     vpu_ready(qp->coroutine);
     return CHAN_SUCCESS;
   }
-  // check if there're any empty slots ..
-  if (chan->copy_from_buff && chan->copy_from_buff(chan, buf))
-    return CHAN_SUCCESS;
 
   // check if the chan is closed by another coroutine
   if (chan->close) return CHAN_CLOSED;
