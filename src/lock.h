@@ -6,7 +6,7 @@
 #include "futex_lock.h"
 
 typedef _tsc_futex_t lock;
-typedef lock * lock_t;
+typedef lock* lock_t;
 
 #define lock_init _tsc_futex_init
 #define lock_acquire _tsc_futex_lock
@@ -23,7 +23,7 @@ typedef lock * lock_t;
 #endif
 
 typedef pthread_spinlock_t lock;
-typedef lock * lock_t;
+typedef lock* lock_t;
 
 #define lock_init(lock) pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE)
 #define lock_acquire pthread_spin_lock
@@ -31,6 +31,6 @@ typedef lock * lock_t;
 #define lock_release pthread_spin_unlock
 #define lock_fini pthread_spin_destroy
 
-#endif // USE_FUTEX_LOCK
+#endif  // USE_FUTEX_LOCK
 
-#endif // _TSC_SUPPORT_LOCK_H_
+#endif  // _TSC_SUPPORT_LOCK_H_

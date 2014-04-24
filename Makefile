@@ -1,6 +1,8 @@
-.PHONY: all library app clean
+.PHONY: all library app clean format
 
 all: library app
+
+FORMATER := clang-format-3.5
 
 enable_timer ?= 0
 enable_debug ?= 1
@@ -21,12 +23,14 @@ ARGS := enable_timer=${enable_timer} \
 	enable_futex=${enable_futex} \
 	use_clang=${use_clang} 
 
-
 library:
 	cd src && make install $(ARGS)
 
 app:
 	cd examples && make install $(ARGS)
+
+format:
+	@find . -name "*.[c|h]" -print | xargs ${FORMATER} -i -style=Google
 
 clean:
 	cd src && make clean

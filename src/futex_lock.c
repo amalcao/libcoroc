@@ -4,81 +4,70 @@
 
 #include "coroutine.h"
 
-void _tsc_futex_init (volatile _tsc_futex_t *lock)
-{
-  lock -> key = MUTEX_UNLOCKED;
+void _tsc_futex_init(volatile _tsc_futex_t *lock) {
+  lock->key = MUTEX_UNLOCKED;
 }
 
-void _tsc_futex_lock (volatile _tsc_futex_t *lock)
-{
+void _tsc_futex_lock(volatile _tsc_futex_t *lock) {
   uint32_t i, v, wait, spin;
 #if (ENABLE_DEBUG > 1)
   tsc_coroutine_t self = tsc_coroutine_self();
-  uint64_t coid = (self != NULL) ? self -> id : (uint64_t)-1;
+  uint64_t coid = (self != NULL) ? self->id : (uint64_t) - 1;
 #endif
 
-  v = TSC_XCHG(& lock->key, MUTEX_LOCKED);
-  if (v == MUTEX_UNLOCKED)
-    goto __lock_success;
+  v = TSC_XCHG(&lock->key, MUTEX_LOCKED);
+  if (v == MUTEX_UNLOCKED) goto __lock_success;
 
   wait = v;
   spin = ACTIVE_SPIN;
 
   while (1) {
-      for (i = 0; i < spin; i++) {
-          while (lock -> key == MUTEX_UNLOCKED)
-            if (TSC_CAS(& lock->key, MUTEX_UNLOCKED, wait))
-              goto __lock_success;
+    for (i = 0; i < spin; i++) {
+      while (lock->key == MUTEX_UNLOCKED)
+        if (TSC_CAS(&lock->key, MUTEX_UNLOCKED, wait)) goto __lock_success;
 
-          __procyield(ACTIVE_SPIN_CNT);
-      }
+      __procyield(ACTIVE_SPIN_CNT);
+    }
 
-      for (i = 0; i < PASSIVE_SPIN; i++) {
-          while (lock -> key == MUTEX_UNLOCKED)
-            if (TSC_CAS(& lock->key, MUTEX_UNLOCKED, wait))
-              goto __lock_success;
-          sched_yield ();
-      }
+    for (i = 0; i < PASSIVE_SPIN; i++) {
+      while (lock->key == MUTEX_UNLOCKED)
+        if (TSC_CAS(&lock->key, MUTEX_UNLOCKED, wait)) goto __lock_success;
+      sched_yield();
+    }
 
-      // sleep 
-      v = TSC_XCHG(& lock->key, MUTEX_SLEEPING);
-      if (v == MUTEX_UNLOCKED)
-        goto __lock_success;
-      wait = MUTEX_SLEEPING;
-      _tsc_futex_sleep ((uint32_t*)& lock->key, MUTEX_SLEEPING, -1);
+    // sleep
+    v = TSC_XCHG(&lock->key, MUTEX_SLEEPING);
+    if (v == MUTEX_UNLOCKED) goto __lock_success;
+    wait = MUTEX_SLEEPING;
+    _tsc_futex_sleep((uint32_t *)&lock->key, MUTEX_SLEEPING, -1);
   }
 
 __lock_success:
 #if (ENABLE_DEBUG > 1)
-  lock -> cookie = coid;
+  lock->cookie = coid;
 #endif
   return;
 }
 
-void _tsc_futex_unlock (volatile _tsc_futex_t *lock)
-{
+void _tsc_futex_unlock(volatile _tsc_futex_t *lock) {
   uint32_t v;
 
 #if (ENABLE_DEBUG > 1)
-  lock -> cookie = (uint64_t)-2;
+  lock->cookie = (uint64_t) - 2;
 #endif
 
-  v = TSC_XCHG(& lock->key, MUTEX_UNLOCKED);
-  assert (v != MUTEX_UNLOCKED);
+  v = TSC_XCHG(&lock->key, MUTEX_UNLOCKED);
+  assert(v != MUTEX_UNLOCKED);
 
-  if (v == MUTEX_SLEEPING)
-    _tsc_futex_wakeup ((uint32_t*)& lock->key, 1);
+  if (v == MUTEX_SLEEPING) _tsc_futex_wakeup((uint32_t *)&lock->key, 1);
 }
 
-int _tsc_futex_trylock (volatile _tsc_futex_t *lock)
-{
-  if (TSC_CAS(& lock->key, MUTEX_UNLOCKED, MUTEX_LOCKED))
-    return 0;
+int _tsc_futex_trylock(volatile _tsc_futex_t *lock) {
+  if (TSC_CAS(&lock->key, MUTEX_UNLOCKED, MUTEX_LOCKED)) return 0;
   return 1;
 }
 
-void _tsc_futex_destroy (volatile _tsc_futex_t *lock)
-{
+void _tsc_futex_destroy(volatile _tsc_futex_t *lock) {
   // TODO
-  assert (lock->key == MUTEX_UNLOCKED);
+  assert(lock->key == MUTEX_UNLOCKED);
 }

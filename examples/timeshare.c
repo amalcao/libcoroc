@@ -1,4 +1,4 @@
-/* - - - - 
+/* - - - -
  * The User APP using LibTSC ..
  * - - - - */
 
@@ -8,38 +8,36 @@
 
 #include "libtsc.h"
 
-void sub_task (void * arg)
-{
-    uint64_t id = (uint64_t)arg;
+void sub_task(void* arg) {
+  uint64_t id = (uint64_t)arg;
 
-    printf ("[sub_task:] id is %i!\n", id);
+  printf("[sub_task:] id is %i!\n", id);
 
-	for (;;) {
+  for (;;) {
 #ifndef ENABLE_TIMER
-		tsc_coroutine_yield ();
-#endif 
-	}
+    tsc_coroutine_yield();
+#endif
+  }
 
-    tsc_coroutine_exit (0);
+  tsc_coroutine_exit(0);
 }
 
+int main(int argc, char** argv) {
+  tsc_coroutine_t threads[100];
 
-int main (int argc, char ** argv)
-{
-    tsc_coroutine_t threads[100];
+  int i;
+  for (i = 0; i < 100; ++i) {
+    threads[i] =
+        tsc_coroutine_allocate(sub_task, i, "", TSC_COROUTINE_NORMAL, 0);
+  }
 
-    int i;
-    for (i = 0; i<100; ++i) {
-        threads[i] = tsc_coroutine_allocate (sub_task, i, "", TSC_COROUTINE_NORMAL, 0);
-    }
-
-	for (;;) {
+  for (;;) {
 #ifndef ENABLE_TIMER
-		tsc_coroutine_yield ();
-#endif 
-	}
+    tsc_coroutine_yield();
+#endif
+  }
 
-    tsc_coroutine_exit (0);
+  tsc_coroutine_exit(0);
 
-    return 0;
+  return 0;
 }
