@@ -14,7 +14,7 @@ struct {
   pthread_cond_t cond;
   queue_t wait_que;
   queue_t ready_que;
-  TSC_OS_THREAD_T os_thr;
+  TSC_OS_THREAD_T *os_thr;
 } tsc_vfs_manager;
 
 // the default file driver
@@ -41,7 +41,7 @@ void *tsc_vfs_routine(void *unused) {
 
     tsc_vfs_manager.working = true;
 
-    tsc_vfs_ops *ops = atomic_queue_rem(&tsc_vfs_manager.wait_que);
+    tsc_vfs_ops *ops = queue_rem(&tsc_vfs_manager.wait_que);
     assert(ops != NULL);
 
     tsc_vfs_manager.items--;
@@ -103,17 +103,28 @@ void *tsc_vfs_routine(void *unused) {
   // this routine will never return
 }
 
-void tsc_vfs_initialize(void) {
-  // init the vfs_manager ..
+void tsc_vfs_initialize(int n) {
 
+  if (n <= 0) {
+    TSC_DEBUG("VFS will not start!\n");
+    return;
+  }
+
+  int i;
+  // init the vfs_manager ..
   tsc_vfs_manager.items = 0;
   tsc_vfs_manager.working = false;
   pthread_mutex_init(&tsc_vfs_manager.mutex, NULL);
   pthread_cond_init(&tsc_vfs_manager.cond, NULL);
-  atomic_queue_init(&tsc_vfs_manager.wait_que);
+  queue_init(&tsc_vfs_manager.wait_que);
   atomic_queue_init(&tsc_vfs_manager.ready_que);
 
-  TSC_OS_THREAD_CREATE(&tsc_vfs_manager.os_thr, NULL, tsc_vfs_routine, NULL);
+  tsc_vfs_manager.os_thr =
+      (TSC_OS_THREAD_T *)TSC_ALLOC(sizeof(TSC_OS_THREAD_T) * n);
+
+  for (i = 0; i < n; i++)
+    TSC_OS_THREAD_CREATE(&tsc_vfs_manager.os_thr[i], NULL, tsc_vfs_routine,
+                         NULL);
 
   return;
 }
@@ -153,7 +164,7 @@ static void __tsc_vfs_add_ops(tsc_vfs_ops *ops) {
   ops->wait = tsc_coroutine_self();
   pthread_mutex_lock(&tsc_vfs_manager.mutex);
 
-  atomic_queue_add(&tsc_vfs_manager.wait_que, &ops->link);
+  queue_add(&tsc_vfs_manager.wait_que, &ops->link);
   tsc_vfs_manager.items++;
 
   if (tsc_vfs_manager.items == 1) pthread_cond_signal(&tsc_vfs_manager.cond);

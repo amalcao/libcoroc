@@ -21,8 +21,8 @@ TSC_SIGNAL_MASK_DEFINE
 
 // added by ZHJ {{
 /*
- * Used the pseudo-random generator defined by the congruence S' = 69070 * S%
- * (2^32 - 5).
+ * Used the pseudo-random generator defined by the congruence
+ *  S' = 69070 * S % (2^32 - 5).
  * Marsaglia, George.  "Remarks on choosing and implementingrandom number
  * generators",
  * Communications of the ACM v 36n 7 (July 1993), p 105-107.
@@ -61,8 +61,6 @@ static inline void* __random_steal(vpu_t* vpu) {
 }
 // }}
 
-// TODO : improve the strategy of work-stealing,
-// e.g. , using the random way to reduce the overhead of locks.
 static inline tsc_coroutine_t core_elect(vpu_t* vpu) {
 #if 0
   if (TSC_ATOMIC_READ(vpu_manager . total_ready) == 0)
@@ -181,7 +179,7 @@ static void core_sched(void) {
 }
 
 // destroy a given coroutine and its stack context.
-// since the stack may always be used during the lifetime
+// since the stack may alwayvpu_managers be used during the lifetime
 // of the coroutine, so this destruction must be a syscall
 // which called by system (idle) corouine on the system context.
 int core_exit(void* args) {

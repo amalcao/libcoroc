@@ -1,5 +1,7 @@
 OS := $(shell uname)
 
+enable_debug ?= 0
+
 TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h 
 TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c
 
