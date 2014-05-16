@@ -87,10 +87,9 @@ extern status_t tsc_coroutine_join(tsc_coroutine_t);
 extern void tsc_coroutine_detach(void);
 #endif  // TSC_ENABLE_COROUTINE_JOIN
 
-#define tsc_coroutine_spawn(entry, args, name) \
-    tsc_coroutine_allocate((tsc_coroutine_handler_t)(entry),\
-        (void*)(args), (name),\
-        TSC_COROUTINE_NORMAL, NULL)
+#define tsc_coroutine_spawn(entry, args, name)                            \
+  tsc_coroutine_allocate((tsc_coroutine_handler_t)(entry), (void*)(args), \
+                         (name), TSC_COROUTINE_NORMAL, NULL)
 
 // -- interfaces for tsc_coroutine_attributes --
 extern void tsc_coroutine_attr_init(tsc_coroutine_attributes_t* attr);

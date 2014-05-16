@@ -161,8 +161,8 @@ static void core_sched(void) {
         pthread_mutex_unlock(&vpu_manager.lock);
         /* wait until one net job coming ..*/
         if (__tsc_netpoll_size() > 0) {
-            __tsc_netpoll_polling(true);
-            pthread_mutex_lock(&vpu_manager.lock);
+          __tsc_netpoll_polling(true);
+          pthread_mutex_lock(&vpu_manager.lock);
         }
         /* no any ready coroutines, just halt .. */
         else

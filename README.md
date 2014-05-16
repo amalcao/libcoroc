@@ -30,6 +30,7 @@ There are some building options:
 - `enable_splitstack=1` to enable the split-stack feature, make sure your complier (gcc 4.6.0+) and linker (GNU gold) support that feature!
 - `enable_deadlock_detect=1` to enable the deadlock detecting. When all VPUs are sleep, the program will print the backtrace info for each suspended thread and quit.
 - `enable_futex=1` to use the futex based lock mechanism instead of the pthread spinlock.
+- `enable_dist=1` to enable the distributed framework.
 
 To build an optimized library with time-sharing support, just use the command:
 		
@@ -49,6 +50,7 @@ Some examples are provided for users to test the library:
 - **ticker.c**: for testing the ticker/timer API
 - **file.c**: for testing the file API
 - **chan.c**: for testing the channel API
+- **server.**&**client.c**: for testing the distributed framework
 - **primes.c**: example migrated from libtask
 - **tcpproxy.c**: example migrated from libtask
 - **httpload.c**: example migrated from libtask
