@@ -10,6 +10,7 @@ enable_splitstack ?= 0
 enable_deadlock_detect ?= 1
 enable_refcnt ?= 1
 enable_futex ?= 0
+enable_dist ?= 0
 
 ifeq ($(shell uname), Darwin)
     use_clang ?= 1
@@ -21,6 +22,7 @@ ARGS := enable_timer=${enable_timer} \
 	enable_deadlock_detect=${enable_deadlock_detect} \
 	enable_refcnt=${enable_refcnt} \
 	enable_futex=${enable_futex} \
+	enable_dist=${enable_dist} \
 	use_clang=${use_clang} 
 
 library:

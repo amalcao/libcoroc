@@ -158,8 +158,12 @@ static void core_sched(void) {
       if (vpu_manager.alive == 0 && vpu_manager.total_ready == 0 &&
           !tsc_vfs_working()) {
 #ifdef ENABLE_DEADLOCK_DETECT
+        pthread_mutex_unlock(&vpu_manager.lock);
         /* wait until one net job coming ..*/
-        if (__tsc_netpoll_size() > 0) __tsc_netpoll_polling(true);
+        if (__tsc_netpoll_size() > 0) {
+            __tsc_netpoll_polling(true);
+            pthread_mutex_lock(&vpu_manager.lock);
+        }
         /* no any ready coroutines, just halt .. */
         else
           vpu_backtrace(vpu->id);
