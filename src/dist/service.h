@@ -25,7 +25,8 @@ typedef struct tsc_service {
   uint64_t timeout;
   bool auto_start;
   uint32_t clients;  // total number of the connected clients
-  tsc_chan_t comm;
+  tsc_chan_t inbound;
+  tsc_chan_t outbound;
   tsc_chan_t quit;
   tsc_service_cb_t routine;
   tsc_service_cb_t init_callback;
@@ -39,13 +40,20 @@ typedef struct {
     int socket;
     tsc_chan_t chan;
   };
-} tsc_conn_t;
+} tsc_serial_t;
+
+typedef struct tsc_conn {
+  tsc_serial_t serial;
+  tsc_chan_t inbound;
+  tsc_chan_t outbound;
+} *tsc_conn_t;
 
 /* FIXME: the definition of common message structure */
 typedef struct tsc_message {
   int len;
-  int serial;
-  char* buf;
+  tsc_serial_t serial;
+  bool auto_delete;
+  char *buf;
 } *tsc_message_t;
 
 extern struct tsc_service *__start_tsc_services_section;
@@ -90,12 +98,17 @@ int tsc_service_reload(tsc_service_t *service);
 int tsc_service_quit(tsc_service_t *service, int info);
 
 /* the public interfaces for client end */
-tsc_chan_t tsc_service_connect_by_name(const char *);
-tsc_chan_t tsc_service_connect_by_addr(uint32_t, int);
-tsc_chan_t tsc_service_connect_by_host(const char *, int);
+tsc_conn_t tsc_service_connect_by_name(const char *);
+tsc_conn_t tsc_service_connect_by_addr(uint32_t, int);
+tsc_conn_t tsc_service_connect_by_host(const char *, int);
 
-int tsc_service_disconnect(tsc_chan_t conn);
+int tsc_service_disconnect(tsc_conn_t conn);
 
 int tsc_service_lookup(const char *, uint32_t *ip, int *port);  // TODO
+
+/* the public interfaces for messages passing */
+int tsc_message_init(tsc_message_t*, tsc_conn_t, int, bool);
+int tsc_message_send(tsc_message_t*, tsc_conn_t);
+int tsc_message_recv(tsc_message_t*, tsc_conn_t);
 
 #endif  // _TSC_SERVICE_H_
