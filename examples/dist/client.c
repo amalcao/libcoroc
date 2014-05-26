@@ -11,21 +11,21 @@
 int main(int argc, char **argv) {
   int i;
   char string[20];
-  tsc_message_t message;
+  struct tsc_message message;
 
   tsc_chan_t conn = tsc_service_connect_by_host("localhost", 65344);
   assert(conn != NULL);
 
   for (i = 0; i < COUNT; ++i) {
     snprintf(string, 20, "hello world! %d", i);
-    message = tsc_message_alloc(strlen(string) + 1);
-    strncpy(message->buf, string, message->len);
+    message.len = strlen(string) + 1;
+    message.buf = string;
     tsc_chan_send(conn, &message);
     sleep(1);
   }
 
-  message = tsc_message_alloc(1);
-  message->buf[0] = 'Q';
+  message.len = 1;
+  message.buf = "Q";
   tsc_chan_send(conn, &message);
 
   tsc_service_disconnect(conn);

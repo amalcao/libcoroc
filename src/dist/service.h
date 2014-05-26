@@ -33,10 +33,19 @@ typedef struct tsc_service {
   tsc_service_cb_t timeout_callback;
 } __attribute__((packed)) tsc_service_t;
 
+typedef struct {
+  int type;
+  union {
+    int socket;
+    tsc_chan_t chan;
+  };
+} tsc_conn_t;
+
 /* FIXME: the definition of common message structure */
 typedef struct tsc_message {
-  uint32_t len;
-  char buf[0];
+  int len;
+  int serial;
+  char* buf;
 } *tsc_message_t;
 
 extern struct tsc_service *__start_tsc_services_section;
@@ -88,9 +97,5 @@ tsc_chan_t tsc_service_connect_by_host(const char *, int);
 int tsc_service_disconnect(tsc_chan_t conn);
 
 int tsc_service_lookup(const char *, uint32_t *ip, int *port);  // TODO
-
-/* the api for messages */
-struct tsc_message *tsc_message_alloc(int len);
-void tsc_message_dealloc(struct tsc_message *message);
 
 #endif  // _TSC_SERVICE_H_

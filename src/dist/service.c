@@ -10,8 +10,8 @@ struct tsc_client_param {
   tsc_chan_t comm;
 };
 
-static int __tsc_message_pump(tsc_service_t *service) {
-  struct tsc_message *message;
+static int __tsc_pump_message(tsc_service_t *service) {
+  struct tsc_message message;
   int info, error;
 
   tsc_chan_t _chan = NULL;
@@ -34,16 +34,17 @@ static int __tsc_message_pump(tsc_service_t *service) {
 
     tsc_chan_set_select(set, &_chan);
     if (comm == _chan) {
-      if (message == NULL) {
+      if (message.len < 0) {
         TSC_ATOMIC_DEC(service->clients);
         error = -1;  // client disconnect ..
       } else {
-        error = service->routine(service, message);
+        error = service->routine(service, &message);
       }
       if (error && service->error_callback)
         service->error_callback(service, &error);
       // the message should be freed here!!
-      tsc_message_dealloc(message);
+      if (message.serial >= 0 && message.len > 0)
+        TSC_DEALLOC(message.buf);
     } else if ((tsc_chan_t)timer == _chan) {
       service->timeout_callback(service, NULL);
     } else if (quit == _chan) {
@@ -73,21 +74,34 @@ __tsc_message_pump_exit:
   return 0;
 }
 
-static int __tsc_parse_message(struct tsc_client_param *param) {
-  int32_t len;
-  struct tsc_message *message;
+static int __tsc_replay_message(struct tsc_message *message) {
+    assert (message->serial >= 0);
 
-  while (tsc_net_read(param->socket, &len, sizeof(int32_t)) > 0) {
-    if (len == 0) continue;
+    assert (tsc_net_write(message->serial, &(message->len), sizeof(message->len)) == sizeof(message->len));
 
-    if (len < 0) {
-      // a negtive len means the remote client decide to disconnect
-      message = NULL;
-    } else {
+    if (message->len > 0) {
+        assert(tsc_net_write(message->serial, message->buf, message->len) == message->len);
+        TSC_DEALLOC(message->buf);
+    }
+    TSC_DEALLOC(message);
+    return 0;
+}
+
+
+static int __tsc_receive_message(struct tsc_client_param *param) {
+  struct tsc_message message;
+  message.serial = param->socket;
+
+  while (tsc_net_read(param->socket, &(message.len), sizeof(int)) > 0) {
+    if (message.len == 0) continue;
+    
+    // a negtive len means the remote client decide to disconnect
+    // TODO
+    if (message.len > 0) {
       // alloc new message buffer ..
-      message = tsc_message_alloc(len);
+      message.buf = TSC_ALLOC(message.len);
       // read the result of the package content ..
-      assert(tsc_net_read(param->socket, message->buf, len) == len);
+      assert(tsc_net_read(param->socket, message.buf, message.len) == message.len);
     }
 
     // dispatch the message to the `pump' task ..
@@ -120,35 +134,32 @@ static int __tsc_server_loop(tsc_service_t *service) {
     param->comm = tsc_refcnt_get(service->comm);
 
     TSC_ATOMIC_INC(service->clients);
-    tsc_coroutine_spawn(__tsc_parse_message, param, "parsing");
+    tsc_coroutine_spawn(__tsc_receive_message, param, "receiver");
   }
 
   // TODO: how to notice the server to exit ??
   return 0;
 }
 
-static int __tsc_client_loop(struct tsc_client_param *param) {
-  struct tsc_message *message = NULL;
-  uint32_t sig = -1;
+static int __tsc_send_message(struct tsc_client_param *param) {
+  struct tsc_message message = {0, -1, 0};
+  int sig = -1;
 
   for (;;) {
     // get the message element from the send operations ..
     tsc_chan_recv(param->comm, &message);
-    if (message == NULL) {
+    if (message.len <= 0) {
       // if the client close the channel, we just send a negtive sized message
       // ..
-      tsc_net_write(param->socket, &sig, sizeof(uint32_t));
+      tsc_net_write(param->socket, &sig, sizeof(int));
       break;
     } else {
       // firstly, sending the length of this message
-      assert(tsc_net_write(param->socket, &(message->len), sizeof(uint32_t)) ==
+      assert(tsc_net_write(param->socket, &(message.len), sizeof(int)) ==
              sizeof(uint32_t));
       // and then, sending the content of this message
-      assert(tsc_net_write(param->socket, message->buf, message->len) ==
-             message->len);
-
-      // release the local message ..
-      tsc_message_dealloc(message);
+      assert(tsc_net_write(param->socket, message.buf, message.len) ==
+             message.len);
     }
   }
 
@@ -173,7 +184,7 @@ int tsc_service_start(tsc_service_t *service, bool backend) {
   assert(service != NULL);
 
   // create the internal channel for messages ..
-  service->comm = tsc_refcnt_get(tsc_chan_allocate(sizeof(void *), 0));
+  service->comm = tsc_refcnt_get(tsc_chan_allocate(sizeof(struct tsc_message), 0));
   // create the channel for quiting ..
   service->quit = tsc_refcnt_get(tsc_chan_allocate(sizeof(int), 1));
 
@@ -183,9 +194,9 @@ int tsc_service_start(tsc_service_t *service, bool backend) {
 
   // create a coroutine to service the message channel..
   if (backend) {
-    tsc_coroutine_spawn(__tsc_message_pump, (void *)service, "pump");
+    tsc_coroutine_spawn(__tsc_pump_message, (void *)service, "pump");
   } else {
-    __tsc_message_pump(service);
+    __tsc_pump_message(service);
   }
   return 0;
 }
@@ -224,21 +235,34 @@ tsc_chan_t tsc_service_connect_by_addr(uint32_t addr, int port) {
 
 tsc_chan_t tsc_service_connect_by_host(const char *host, int port) {
   // FIXME: we don't support the multi-param passing to a new spawned task now!
-  struct tsc_client_param *param;
+  struct tsc_client_param *snd_param, *recv_param;
+  int socket;
   tsc_chan_t comm = NULL;
-  param = TSC_ALLOC(sizeof(*param));
 
-  param->socket = tsc_net_dial(true, host, port);
-  if (param->socket < 0) {
-    TSC_DEALLOC(param);
-  } else {
-    comm = tsc_chan_allocate(sizeof(void *), 0);
-    param->comm = tsc_refcnt_get(comm);
+  socket = tsc_net_dial(true, host, port);
+  if (socket >= 0) {
+    comm = tsc_chan_allocate(sizeof(struct tsc_message), 0);
+    
+    // start the coroutine to send the outbound messages
+    snd_param->socket = socket;
+    snd_param->comm = tsc_refcnt_get(comm);
 
-    // NOTE: param MUST be freed by the new task..
-    tsc_coroutine_spawn(__tsc_client_loop, param, "client");
+    tsc_coroutine_spawn(__tsc_send_message, snd_param, "sender");
+
+    // start the coroutine to recv the inbound messages
+    recv_param->socket = socket;
+    recv_param->comm = (tsc_chan_t)tsc_refcnt_get(tsc_coroutine_self());
+
+    tsc_coroutine_spawn(__tsc_receive_message, recv_param, "receiver");
   }
   return comm;
+}
+
+int tsc_service_disconnect(tsc_chan_t conn) {
+  struct tsc_message *message = NULL;
+  tsc_chan_send(conn, &message);
+  tsc_refcnt_put(conn);
+  return 0;
 }
 
 // FIXME: we need to just define one service to create the section
@@ -258,22 +282,3 @@ int tsc_init_all_services(void) {
 
   return id;
 }
-
-int tsc_service_disconnect(tsc_chan_t conn) {
-  struct tsc_message *message = NULL;
-  tsc_chan_send(conn, &message);
-  tsc_refcnt_put(conn);
-  return 0;
-}
-
-/* the implement of message api */
-struct tsc_message *tsc_message_alloc(int len) {
-  if (len < 0) return NULL;
-
-  tsc_message_t message = NULL;
-  message = TSC_ALLOC(sizeof(struct tsc_message) + len);
-  if (message != NULL) message->len = len;
-  return message;
-}
-
-void tsc_message_dealloc(struct tsc_message *message) { TSC_DEALLOC(message); }
