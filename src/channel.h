@@ -85,6 +85,14 @@ extern int _tsc_chan_recv(tsc_chan_t chan, void *buf, bool block);
 #define tsc_chan_nbsend(chan, buf) _tsc_chan_send(chan, buf, false)
 #define tsc_chan_nbrecv(chan, buf) _tsc_chan_recv(chan, buf, false)
 
+extern int _tsc_chan_sendp(tsc_chan_t chan, void *ptr, bool block);
+extern int _tsc_chan_recvp(tsc_chan_t chan, void **pptr, bool block);
+
+#define tsc_chan_sendp(chan, ptr) _tsc_chan_sendp(chan, ptr, true)
+#define tsc_chan_recvp(chan, pptr) _tsc_chan_recvp(chan, pptr, true)
+#define tsc_chan_nbsendp(chan, ptr) _tsc_chan_sendp(chan, ptr, false)
+#define tsc_chan_nbrecvp(chan, pptr) _tsc_chan_recvp(chan, pptr, false)
+
 extern int tsc_chan_close(tsc_chan_t chan);
 
 #if defined(ENABLE_CHANNEL_SELECT)

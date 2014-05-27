@@ -2,8 +2,8 @@ OS := $(shell uname)
 
 enable_debug ?= 0
 
-TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h 
-TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c
+TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h hash.h
+TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c hash.c
 
 CFLAGS += -Werror
 
@@ -88,7 +88,7 @@ libTSC.a: $(TSC_OBJS)
 
 .PHONY:clean install
 clean:
-	rm -f *.o libTSC.a 
+	rm -f *.o libTSC.a dist/*.o darwin/*.o
 
 install: libTSC.a
 	mkdir -p ../lib

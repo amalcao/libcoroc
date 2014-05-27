@@ -188,6 +188,14 @@ int _tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
   return ret;
 }
 
+int _tsc_chan_sendp(tsc_chan_t chan, void *ptr, bool block) {
+  return _tsc_chan_send(chan, &ptr, block);
+}
+
+int _tsc_chan_recvp(tsc_chan_t chan, void **pptr, bool block) {
+  return _tsc_chan_recv(chan, pptr, block);
+}
+
 int tsc_chan_close(tsc_chan_t chan) {
   int ret = CHAN_SUCCESS;
 

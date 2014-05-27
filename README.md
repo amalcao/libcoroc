@@ -50,7 +50,7 @@ Some examples are provided for users to test the library:
 - **ticker.c**: for testing the ticker/timer API
 - **file.c**: for testing the file API
 - **chan.c**: for testing the channel API
-- **server.**&**client.c**: for testing the distributed framework
+- **ping.c**&**pong.c**: for testing the distributed message passing API
 - **primes.c**: example migrated from libtask
 - **tcpproxy.c**: example migrated from libtask
 - **httpload.c**: example migrated from libtask

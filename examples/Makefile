@@ -40,8 +40,8 @@ endif
 
 
 ifeq (${enable_dist}, 1)
-	APPS += dist/server.run
-	APPS += dist/client.run
+	APPS += dist/ping.run
+	APPS += dist/pong.run
 endif
 
 all: ${APPS}
