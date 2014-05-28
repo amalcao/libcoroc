@@ -16,9 +16,9 @@
 // This is the NET API wrapper for libtsc,
 // copy & modify from the LibTask project.
 
-int tsc_net_lookup(char *name, uint32_t *ip);
+int tsc_net_lookup(const char *name, uint32_t *ip);
 
-int tsc_net_announce(bool istcp, char *server, int port) {
+int tsc_net_announce(bool istcp, const char *server, int port) {
   int fd, n, proto;
   struct sockaddr_in sa;
   socklen_t sn;
@@ -79,12 +79,12 @@ int tsc_net_accept(int fd, char *server, int *port) {
 }
 
 #define CLASS(p) ((*(unsigned char *)(p)) >> 6)
-static int __tsc_parseip(char *name, uint32_t *ip) {
+static int __tsc_parseip(const char *name, uint32_t *ip) {
   uint8_t addr[4];
   char *p;
   int i, x;
 
-  p = name;
+  p = (char*)name;
   for (i = 0; i < 4 && *p; i++) {
     x = strtoul(p, &p, 0);
     if (x < 0 || x > 256) return -1;
@@ -121,7 +121,7 @@ static int __tsc_parseip(char *name, uint32_t *ip) {
   return 0;
 }
 
-int tsc_net_lookup(char *name, uint32_t *ip) {
+int tsc_net_lookup(const char *name, uint32_t *ip) {
   struct hostent *he;
 
   if (__tsc_parseip(name, ip) >= 0) return 0;
