@@ -84,7 +84,7 @@ static int __tsc_parseip(const char *name, uint32_t *ip) {
   char *p;
   int i, x;
 
-  p = (char*)name;
+  p = (char *)name;
   for (i = 0; i < 4 && *p; i++) {
     x = strtoul(p, &p, 0);
     if (x < 0 || x > 256) return -1;
