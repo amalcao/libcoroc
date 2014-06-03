@@ -4,18 +4,9 @@
 #include <assert.h>
 #include <stdarg.h>
 
+#include "async.h"
 #include "vfs.h"
 #include "vpu.h"
-
-struct {
-  int items;
-  bool working;
-  pthread_mutex_t mutex;
-  pthread_cond_t cond;
-  queue_t wait_que;
-  queue_t ready_que;
-  TSC_OS_THREAD_T *os_thr;
-} tsc_vfs_manager;
 
 // the default file driver
 struct tsc_vfs_driver tsc_vfs_file_drv = {.open = open,
@@ -26,124 +17,63 @@ struct tsc_vfs_driver tsc_vfs_file_drv = {.open = open,
                                           .close = close,
                                           .ioctl = NULL, };
 
-TSC_SIGNAL_MASK_DECLARE
-
 // the vfs sub-system APIs
-void *tsc_vfs_routine(void *unused) {
-  for (;;) {
+void *tsc_vfs_callback(tsc_vfs_ops *ops) {
+  assert(ops != NULL);
 
-    pthread_mutex_lock(&tsc_vfs_manager.mutex);
-
-    if (tsc_vfs_manager.items == 0) {
-      tsc_vfs_manager.working = false;
-      pthread_cond_wait(&tsc_vfs_manager.cond, &tsc_vfs_manager.mutex);
+  switch (ops->ops_type) {
+    case TSC_VFS_OPEN: {
+      int fd = ops->driver->open((char *)(ops->buf), (int)(ops->arg0),
+                                 (int)(ops->arg1));
+      ops->arg0 = fd;
+      break;
     }
 
-    tsc_vfs_manager.working = true;
+    case TSC_VFS_CLOSE:
+      ops->driver->close(ops->fd);
+      break;
 
-    tsc_vfs_ops *ops = queue_rem(&tsc_vfs_manager.wait_que);
-    assert(ops != NULL);
+    case TSC_VFS_FLUSH:
+      if (ops->driver->flush) ops->driver->flush(ops->fd);
+      break;
 
-    tsc_vfs_manager.items--;
+    case TSC_VFS_READ: {
+      ssize_t sz = ops->driver->read(ops->fd, ops->buf, (size_t)(ops->arg0));
+      ops->arg0 = sz;
+      break;
+    }
 
-    pthread_mutex_unlock(&tsc_vfs_manager.mutex);
+    case TSC_VFS_WRITE: {
+      ssize_t sz = ops->driver->write(ops->fd, ops->buf, (size_t)(ops->arg0));
+      ops->arg0 = sz;
+      break;
+    }
 
-    switch (ops->ops_type) {
-      case TSC_VFS_OPEN: {
-        int fd = ops->driver->open((char *)(ops->buf), (int)(ops->arg0),
-                                   (int)(ops->arg1));
-        ops->arg0 = fd;
-        break;
-      }
+    case TSC_VFS_LSEEK: {
+      off_t off;
+      if (ops->driver->lseek)
+        off = ops->driver->lseek(ops->fd, (off_t)ops->arg0, (int)ops->arg1);
+      ops->arg0 = off;
+      break;
+    }
 
-      case TSC_VFS_CLOSE:
-        ops->driver->close(ops->fd);
-        break;
+    case TSC_VFS_IOCTL: {
+      int ret = -1;
+      if (ops->driver->ioctl)
+        ret = ops->driver->ioctl(ops->fd, (int)ops->arg0, (int)ops->arg1);
+      ops->arg0 = ret;
+      break;
+    }
 
-      case TSC_VFS_FLUSH:
-        if (ops->driver->flush) ops->driver->flush(ops->fd);
-        break;
+    default:
+      assert(0);
+  }  // switch
 
-      case TSC_VFS_READ: {
-        ssize_t sz = ops->driver->read(ops->fd, ops->buf, (size_t)(ops->arg0));
-        ops->arg0 = sz;
-        break;
-      }
-
-      case TSC_VFS_WRITE: {
-        ssize_t sz = ops->driver->write(ops->fd, ops->buf, (size_t)(ops->arg0));
-        ops->arg0 = sz;
-        break;
-      }
-
-      case TSC_VFS_LSEEK: {
-        off_t off;
-        if (ops->driver->lseek)
-          off = ops->driver->lseek(ops->fd, (off_t)ops->arg0, (int)ops->arg1);
-        ops->arg0 = off;
-        break;
-      }
-
-      case TSC_VFS_IOCTL: {
-        int ret = -1;
-        if (ops->driver->ioctl)
-          ret = ops->driver->ioctl(ops->fd, (int)ops->arg0, (int)ops->arg1);
-        ops->arg0 = ret;
-        break;
-      }
-
-      default:
-        assert(0);
-    }  // switch
-
-    // add the result back to the ready queue ..
-    atomic_queue_add(&tsc_vfs_manager.ready_que, &ops->link);
-  }
-
-  // this routine will never return
-}
-
-void tsc_vfs_initialize(int n) {
-
-  if (n <= 0) {
-    TSC_DEBUG("VFS will not start!\n");
-    return;
-  }
-
-  int i;
-  // init the vfs_manager ..
-  tsc_vfs_manager.items = 0;
-  tsc_vfs_manager.working = false;
-  pthread_mutex_init(&tsc_vfs_manager.mutex, NULL);
-  pthread_cond_init(&tsc_vfs_manager.cond, NULL);
-  queue_init(&tsc_vfs_manager.wait_que);
-  atomic_queue_init(&tsc_vfs_manager.ready_que);
-
-  tsc_vfs_manager.os_thr =
-      (TSC_OS_THREAD_T *)TSC_ALLOC(sizeof(TSC_OS_THREAD_T) * n);
-
-  for (i = 0; i < n; i++)
-    TSC_OS_THREAD_CREATE(&tsc_vfs_manager.os_thr[i], NULL, tsc_vfs_routine,
-                         NULL);
-
-  return;
-}
-
-bool tsc_vfs_working(void) {
-  bool ret = true;
-  pthread_mutex_lock(&tsc_vfs_manager.mutex);
-  if (!tsc_vfs_manager.working)  // FIXME: any hazard here ?
-    ret = (tsc_vfs_manager.ready_que.status + tsc_vfs_manager.wait_que.status >
-           0);
-  pthread_mutex_unlock(&tsc_vfs_manager.mutex);
-
-  return ret;
-}
-
-tsc_coroutine_t tsc_vfs_get_coroutine(void) {
-  tsc_vfs_ops *ops = atomic_queue_rem(&tsc_vfs_manager.ready_que);
-  if (ops != NULL) return ops->wait;
   return NULL;
+}
+
+static inline void __tsc_vfs_add_ops(tsc_vfs_ops *ops) {
+  tsc_async_request_submit((tsc_async_callback_t)tsc_vfs_callback, ops);
 }
 
 static void __tsc_vfs_init_ops(tsc_vfs_ops *ops, int type, int fd, int64_t arg0,
@@ -154,25 +84,6 @@ static void __tsc_vfs_init_ops(tsc_vfs_ops *ops, int type, int fd, int64_t arg0,
   ops->arg1 = arg1;
   ops->buf = buf;
   ops->driver = drv;
-
-  queue_item_init(&ops->link, ops);
-}
-
-static void __tsc_vfs_add_ops(tsc_vfs_ops *ops) {
-  TSC_SIGNAL_MASK();
-
-  ops->wait = tsc_coroutine_self();
-  pthread_mutex_lock(&tsc_vfs_manager.mutex);
-
-  queue_add(&tsc_vfs_manager.wait_que, &ops->link);
-  tsc_vfs_manager.items++;
-
-  if (tsc_vfs_manager.items == 1) pthread_cond_signal(&tsc_vfs_manager.cond);
-
-  // suspend current thread and release the lock ..
-  vpu_suspend(&tsc_vfs_manager.mutex, (unlock_handler_t)pthread_mutex_unlock);
-
-  TSC_SIGNAL_UNMASK();
 }
 
 // implementation of APIs

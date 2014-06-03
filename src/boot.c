@@ -11,7 +11,7 @@
 extern void tsc_vpu_initialize(int, tsc_coroutine_handler_t);
 extern void tsc_clock_initialize(void);
 extern void tsc_intertimer_initialize(void);
-extern void tsc_vfs_initialize(int);
+extern void tsc_async_pool_initialize(int);
 extern void tsc_netpoll_initialize(void);
 
 int __argc;
@@ -28,7 +28,7 @@ static bool __tsc_env2int(const char *env, int *ret) {
   return (errno == 0);
 }
 
-int tsc_boot(int argc, char **argv, int np, int nvfs,
+int tsc_boot(int argc, char **argv, int np, int nasync,
              tsc_coroutine_handler_t entry) {
   __argc = argc;
   __argv = argv;
@@ -38,14 +38,14 @@ int tsc_boot(int argc, char **argv, int np, int nvfs,
     if (np <= 0) np = TSC_NP_ONLINE();
   }
 
-  if (nvfs < 0 && !__tsc_env2int("TSC_VFS", &nvfs)) {
-    nvfs = (np > 1) ? (np >> 1) : 1;
+  if (nasync <= 0 && !__tsc_env2int("TSC_ASYNC", &nasync)) {
+    nasync = (np > 1) ? (np >> 1) : 1;
   }
 
   tsc_clock_initialize();
   tsc_intertimer_initialize();
-  tsc_vfs_initialize(nvfs);
   tsc_netpoll_initialize();
+  tsc_async_pool_initialize(nasync);
   tsc_vpu_initialize(np, entry);
   // TODO : more modules later .. --
 

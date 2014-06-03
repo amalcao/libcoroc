@@ -10,7 +10,6 @@
 #include <fcntl.h>
 
 #include "support.h"
-#include "coroutine.h"
 
 // -- the virual file system modules --
 
@@ -55,14 +54,7 @@ typedef struct {
   int64_t arg1;  // optional
   void *buf;
   struct tsc_vfs_driver *driver;  // optional
-  tsc_coroutine_t wait;
-  queue_item_t link;
 } tsc_vfs_ops;
-
-// the internal APIs ..
-tsc_coroutine_t tsc_vfs_get_coroutine();
-void tsc_vfs_initialize();
-bool tsc_vfs_working();
 
 // the APIs ..
 int __tsc_vfs_open(tsc_vfs_driver_t drv, bool sync, const char *name, int flags,
@@ -79,8 +71,8 @@ off_t __tsc_vfs_lseek(tsc_vfs_driver_t drv, bool sync, int fd, off_t offset,
 
 // asynchronized APIs
 #define tsc_vfs_open(...) __tsc_vfs_open(NULL, false, __VA_ARGS__)
-#define tsc_vfs_close(fd) __tsc_vfs_close(NULL, false, fd)
-#define tsc_vfs_flush(fd) __tsc_vfs_flush(NULL, false, fd)
+#define tsc_vfs_close(...) __tsc_vfs_close(NULL, false, __VA_ARGS__)
+#define tsc_vfs_flush(...) __tsc_vfs_flush(NULL, false, __VA_ARGS__)
 #define tsc_vfs_read(...) __tsc_vfs_read(NULL, false, __VA_ARGS__)
 #define tsc_vfs_write(...) __tsc_vfs_write(NULL, false, __VA_ARGS__)
 #define tsc_vfs_lseek(...) __tsc_vfs_lseek(NULL, false, __VA_ARGS__)
@@ -88,8 +80,8 @@ off_t __tsc_vfs_lseek(tsc_vfs_driver_t drv, bool sync, int fd, off_t offset,
 
 // synchronized APIs
 #define tsc_vfs_open_sync(...) __tsc_vfs_open(NULL, true, __VA_ARGS__)
-#define tsc_vfs_close_sync(fd) __tsc_vfs_close(NULL, true, fd)
-#define tsc_vfs_flush_sync(fd) __tsc_vfs_flush(NULL, true, fd)
+#define tsc_vfs_close_sync(...) __tsc_vfs_close(NULL, true, __VA_ARGS__)
+#define tsc_vfs_flush_sync(...) __tsc_vfs_flush(NULL, true, __VA_ARGS__)
 #define tsc_vfs_read_sync(...) __tsc_vfs_read(NULL, true, __VA_ARGS__)
 #define tsc_vfs_write_sync(...) __tsc_vfs_write(NULL, true, __VA_ARGS__)
 #define tsc_vfs_lseek_sync(...) __tsc_vfs_lseek(NULL, true, __VA_ARGS__)

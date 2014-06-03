@@ -9,7 +9,7 @@ enable_debug ?= 1
 enable_splitstack ?= 0
 enable_deadlock_detect ?= 1
 enable_refcnt ?= 1
-enable_futex ?= 0
+enable_futex ?= 1
 enable_dist ?= 0
 
 ifeq ($(shell uname), Darwin)

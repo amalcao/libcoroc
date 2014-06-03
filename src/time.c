@@ -4,6 +4,9 @@
 #include <assert.h>
 
 #include "time.h"
+#if defined(ENABLE_NOTIFY)
+#include "notify.h"
+#endif
 
 #define TSC_DEFAULT_INTERTIMERS_CAP 32
 
@@ -19,15 +22,6 @@ static void tsc_send_timer(void *arg) {
   }
 
   tsc_chan_send((tsc_chan_t)timer, &timer->timer.when);
-}
-
-static uint64_t tsc_getcurtime(void) {
-  struct timeval tv;
-  struct timezone tz;
-
-  gettimeofday(&tv, &tz);
-
-  return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
 static void inline __tsc_timer_init(tsc_timer_t t, uint32_t period,
@@ -56,7 +50,7 @@ void tsc_timer_dealloc(tsc_timer_t t) {
 }
 
 tsc_chan_t tsc_timer_after(tsc_timer_t t, uint64_t after) {
-  uint64_t curr = tsc_getcurtime();
+  uint64_t curr = tsc_getmicrotime();
   return tsc_timer_at(t, curr + after);
 }
 
@@ -67,7 +61,7 @@ tsc_chan_t tsc_timer_at(tsc_timer_t t, uint64_t when) {
 }
 
 int tsc_timer_start(tsc_timer_t t) {
-  if (t->timer.when <= tsc_getcurtime()) {
+  if (t->timer.when <= tsc_getmicrotime()) {
     tsc_send_timer(&t->timer);
     return -1;
   }
@@ -88,6 +82,9 @@ int tsc_timer_reset(tsc_timer_t t, uint64_t when) {
 
 static struct {
   lock lock;
+#if defined(ENABLE_NOTIFY)
+  tsc_notify_t note;
+#endif
   tsc_inter_timer_t **timers;
   uint32_t cap;
   uint32_t size;
@@ -98,6 +95,9 @@ void tsc_intertimer_initialize(void) {
   tsc_intertimer_manager.size = 0;
   tsc_intertimer_manager.cap = TSC_DEFAULT_INTERTIMERS_CAP;
   lock_init(&tsc_intertimer_manager.lock);
+#if defined(ENABLE_NOTIFY)
+  tsc_notify_clear(&tsc_intertimer_manager.note);
+#endif
   tsc_intertimer_manager.timers =
       TSC_ALLOC(TSC_DEFAULT_INTERTIMERS_CAP * sizeof(void *));
   memset(tsc_intertimer_manager.timers, 0,
@@ -161,9 +161,9 @@ static int tsc_intertimer_routine(void *unused) {
 
     tsc_inter_timer_t **__timers = tsc_intertimer_manager.timers;
     uint32_t __size = tsc_intertimer_manager.size;
+    uint64_t now = tsc_getmicrotime();
 
     while (__size > 0) {
-      uint64_t now = tsc_getcurtime();
       tsc_inter_timer_t *t = __timers[0];
 
       if (t->when <= now) {
@@ -191,7 +191,13 @@ static int tsc_intertimer_routine(void *unused) {
                   (unlock_handler_t)(lock_release));
     } else {
       lock_release(&tsc_intertimer_manager.lock);
+#if defined(ENABLE_NOTIFY)
+      tsc_notify_tsleep_u(&tsc_intertimer_manager.note,
+                          1000 * (__timers[0]->when - now));
+      tsc_notify_clear(&tsc_intertimer_manager.note);
+#else
       tsc_coroutine_yield();  // let others run ..
+#endif
     }
 
     TSC_SIGNAL_UNMASK();
@@ -237,7 +243,9 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
     // awaken the timer daemon thread ..
     vpu_ready(tsc_intertimer_manager.daemon);
   }
-
+#if defined(ENABLE_NOTIFY)
+  tsc_notify_wakeup(&tsc_intertimer_manager.note);
+#endif
   lock_release(&tsc_intertimer_manager.lock);
 
   TSC_SIGNAL_UNMASK();

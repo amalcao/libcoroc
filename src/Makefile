@@ -2,8 +2,8 @@ OS := $(shell uname)
 
 enable_debug ?= 0
 
-TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h hash.h
-TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c hash.c
+TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h hash.h async.h 
+TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c hash.c async.c 
 
 CFLAGS += -Werror
 
@@ -20,11 +20,15 @@ CFLAGS += -Idarwin
 endif
 
 ifeq (${OS}, Linux)
-TSC_CFILES += netpoll_epoll.c
-
+TSC_CFILES += netpoll_epoll.c futex_impl.c
+# enable the notify mechanism for linux
+CFLAGS += -DENABLE_NOTIFY
+TSC_CFILES += notify.c
+TSC_HEADERS += notify.h
+# enable futex based lock mechanism for linux
 ifeq (${enable_futex}, 1)
 TSC_HEADERS += futex_lock.h
-TSC_CFILES += futex_impl.c futex_lock.c
+TSC_CFILES += futex_lock.c
 CFLAGS += -DUSE_FUTEX_LOCK
 endif
 

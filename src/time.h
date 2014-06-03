@@ -1,6 +1,8 @@
 #ifndef _TSC_TIME_H_
 #define _TSC_TIME_H_
 
+#include <sys/time.h>
+
 #include "support.h"
 #include "vpu.h"
 #include "channel.h"
@@ -38,5 +40,19 @@ int tsc_timer_reset(tsc_timer_t, uint64_t);
 /* internal api */
 int tsc_add_intertimer(tsc_inter_timer_t *);
 int tsc_del_intertimer(tsc_inter_timer_t *);
+
+/* get current time */
+static inline int64_t tsc_getmicrotime(void) {
+  struct timeval tv;
+  struct timezone tz;
+  gettimeofday(&tv, &tz);
+  return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+
+static inline int64_t tsc_getnanotime(void) {
+  struct timespec abstime;
+  clock_gettime(CLOCK_REALTIME, &abstime);
+  return abstime.tv_sec * 1000000000LL + abstime.tv_nsec;
+}
 
 #endif  // _TSC_TIME_H_

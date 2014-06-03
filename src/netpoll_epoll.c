@@ -42,7 +42,7 @@ int __tsc_netpoll_rem(tsc_poll_desc_t desc) {
 
 bool __tsc_netpoll_polling(bool block) {
   struct epoll_event events[128];
-  int timeout = -1, ready, i;
+  int timeout = -1, ready, i, mode = 0;
   if (!block) timeout = 0;
 
   ready = epoll_wait(__tsc_epfd, events, 128, timeout);
@@ -51,21 +51,19 @@ bool __tsc_netpoll_polling(bool block) {
 
   for (i = 0; i < ready; i++) {
     tsc_poll_desc_t desc = events[i].data.ptr;
-    if ((desc->mode & TSC_NETPOLL_READ) &&
-        (events[i].events & (EPOLLIN | EPOLLRDHUP)))
-      tsc_netpoll_wakeup(desc, true);
+    if (events[i].events & EPOLLERR) {
+      mode = TSC_NETPOLL_ERROR;
+    } else {
+      if ((desc->mode & TSC_NETPOLL_READ) &&
+          (events[i].events & (EPOLLIN | EPOLLRDHUP)))
+        mode |= TSC_NETPOLL_READ;
 
-    else if ((desc->mode & TSC_NETPOLL_WRITE) && (events[i].events & EPOLLOUT))
-      tsc_netpoll_wakeup(desc, true);
-    else if (events[i].events & EPOLLERR)
-      tsc_netpoll_wakeup(desc, false);
-
-/* FIXME: some data competition may happen here!!
- * the deleted `desc' will trigger the epoll after dead! */
-#if 1
-    else
-      assert(0);  // !!
-#endif
+      if ((desc->mode & TSC_NETPOLL_WRITE) && (events[i].events & EPOLLOUT))
+        mode |= TSC_NETPOLL_WRITE;
+    }
+    // the mode as the return value ..
+    desc->mode = mode;
+    tsc_netpoll_wakeup(desc);
   }
 
   return true;

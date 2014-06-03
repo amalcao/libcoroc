@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "vpu.h"
-#include "vfs.h"
+#include "async.h"
 #include "netpoll.h"
 #include "lock.h"
 
@@ -119,9 +119,6 @@ static void core_sched(void) {
       // try to fetch tasks from the global queue,
       // or stealing from other VPUs' queue ..
       candidate = core_elect(vpu);
-#if ENABLE_VFS
-      if (candidate == NULL) candidate = tsc_vfs_get_coroutine();
-#endif  // ENABLE_VFS
     }
 
     if (candidate != NULL) {
@@ -156,12 +153,12 @@ static void core_sched(void) {
       vpu_manager.alive--;
 
       if (vpu_manager.alive == 0 && vpu_manager.total_ready == 0 &&
-          !tsc_vfs_working()) {
+          !tsc_async_pool_working()) {
 #ifdef ENABLE_DEADLOCK_DETECT
         pthread_mutex_unlock(&vpu_manager.lock);
         /* wait until one net job coming ..*/
         if (__tsc_netpoll_size() > 0) {
-          __tsc_netpoll_polling(true);
+          __tsc_netpoll_polling(false);
           pthread_mutex_lock(&vpu_manager.lock);
         }
         /* no any ready coroutines, just halt .. */
@@ -439,7 +436,7 @@ void vpu_wakeup_one(void) {
 
 #ifdef ENABLE_DEADLOCK_DETECT
 void vpu_backtrace(int id) {
-  fprintf(stderr, "All threads are sleep, daedlock may happen!\n\n");
+  fprintf(stderr, "All threads are sleep, deadlock may happen!\n\n");
 
   // the libc's `backtrace()' can only trace the frame of the caller,
   // so we must schedule the suspended coroutine to a running OS coroutine
