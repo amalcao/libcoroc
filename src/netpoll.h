@@ -1,16 +1,23 @@
 #ifndef _TSC_NETPOLL_H_
 #define _TSC_NETPOLL_H_
 
+#include <stdint.h>
 #include <stdbool.h>
 
 #include "support.h"
 #include "lock.h"
 #include "coroutine.h"
 #include "time.h"
+#ifdef ENABLE_REFCNT
+#include "refcnt.h"
+#endif
 
 enum { TSC_NETPOLL_READ = 1, TSC_NETPOLL_WRITE = 2, TSC_NETPOLL_ERROR = 4 };
 
 typedef struct tsc_poll_desc {
+#ifdef ENABLE_REFCNT
+  struct tsc_refcnt refcnt;
+#endif
   bool done;
   int fd;
   int mode;
@@ -36,10 +43,13 @@ int tsc_net_nonblock(int fd);
 int tsc_net_read(int fd, void *buf, int size);
 int tsc_net_write(int fd, void *buf, int size);
 int tsc_net_wait(int fd, int mode);
+int tsc_net_timedwait(int fd, int mode, int64_t usec);
 
 int tsc_net_announce(bool istcp, const char *server, int port);
+int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec);
 int tsc_net_accept(int fd, char *server, int *port);
 int tsc_net_lookup(const char *name, uint32_t *ip);
+int tsc_net_timed_dial(bool istcp, char *server, int port, int64_t usec);
 int tsc_net_dial(bool istcp, char *server, int port);
 
 #endif  // _TSC_NETPOLL_H_

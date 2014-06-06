@@ -24,12 +24,13 @@ static void *tsc_async_thread_routine(void *unused) {
   pthread_mutex_lock(&tsc_async_pool_manager.mutex);
   for (;;) {
     while (tsc_async_pool_manager.wait_que.status == 0) {
-      // release the mutex before doing the polling 
+#if 0
+      // release the mutex before doing the polling
       pthread_mutex_unlock(&tsc_async_pool_manager.mutex);
       __tsc_netpoll_polling(false);
       // alloc the mutex before cond wait ..
       pthread_mutex_lock(&tsc_async_pool_manager.mutex);
-        
+#endif
       // prepare to waitting for next job or timeout ..
       pthread_cond_timedwait(&tsc_async_pool_manager.cond,
                              &tsc_async_pool_manager.mutex, &wait);
@@ -50,7 +51,7 @@ static void *tsc_async_thread_routine(void *unused) {
     vpu_ready(req->wait);
 
     pthread_mutex_lock(&tsc_async_pool_manager.mutex);
-    tsc_async_pool_manager.busy --;
+    tsc_async_pool_manager.busy--;
   }
   // never return here maybe ..
   pthread_exit(0);
@@ -108,11 +109,11 @@ tsc_coroutine_t tsc_async_pool_fetch(void) {
 }
 #else
 bool tsc_async_pool_working(void) {
-    bool busy;
-    pthread_mutex_lock(&tsc_async_pool_manager.mutex);
-    busy = tsc_async_pool_manager.busy > 0;
-    pthread_mutex_unlock(&tsc_async_pool_manager.mutex);
-    return busy;
+  bool busy;
+  pthread_mutex_lock(&tsc_async_pool_manager.mutex);
+  busy = tsc_async_pool_manager.busy > 0;
+  pthread_mutex_unlock(&tsc_async_pool_manager.mutex);
+  return busy;
 }
 #endif
 

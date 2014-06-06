@@ -25,7 +25,7 @@ int ping_service_run(tsc_service_t service, tsc_message_t message) {
 
   if (pm1->count >= 10) {
     // disconnect ..
-    tsc_service_disconnect(service, pong);
+    tsc_service_disconnect(service->id, pong);
     // wait for the messages dispatched ..
     int i;
     for (i = 0; i < 10; i++) tsc_coroutine_yield();

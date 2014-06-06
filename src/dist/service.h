@@ -86,6 +86,7 @@ extern struct tsc_service *__stop_tsc_services_section;
 
 #define TSC_SERVICE_ID2IP(id) (uint32_t)((id) >> 32)
 #define TSC_SERVICE_ID2PORT(id) (int)(((id) >> 16) & 0xffffUL)
+#define TSC_SERVICE_ID2LOCAL(id) ((id) & 0xffffUL)
 
 /* the public interfaces for server end */
 int tsc_init_all_services(void);
@@ -96,8 +97,8 @@ int tsc_service_quit(tsc_service_t service, int info);
 
 /* the public interfaces for client end */
 int tsc_service_lookup(const char *name, tsc_service_id_t *id);
-int tsc_service_connect(tsc_service_t self, tsc_service_id_t target);
-int tsc_service_disconnect(tsc_service_t self, tsc_service_id_t target);
+int tsc_service_connect(tsc_service_id_t self, tsc_service_id_t target);
+int tsc_service_disconnect(tsc_service_id_t self, tsc_service_id_t target);
 
 /* the public interfaces for messages passing */
 tsc_message_t tsc_message_alloc(tsc_service_id_t src, int len);

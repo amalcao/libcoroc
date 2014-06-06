@@ -53,13 +53,16 @@ int tsc_net_announce(bool istcp, const char *server, int port) {
   return fd;
 }
 
-int tsc_net_accept(int fd, char *server, int *port) {
+int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
   int cfd, one;
   struct sockaddr_in sa;
   uint8_t *ip;
   socklen_t len;
 
-  tsc_net_wait(fd, TSC_NETPOLL_READ);
+  if (usec <= 0)
+    tsc_net_wait(fd, TSC_NETPOLL_READ);
+  else if (!tsc_net_timedwait(fd, TSC_NETPOLL_READ, usec))
+    return -1;
 
   len = sizeof sa;
   if ((cfd = accept(fd, (void *)&sa, &len)) < 0) return -1;
@@ -76,6 +79,10 @@ int tsc_net_accept(int fd, char *server, int *port) {
   setsockopt(cfd, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof one);
 
   return cfd;
+}
+
+int tsc_net_accept(int fd, char *server, int *port) {
+    return tsc_net_timed_accept(fd, server, port, 0);
 }
 
 #define CLASS(p) ((*(unsigned char *)(p)) >> 6)
@@ -134,7 +141,7 @@ int tsc_net_lookup(const char *name, uint32_t *ip) {
   return -1;
 }
 
-int tsc_net_dial(bool istcp, char *server, int port) {
+int tsc_net_timed_dial(bool istcp, char *server, int port, int64_t usec) {
   int proto, fd, n;
   uint32_t ip;
   struct sockaddr_in sa;
@@ -165,7 +172,13 @@ int tsc_net_dial(bool istcp, char *server, int port) {
   }
 
   // wait for the connection finish ..
-  tsc_net_wait(fd, TSC_NETPOLL_WRITE);
+  if (usec <= 0) {
+    tsc_net_wait(fd, TSC_NETPOLL_WRITE);
+  } else if (!tsc_net_timedwait(fd, TSC_NETPOLL_WRITE, usec)) {
+    close(fd);
+    return -1;
+  }
+
   sn = sizeof sa;
   if (getpeername(fd, (struct sockaddr *)&sa, &sn) >= 0) return fd;
 
@@ -177,4 +190,8 @@ int tsc_net_dial(bool istcp, char *server, int port) {
   errno = n;
 
   return -1;
+}
+
+int tsc_net_dial(bool istcp, char *server, int port) {
+    return tsc_net_timed_dial(istcp, server, port, 0);
 }

@@ -162,7 +162,7 @@ static void core_sched(void) {
           pthread_mutex_lock(&vpu_manager.lock);
         }
         /* no any ready coroutines, just halt .. */
-        else
+        else if (vpu_manager.total_ready == 0)
           vpu_backtrace(vpu->id);
 #endif
       } else if (vpu_manager.alive > 0) {

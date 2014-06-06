@@ -6,6 +6,7 @@
 #include "../time.h"
 #include "../hash.h"
 #include "../netpoll.h"
+#include "../notify.h"
 
 // ===== the record hash map =======
 static hash_t __tsc_service_record_table;
@@ -195,17 +196,15 @@ int tsc_init_all_services(void) {
 typedef struct {
   int socket;
   tsc_chan_t comm;
-  tsc_service_t service;
+  tsc_service_id_t service;
 } tsc_snd_param_t;
 
 // the routine of sender task.
 //  at first, it sends my service id to remote service,
 //  and then, it runs the message sending loop..
 static int __tsc_service_sender(tsc_snd_param_t *param) {
-  tsc_service_id_t id = param->service->id;
-
   // FIXME: check the return value!!
-  tsc_net_write(param->socket, &id, sizeof(id));
+  tsc_net_write(param->socket, &param->service, sizeof(tsc_service_id_t));
 
   for (;;) {
     tsc_message_t message;
@@ -289,9 +288,13 @@ int tsc_service_lookup(const char *name, tsc_service_id_t *id) {
   return -1;
 }
 
-int tsc_service_connect(tsc_service_t self, tsc_service_id_t target) {
+int tsc_service_connect(tsc_service_id_t self, tsc_service_id_t target) {
   // check if the service with specific id is already recorded
   if (__tsc_service_record_get(target) != NULL) return -1;
+
+  // check if the `self' id is valid
+  tsc_chan_t inbound = __tsc_service_record_get(TSC_SERVICE_ID2LOCAL(self));
+  if (inbound == NULL) return -1;
 
   uint32_t ip = TSC_SERVICE_ID2IP(target);
   int port = TSC_SERVICE_ID2PORT(target);
@@ -320,7 +323,7 @@ int tsc_service_connect(tsc_service_t self, tsc_service_id_t target) {
   tsc_chan_t sync =
       tsc_refcnt_get(tsc_chan_allocate(sizeof(tsc_service_id_t), 0));
   tsc_recv_param_t *rp = TSC_ALLOC(sizeof(tsc_recv_param_t));
-  rp->comm = tsc_refcnt_get(self->inbound);
+  rp->comm = tsc_refcnt_get(inbound);
   rp->sync = tsc_refcnt_get(sync);
   rp->socket = socket;
 
@@ -346,13 +349,13 @@ __exit_connect:
   return 0;
 }
 
-int tsc_service_disconnect(tsc_service_t self, tsc_service_id_t target) {
+int tsc_service_disconnect(tsc_service_id_t self, tsc_service_id_t target) {
   tsc_message_t message;
   tsc_chan_t comm = __tsc_service_record_get(target);
   if (comm == NULL) return -1;
 
   // sending the detach signal to the target service ..
-  message = tsc_message_alloc(self->id, 0);
+  message = tsc_message_alloc(self, 0);
   return tsc_message_send(message, target);
 }
 
@@ -379,7 +382,7 @@ static int tsc_service_accept(tsc_service_t service) {
     tsc_chan_t outbound = tsc_chan_allocate(sizeof(tsc_message_t), 10);
     tsc_snd_param_t *sp = TSC_ALLOC(sizeof(tsc_snd_param_t));
     sp->comm = tsc_refcnt_get(outbound);
-    sp->service = service;
+    sp->service = service->id;
     sp->socket = client;
 
     tsc_coroutine_spawn(__tsc_service_sender, sp, "sender");
@@ -418,9 +421,27 @@ void tsc_message_dealloc(tsc_message_t msg) {
   TSC_DEALLOC(msg);
 }
 
+#define MAX_WAIT_TIME 100000000LL  // 0.1 sec
+
 int tsc_message_send(tsc_message_t msg, tsc_service_id_t dst) {
   tsc_chan_t comm = __tsc_service_record_get(dst);
-  if (comm == NULL) return -1;
+  // try to connect the target service until success
+  if (comm == NULL) {
+    // ignore the `disconnect' message, since the connection 
+    // has not been established.
+    if (msg->len == 0) {
+      tsc_message_dealloc(msg);
+      return 0;
+    }
+
+    uint64_t timeout = 100000; // 100,000 nano seconds
+    do {
+        tsc_nanosleep(timeout);
+        timeout = (timeout >= MAX_WAIT_TIME) ? MAX_WAIT_TIME : 2*timeout;
+    } while (tsc_service_connect(msg->src, dst) != 0);
+    assert (comm = __tsc_service_record_get(dst));
+  }
+
   msg->dst = dst;
   tsc_chan_sendp(comm, msg);
   return 0;

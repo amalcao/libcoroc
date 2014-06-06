@@ -41,6 +41,9 @@ static void __tsc_poll_desc_init(tsc_poll_desc_t desc, int fd, int mode,
   desc->wait = tsc_coroutine_self();
   desc->deadline = deadline;
   lock_init(&desc->lock);
+
+  tsc_refcnt_init(&desc->refcnt, TSC_DEALLOC);
+  tsc_refcnt_get(desc); // inc the refcnt !!
 }
 
 int tsc_net_wait(int fd, int mode) {
@@ -70,11 +73,13 @@ static void __tsc_netpoll_timeout(void *arg) {
 
   desc->mode = 0;
 
-  __tsc_netpoll_rem(desc);
   vpu_ready(desc->wait);
+  __tsc_netpoll_rem(desc);
 
 __exit_netpoll_timeout:
   lock_release(&desc->lock);
+  tsc_refcnt_put(desc); // dec the refcnt !!
+
   TSC_SIGNAL_UNMASK();
 }
 
@@ -82,28 +87,33 @@ int tsc_net_timedwait(int fd, int mode, int64_t usec) {
   if (usec <= 0) return -1;
 
   tsc_inter_timer_t deadline;
-  struct tsc_poll_desc desc;
+  struct tsc_poll_desc* desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
 
   deadline.when = tsc_getmicrotime() + usec;
   deadline.period = 0;
   deadline.func = __tsc_netpoll_timeout;
-  deadline.args = &desc;
+  deadline.args = tsc_refcnt_get(desc); // inc the refcnt!!
   deadline.owner = NULL;
 
-  __tsc_poll_desc_init(&desc, fd, mode, &deadline);
+  __tsc_poll_desc_init(desc, fd, mode, &deadline);
 
   TSC_SIGNAL_MASK();
-  lock_acquire(&desc.lock);
-  __tsc_netpoll_add(&desc);
+  lock_acquire(&desc->lock);
+  __tsc_netpoll_add(desc);
   // add the timer to do timeout check..
   tsc_add_intertimer(&deadline);
   // then suspend current task ..
-  vpu_suspend(&desc.lock, (unlock_handler_t)lock_release);
+  vpu_suspend(&desc->lock, (unlock_handler_t)lock_release);
   // delete the deadline timer here!!
-  tsc_del_intertimer(&deadline);
+  if (tsc_del_intertimer(&deadline) == 0)
+    tsc_refcnt_put(desc);
+
+  // drop the reference ..
+  mode = desc->mode;
+  tsc_refcnt_put(desc);
 
   TSC_SIGNAL_UNMASK();
-  return desc.mode;
+  return mode;
 }
 
 int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
@@ -113,12 +123,13 @@ int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
   // if (desc->done) goto __exit_netpoll_wakeup;
   if (!TSC_CAS(&desc->done, false, true)) goto __exit_netpoll_wakeup;
 
-  __tsc_netpoll_rem(desc);
-
   // this function must be called by
   // system context, so don not need
   // to mask the signals ..
   vpu_ready(desc->wait);
+  // put the ready task back to running queue
+  // before removing the `desc' from the netpoll !!
+  __tsc_netpoll_rem(desc);
 
 __exit_netpoll_wakeup:
   lock_release(&desc->lock);
