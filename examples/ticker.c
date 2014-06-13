@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
   tsc_timer_t timer = tsc_timer_allocate(1000000 * 2, callback);
   tsc_timer_after(timer, 1000000 * 2);  // 2 seconds later
 
-  for (i = 0; i < 10; i++) {
+  for (i = 0; i < 3; i++) {
     printf("waiting for 2 seconds!\n");
     tsc_chan_recv((tsc_chan_t)timer, &awaken);
     printf("awaken, time is %llu!\n", (long long unsigned)awaken);

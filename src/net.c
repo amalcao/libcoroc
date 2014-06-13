@@ -82,7 +82,7 @@ int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
 }
 
 int tsc_net_accept(int fd, char *server, int *port) {
-    return tsc_net_timed_accept(fd, server, port, 0);
+  return tsc_net_timed_accept(fd, server, port, 0);
 }
 
 #define CLASS(p) ((*(unsigned char *)(p)) >> 6)
@@ -193,5 +193,5 @@ int tsc_net_timed_dial(bool istcp, char *server, int port, int64_t usec) {
 }
 
 int tsc_net_dial(bool istcp, char *server, int port) {
-    return tsc_net_timed_dial(istcp, server, port, 0);
+  return tsc_net_timed_dial(istcp, server, port, 0);
 }

@@ -427,19 +427,19 @@ int tsc_message_send(tsc_message_t msg, tsc_service_id_t dst) {
   tsc_chan_t comm = __tsc_service_record_get(dst);
   // try to connect the target service until success
   if (comm == NULL) {
-    // ignore the `disconnect' message, since the connection 
+    // ignore the `disconnect' message, since the connection
     // has not been established.
     if (msg->len == 0) {
       tsc_message_dealloc(msg);
       return 0;
     }
 
-    uint64_t timeout = 100000; // 100,000 nano seconds
+    uint64_t timeout = 100000;  // 100,000 nano seconds
     do {
-        tsc_nanosleep(timeout);
-        timeout = (timeout >= MAX_WAIT_TIME) ? MAX_WAIT_TIME : 2*timeout;
+      tsc_nanosleep(timeout);
+      timeout = (timeout >= MAX_WAIT_TIME) ? MAX_WAIT_TIME : 2 * timeout;
     } while (tsc_service_connect(msg->src, dst) != 0);
-    assert (comm = __tsc_service_record_get(dst));
+    assert(comm = __tsc_service_record_get(dst));
   }
 
   msg->dst = dst;

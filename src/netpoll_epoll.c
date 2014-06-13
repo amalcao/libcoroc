@@ -32,7 +32,7 @@ static inline int __tsc_netpoll_ctl(tsc_poll_desc_t desc, int op) {
 }
 
 int __tsc_netpoll_add(tsc_poll_desc_t desc) {
-  tsc_refcnt_get(desc); // inc the refcnt !!
+  tsc_refcnt_get(desc);  // inc the refcnt !!
   TSC_ATOMIC_INC(__tsc_num_op);
   return __tsc_netpoll_ctl(desc, EPOLL_CTL_ADD);
 }
@@ -41,7 +41,7 @@ int __tsc_netpoll_rem(tsc_poll_desc_t desc) {
   // dec the refcnt!!
   // NOTE the `desc' will not be freed here
   // since the refcnt is at least 1 !!
-  tsc_refcnt_put(desc); 
+  tsc_refcnt_put(desc);
   TSC_ATOMIC_DEC(__tsc_num_op);
   return __tsc_netpoll_ctl(desc, EPOLL_CTL_DEL);
 }

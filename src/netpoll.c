@@ -43,7 +43,7 @@ static void __tsc_poll_desc_init(tsc_poll_desc_t desc, int fd, int mode,
   lock_init(&desc->lock);
 
   tsc_refcnt_init(&desc->refcnt, TSC_DEALLOC);
-  tsc_refcnt_get(desc); // inc the refcnt !!
+  tsc_refcnt_get(desc);  // inc the refcnt !!
 }
 
 int tsc_net_wait(int fd, int mode) {
@@ -78,7 +78,7 @@ static void __tsc_netpoll_timeout(void *arg) {
 
 __exit_netpoll_timeout:
   lock_release(&desc->lock);
-  tsc_refcnt_put(desc); // dec the refcnt !!
+  tsc_refcnt_put(desc);  // dec the refcnt !!
 
   TSC_SIGNAL_UNMASK();
 }
@@ -87,12 +87,12 @@ int tsc_net_timedwait(int fd, int mode, int64_t usec) {
   if (usec <= 0) return -1;
 
   tsc_inter_timer_t deadline;
-  struct tsc_poll_desc* desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
+  struct tsc_poll_desc *desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
 
   deadline.when = tsc_getmicrotime() + usec;
   deadline.period = 0;
   deadline.func = __tsc_netpoll_timeout;
-  deadline.args = tsc_refcnt_get(desc); // inc the refcnt!!
+  deadline.args = tsc_refcnt_get(desc);  // inc the refcnt!!
   deadline.owner = NULL;
 
   __tsc_poll_desc_init(desc, fd, mode, &deadline);
@@ -105,8 +105,7 @@ int tsc_net_timedwait(int fd, int mode, int64_t usec) {
   // then suspend current task ..
   vpu_suspend(&desc->lock, (unlock_handler_t)lock_release);
   // delete the deadline timer here!!
-  if (tsc_del_intertimer(&deadline) == 0)
-    tsc_refcnt_put(desc);
+  if (tsc_del_intertimer(&deadline) == 0) tsc_refcnt_put(desc);
 
   // drop the reference ..
   mode = desc->mode;

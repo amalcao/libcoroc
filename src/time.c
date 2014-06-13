@@ -86,8 +86,8 @@ static struct {
   tsc_notify_t note;
 #endif
   tsc_inter_timer_t **timers;
-  uint32_t cap;
-  uint32_t size;
+  int32_t cap;
+  int32_t size;
   tsc_coroutine_t daemon;
 } tsc_intertimer_manager;
 
@@ -102,6 +102,16 @@ void tsc_intertimer_initialize(void) {
       TSC_ALLOC(TSC_DEFAULT_INTERTIMERS_CAP * sizeof(void *));
   memset(tsc_intertimer_manager.timers, 0,
          TSC_DEFAULT_INTERTIMERS_CAP * sizeof(void *));
+}
+
+// exchange the two elements in the heap
+static inline void __exchange_heap(tsc_inter_timer_t **timers, uint32_t e0, 
+                                   uint32_t e1) {
+  tsc_inter_timer_t *tmp = timers[e0];
+  timers[e0] = timers[e1];
+  timers[e1] = tmp;
+  timers[e0]->index = e0;
+  timers[e1]->index = e1;
 }
 
 // adjust the heap using a top-down strategy,
@@ -121,10 +131,7 @@ static void __down_adjust_heap(tsc_inter_timer_t **timers, uint32_t cur,
     tmp = (timers[left]->when < timers[right]->when) ? left : right;
 
   if (timers[tmp]->when < timers[cur]->when) {
-    tsc_inter_timer_t *t = timers[cur];
-    timers[cur] = timers[tmp];
-    timers[tmp] = t;
-
+    __exchange_heap(timers, cur, tmp);
     // adjust the child ..
     __down_adjust_heap(timers, tmp, size);
   }
@@ -140,10 +147,7 @@ static void __up_adjust_heap(tsc_inter_timer_t **timers, uint32_t cur) {
   uint32_t parent = (cur - 1) >> 1;
 
   if (timers[cur]->when < timers[parent]->when) {
-    tsc_inter_timer_t *t = timers[cur];
-    timers[cur] = timers[parent];
-    timers[parent] = t;
-
+    __exchange_heap(timers, cur, parent);
     // adjust parent ..
     __up_adjust_heap(timers, parent);
   }
@@ -160,7 +164,7 @@ static int tsc_intertimer_routine(void *unused) {
     lock_acquire(&tsc_intertimer_manager.lock);
 
     tsc_inter_timer_t **__timers = tsc_intertimer_manager.timers;
-    uint32_t __size = tsc_intertimer_manager.size;
+    int32_t __size = tsc_intertimer_manager.size;
     uint64_t now = tsc_getmicrotime();
 
     while (__size > 0) {
@@ -171,7 +175,11 @@ static int tsc_intertimer_routine(void *unused) {
         (t->func)((void *)t);
         if (t->period == 0) {
           // del the timer ..
-          if (--__size > 0) __timers[0] = __timers[__size];
+          __timers[0]->index = -1;
+          if (--__size > 0) {
+            __timers[0] = __timers[__size];
+            __timers[0]->index = 0;
+          }
 
           tsc_intertimer_manager.size = __size;
         } else {
@@ -230,9 +238,10 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
   }
 
   tsc_inter_timer_t **__timers = tsc_intertimer_manager.timers;
-  uint32_t __size = tsc_intertimer_manager.size;
+  int32_t __size = tsc_intertimer_manager.size;
 
   __timers[__size] = timer;
+  timer->index = __size; // fast path for deletion
   __up_adjust_heap(__timers, __size);
 
   tsc_intertimer_manager.size++;
@@ -253,24 +262,24 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
 }
 
 int tsc_del_intertimer(tsc_inter_timer_t *timer) {
-  int ret = 1;
+  int ret = -1;
 
   lock_acquire(&tsc_intertimer_manager.lock);
 
   tsc_inter_timer_t **__timers = tsc_intertimer_manager.timers;
-  uint32_t __size = tsc_intertimer_manager.size;
-  uint32_t i;
+  int32_t __size = tsc_intertimer_manager.size;
+  int32_t i = timer->index;
 
-  for (i = 0; i < __size; i++) {
-    if (__timers[i] == timer) {
-      __timers[i] = __timers[--__size];
-      __down_adjust_heap(__timers, i, __size);
-      tsc_intertimer_manager.size = __size;
-      ret = 0;
-      break;
-    }
-  }
+  if (i < 0 || i >= __size || timer != __timers[i])
+    goto __exit_del_intertimer;
 
+  __timers[i] = __timers[--__size];
+  __timers[i]->index = i;
+  __down_adjust_heap(__timers, i, __size);
+  tsc_intertimer_manager.size = __size;
+  ret = 0;
+
+__exit_del_intertimer:
   lock_release(&tsc_intertimer_manager.lock);
 
   return ret;
