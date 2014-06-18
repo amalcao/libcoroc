@@ -42,11 +42,6 @@ CFLAGS += -DENABLE_WORKSTEALING
 CFLAGS += -DENABLE_CHANNEL_SELECT
 CFLAGS += -DENABLE_VFS
 
-ifeq (${enable_dist}, 1)
-	TSC_HEADERS += dist/service.h
-	TSC_CFILES += dist/service.c
-endif
-
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
 	TSC_HEADERS += refcnt.h

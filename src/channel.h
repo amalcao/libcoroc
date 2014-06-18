@@ -89,16 +89,18 @@ extern int _tsc_chan_recv(tsc_chan_t chan, void *buf, bool block);
 extern int _tsc_chan_sendp(tsc_chan_t chan, void *ptr, bool block);
 extern int _tsc_chan_recvp(tsc_chan_t chan, void **pptr, bool block);
 #else
-# define _tsc_chan_sende(chan, exp, block) ({\
-    typeof(exp) __temp = exp;   \
-    assert(sizeof(__temp) == chan->elemsize);   \
+#define _tsc_chan_sende(chan, exp, block)          \
+  ({                                               \
+    typeof(exp) __temp = exp;                      \
+    assert(sizeof(__temp) == chan->elemsize);      \
     int rc = _tsc_chan_send(chan, &__temp, block); \
-    rc; })
+    rc;                                            \
+  })
 
-# define tsc_chan_sende(chan, exp) _tsc_chan_sende(chan, exp, true)
-# define tsc_chan_nbsende(chan, exp) _tsc_chan_sende(chan, exp, false)
+#define tsc_chan_sende(chan, exp) _tsc_chan_sende(chan, exp, true)
+#define tsc_chan_nbsende(chan, exp) _tsc_chan_sende(chan, exp, false)
 
-# define _tsc_chan_sendp _tsc_chan_sende
+#define _tsc_chan_sendp _tsc_chan_sende
 #endif
 
 #define tsc_chan_sendp(chan, ptr) _tsc_chan_sendp(chan, ptr, true)

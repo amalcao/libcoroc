@@ -38,12 +38,6 @@ ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
 endif
 
-
-ifeq (${enable_dist}, 1)
-	APPS += dist/ping.run
-	APPS += dist/pong.run
-endif
-
 all: ${APPS}
 
 %.o:%.S
