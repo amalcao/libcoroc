@@ -105,7 +105,7 @@ void tsc_intertimer_initialize(void) {
 }
 
 // exchange the two elements in the heap
-static inline void __exchange_heap(tsc_inter_timer_t **timers, uint32_t e0, 
+static inline void __exchange_heap(tsc_inter_timer_t **timers, uint32_t e0,
                                    uint32_t e1) {
   tsc_inter_timer_t *tmp = timers[e0];
   timers[e0] = timers[e1];
@@ -241,7 +241,7 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
   int32_t __size = tsc_intertimer_manager.size;
 
   __timers[__size] = timer;
-  timer->index = __size; // fast path for deletion
+  timer->index = __size;  // fast path for deletion
   __up_adjust_heap(__timers, __size);
 
   tsc_intertimer_manager.size++;
@@ -270,8 +270,7 @@ int tsc_del_intertimer(tsc_inter_timer_t *timer) {
   int32_t __size = tsc_intertimer_manager.size;
   int32_t i = timer->index;
 
-  if (i < 0 || i >= __size || timer != __timers[i])
-    goto __exit_del_intertimer;
+  if (i < 0 || i >= __size || timer != __timers[i]) goto __exit_del_intertimer;
 
   __timers[i] = __timers[--__size];
   __timers[i]->index = i;

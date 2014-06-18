@@ -14,7 +14,7 @@ struct tsc_timer;
 typedef struct {
   uint64_t when;
   uint32_t period;
-  int32_t  index;
+  int32_t index;
   void (*func)(void *);
   void *args;
   struct tsc_timer *owner;

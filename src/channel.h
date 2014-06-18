@@ -85,13 +85,24 @@ extern int _tsc_chan_recv(tsc_chan_t chan, void *buf, bool block);
 #define tsc_chan_nbsend(chan, buf) _tsc_chan_send(chan, buf, false)
 #define tsc_chan_nbrecv(chan, buf) _tsc_chan_recv(chan, buf, false)
 
+#if 0
 extern int _tsc_chan_sendp(tsc_chan_t chan, void *ptr, bool block);
 extern int _tsc_chan_recvp(tsc_chan_t chan, void **pptr, bool block);
+#else
+# define _tsc_chan_sende(chan, exp, block) ({\
+    typeof(exp) __temp = exp;   \
+    assert(sizeof(__temp) == chan->elemsize);   \
+    int rc = _tsc_chan_send(chan, &__temp, block); \
+    rc; })
+
+# define tsc_chan_sende(chan, exp) _tsc_chan_sende(chan, exp, true)
+# define tsc_chan_nbsende(chan, exp) _tsc_chan_sende(chan, exp, false)
+
+# define _tsc_chan_sendp _tsc_chan_sende
+#endif
 
 #define tsc_chan_sendp(chan, ptr) _tsc_chan_sendp(chan, ptr, true)
-#define tsc_chan_recvp(chan, pptr) _tsc_chan_recvp(chan, pptr, true)
 #define tsc_chan_nbsendp(chan, ptr) _tsc_chan_sendp(chan, ptr, false)
-#define tsc_chan_nbrecvp(chan, pptr) _tsc_chan_recvp(chan, pptr, false)
 
 extern int tsc_chan_close(tsc_chan_t chan);
 

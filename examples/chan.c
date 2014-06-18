@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   for (i = 0; i < 5; i++) {
     printf("waiting for 1 seconds!\n");
     tsc_chan_recv((tsc_chan_t)timer, &awaken);
-    tsc_chan_send(chan, &i);
+    tsc_chan_sende(chan, i+1);
   }
 
   printf("release the timer ..\n");
