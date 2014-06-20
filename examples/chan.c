@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   uint64_t awaken = 0;
   int i = 0;
   tsc_chan_t chan =
-      (tsc_chan_t)tsc_refcnt_get(tsc_chan_allocate(sizeof(int), 0));
+      tsc_chan_allocate(sizeof(int), 0);
 
   tsc_timer_t timer = tsc_timer_allocate(1000000 * 1, NULL);
   tsc_timer_after(timer, 1000000 * 1);  // 1 seconds later

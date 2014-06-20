@@ -5,10 +5,8 @@
 #include <string.h>
 #include "support.h"
 #include "queue.h"
-#include "lock_chain.h"
-#ifdef ENABLE_REFCNT
 #include "refcnt.h"
-#endif
+#include "lock_chain.h"
 
 enum { CHAN_SUCCESS = 0, CHAN_AWAKEN = 1, CHAN_BUSY = 2, CHAN_CLOSED = 4, };
 
@@ -17,9 +15,7 @@ typedef bool (*tsc_chan_handler)(struct tsc_chan *, void *);
 
 // the general channel type ..
 typedef struct tsc_chan {
-#ifdef ENABLE_REFCNT
   struct tsc_refcnt refcnt;
-#endif
   bool close;
   bool select;
   lock lock;
@@ -45,9 +41,8 @@ extern void tsc_chan_dealloc(tsc_chan_t);
 // init the general channel ..
 static inline void tsc_chan_init(tsc_chan_t ch, int32_t elemsize,
                                  tsc_chan_handler to, tsc_chan_handler from) {
-#ifdef ENABLE_REFCNT
   tsc_refcnt_init(&ch->refcnt, (release_handler_t)tsc_chan_dealloc);
-#endif
+
   ch->close = false;
   ch->select = false;
   ch->elemsize = elemsize;

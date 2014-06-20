@@ -43,7 +43,6 @@ static void __tsc_poll_desc_init(tsc_poll_desc_t desc, int fd, int mode,
   lock_init(&desc->lock);
 
   tsc_refcnt_init(&desc->refcnt, TSC_DEALLOC);
-  tsc_refcnt_get(desc);  // inc the refcnt !!
 }
 
 int tsc_net_wait(int fd, int mode) {
@@ -88,14 +87,13 @@ int tsc_net_timedwait(int fd, int mode, int64_t usec) {
 
   tsc_inter_timer_t deadline;
   struct tsc_poll_desc *desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
+  __tsc_poll_desc_init(desc, fd, mode, &deadline);
 
   deadline.when = tsc_getmicrotime() + usec;
   deadline.period = 0;
   deadline.func = __tsc_netpoll_timeout;
   deadline.args = tsc_refcnt_get(desc);  // inc the refcnt!!
   deadline.owner = NULL;
-
-  __tsc_poll_desc_init(desc, fd, mode, &deadline);
 
   TSC_SIGNAL_MASK();
   lock_acquire(&desc->lock);

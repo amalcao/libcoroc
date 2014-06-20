@@ -15,9 +15,7 @@
 enum { TSC_NETPOLL_READ = 1, TSC_NETPOLL_WRITE = 2, TSC_NETPOLL_ERROR = 4 };
 
 typedef struct tsc_poll_desc {
-#ifdef ENABLE_REFCNT
   struct tsc_refcnt refcnt;
-#endif
   bool done;
   int fd;
   int mode;

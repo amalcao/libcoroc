@@ -243,7 +243,7 @@ typedef struct tsc_refcnt {
 
 static inline void tsc_refcnt_init(tsc_refcnt_t ref,
                                    release_handler_t release) {
-  ref->count = 0;
+  ref->count = 1;
   ref->release = release;
 }
 
