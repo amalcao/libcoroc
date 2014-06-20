@@ -231,7 +231,6 @@ extern __thread int __vpu_sigmask_nest;
 #define TSC_SYNC_ALL() __sync_synchronize()
 #endif
 
-#ifdef ENABLE_REFCNT
 /* -- inline APIs for reference counting mechanism -- */
 
 typedef void (*release_handler_t)(void *);
@@ -255,8 +254,6 @@ static inline void *tsc_refcnt_get(tsc_refcnt_t ref) {
 static inline void tsc_refcnt_put(tsc_refcnt_t ref) {
   if (TSC_ATOMIC_DEC(ref->count) == 0) (ref->release)(ref);
 }
-
-#endif  // ENABLE_REFCNT
 
 #ifdef __cplusplus
 }

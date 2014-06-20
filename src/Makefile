@@ -41,6 +41,7 @@ TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 CFLAGS += -DENABLE_WORKSTEALING
 CFLAGS += -DENABLE_CHANNEL_SELECT
 CFLAGS += -DENABLE_VFS
+CFLAGS += -DENABLE_REFCNT
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
@@ -68,10 +69,6 @@ ifneq (${enable_deadlock_detect}, 0)
 ifeq (${use_clang}, 0)
 	CFLAGS += -rdynamic
 endif
-endif
-
-ifneq (${enable_refcnt}, 0)
-	CFLAGS += -DENABLE_REFCNT
 endif
 
 all: libTSC.a
