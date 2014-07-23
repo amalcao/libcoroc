@@ -25,7 +25,8 @@ library:
 	cd src && make install $(ARGS)
 
 app:
-	cd examples && make install $(ARGS)
+	cd examples/C && make install $(ARGS)
+	cd examples/CoroC && make install $(ARGS)
 
 format:
 	@find . -name "*.[c|h]" -print | xargs ${FORMATER} -i -style=Google

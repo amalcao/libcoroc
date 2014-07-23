@@ -1,0 +1,85 @@
+#define MAX 16
+
+int* array;
+
+void gen_array_elem(int* array, int size) {
+  int i;
+  srand(123456);
+
+  for (i = 0; i < size; i++) {
+    array[i] = rand();
+  }
+}
+
+int check_max_elem(int* array, int size, int max) {
+  int i;
+  for (i = 0; i < size; i++) {
+    if (array[i] > max) return 0;
+  }
+  return 1;
+}
+
+/* -- the slave entry -- */
+int find_max(__chan_t chan) {
+  int size, start, max[2];
+
+  // get the size firstly
+  chan >> size; 
+  if (size <= 0) 
+    __CoroC_Quit -1; 
+    
+  // get my tasks' start index
+  chan >> start;
+
+  max[0] = array[start];
+  max[1] = array[start + 1];
+  if (size > 1) {
+    if (size > 2) {
+
+      int sz[2], st[2];
+
+      sz[0] = size / 2;
+      st[0] = start;
+      sz[1] = size - sz[0];
+      st[1] = start + sz[0];
+
+      __chan_t ch0 = __CoroC_Chan<int>;
+      __CoroC_Spawn find_max(ch0); 
+      ch0 << sz[0];
+      ch0 << st[0];
+
+      __chan_t ch1 = __CoroC_Chan<int>;
+      __CoroC_Spawn find_max(ch1); 
+      ch1 << sz[1];
+      ch1 << st[1];
+
+      ch0 >> max[0];
+      ch1 >> max[1];
+    }
+    if (max[0] < max[1]) max[0] = max[1];
+  }
+
+  chan << max[0];
+  __CoroC_Quit;
+}
+
+/* -- the user entry -- */
+int main(int argc, char** argv) {
+  int max = 0, size = MAX, start = 0;
+  array = (int*)malloc(size * sizeof(int));
+  gen_array_elem(array, size);
+
+  __chan_t chan = __CoroC_Chan<int>;
+  __CoroC_Spawn find_max(chan);
+
+  chan << size; //send the size of array
+  chan << start; // send the start index of array
+
+  chan >> max; // recv the result
+
+  printf("The MAX element is %d\n", max);
+  if (!check_max_elem(array, size, max)) printf("The answer is wrong!\n");
+
+  free(array);
+  __CoroC_Quit;
+}

@@ -8,7 +8,7 @@ OS := $(shell uname)
 CC ?= gcc-4.8
 
 
-APP_CFLAGS := -Dmain=user_main -I../include
+APP_CFLAGS := -Dmain=user_main -I../../include
 
 ifeq (${use_clang}, 1)
 	CC := clang
@@ -44,13 +44,13 @@ all: ${APPS}
 %.o:%.c
 	$(CC) -c ${CFLAGS} -Werror $<
 
-%.run:%.c ../lib/libTSC.a
-	$(CC) $< ${CFLAGS} ${APP_CFLAGS} -L../lib -lTSC -lpthread -lm -o $@
+%.run:%.c ../../lib/libTSC.a
+	$(CC) $< ${CFLAGS} ${APP_CFLAGS} -L../../lib -lTSC -lpthread -lm -o $@
 
 .PHONY:clean install
 clean:
-	rm -rf *.o *.run* dist/*.run*
+	rm -rf *.o *.run*
 
 install: ${APPS}
-	mkdir -p ../bin
-	cp ${APPS} ../bin/
+	mkdir -p ../../bin
+	cp ${APPS} ../../bin/

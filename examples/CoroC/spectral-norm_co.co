@@ -1,0 +1,119 @@
+
+int Num = 1000;
+int NumCPU = 2;
+double *U, *V, *T;
+double *_u, *_v;
+__chan_t finishChan;
+
+static inline double Dot(double *v, double *u, int n) {
+  double sum = 0.0;
+  int i;
+
+  for (i = 0; i < n; i++) sum += v[i] * u[i];
+  return sum;
+}
+
+static inline double A(int i, int j) {
+  return ((i + j) * (i + j + 1) / 2 + i + 1);
+}
+
+void task_Atv(int kk, __chan_t finishChan) {
+  int size = (Num + NumCPU - 1) / NumCPU;
+  int start = size * kk;
+  int end = size * (kk + 1);
+  if (end > Num) end = Num;
+
+  int ul = Num;
+  int i, j;
+  for (i = start; i < end; i++) {
+    double vi = 0;
+    for (j = 0; j < ul; j++) vi += (_u[j] / (double)(A(j, i)));
+
+    _v[i] = vi;
+  }
+
+  int finish = 1;
+  finishChan << finish;
+}
+
+void task_Av(int kk, __chan_t finishChan) {
+  int size = (Num + NumCPU - 1) / NumCPU;
+  int start = size * kk;
+  int end = size * (kk + 1);
+  if (end > Num) end = Num;
+
+  int ul = Num;
+  int i, j;
+  for (i = start; i < end; i++) {
+    double vi = 0;
+    for (j = 0; j < ul; j++) vi += (_u[j] / (double)(A(i, j)));
+
+    _v[i] = vi;
+  }
+
+  int finish = 1;
+  finishChan << finish;
+}
+
+void mult_Atv(double *v, double *u, __chan_t finishChan) {
+  int k;
+  int finish;
+  _v = v;
+  _u = u;
+
+  for (k = 0; k < NumCPU; k++)
+    __CoroC_Spawn task_Atv(k, finishChan);
+
+  for (k = 0; k < NumCPU; k++)
+    finishChan >> finish;
+}
+
+void mult_Av(double *v, double *u, __chan_t finishChan) {
+  int k;
+  int finish;
+  _v = v;
+  _u = u;
+
+  for (k = 0; k < NumCPU; k++) 
+    __CoroC_Spawn task_Av(k, finishChan);
+
+  for (k = 0; k < NumCPU; k++) 
+    finishChan >> finish;
+}
+
+void mult_AtAv(double *v, double *u, double *x, __chan_t chan) {
+  mult_Av(x, u, chan);
+  mult_Atv(v, x, chan);
+}
+
+double SpectralNorm(int n) {
+  __chan_t finishChan = __CoroC_Chan <int>;
+
+  U = (double*)malloc(sizeof(double) * n);
+  V = (double*)malloc(sizeof(double) * n);
+  T = (double*)malloc(sizeof(double) * n);
+
+  int i;
+
+  for (i = 0; i < n; i++) U[i] = 1;
+
+  for (i = 0; i < 10; i++) {
+    mult_AtAv(V, U, T, finishChan);
+    mult_AtAv(U, V, T, finishChan);
+  }
+
+  double dot_uv = Dot(U, V, n);
+  double dot_vv = Dot(V, V, n);
+
+  free(U);
+  free(V);
+  free(T);
+  return sqrt(dot_uv / dot_vv);
+}
+
+int main(int argc, char **argv) {
+  if (argc > 1) 
+    Num = atoi(argv[1]);
+
+  printf("%0.9f\n", SpectralNorm(Num));
+}
