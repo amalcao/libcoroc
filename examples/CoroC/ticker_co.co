@@ -1,0 +1,27 @@
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <libtsc.h>
+
+void callback(void) { printf("\ttime out!\n"); }
+
+int main(int argc, char** argv) {
+  uint64_t awaken = 0;
+  int i = 0;
+  tsc_timer_t timer = tsc_timer_allocate(1000000 * 2, callback);
+  tsc_timer_after(timer, 1000000 * 2);  // 2 seconds later
+
+  __chan_t<uint64_t> Timer = (__chan_t)timer;
+
+  for (i = 0; i < 3; i++) {
+    printf("waiting for 2 seconds!\n");
+    Timer >> awaken;
+    printf("awaken, time is %llu!\n", (long long unsigned)awaken);
+  }
+
+  printf("release the timer ..\n");
+  tsc_timer_stop(timer);
+  tsc_timer_dealloc(timer);
+
+  return 0;
+}
