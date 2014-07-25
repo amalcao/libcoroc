@@ -9,7 +9,7 @@
 
 char *server;
 int port;
-int proxy_task(void *);
+int proxy_task(int);
 int rwtask(int, int);
 
 int main(int argc, char **argv) {
@@ -34,16 +34,15 @@ int main(int argc, char **argv) {
   tsc_net_nonblock(fd);
   while ((cfd = tsc_net_accept(fd, remote, &rport)) >= 0) {
     fprintf(stderr, "connection from %s:%d\n", remote, rport);
-    __CoroC_Spawn proxy_task((void*)cfd);
+    __CoroC_Spawn proxy_task(cfd);
   }
 
   return 0;
 }
 
-int proxy_task(void *v) {
-  int fd, remotefd;
+int proxy_task(int fd) {
+  int remotefd;
 
-  fd = (int)v;
   if ((remotefd = tsc_net_dial(true, server, port)) < 0) {
     close(fd);
     __CoroC_Quit -1;
