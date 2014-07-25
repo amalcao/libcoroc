@@ -1,3 +1,7 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+
 #define MAX 16
 
 int* array;
@@ -20,7 +24,7 @@ int check_max_elem(int* array, int size, int max) {
 }
 
 /* -- the slave entry -- */
-int find_max(__chan_t chan) {
+int find_max(__chan_t<int> chan) {
   int size, start, max[2];
 
   // get the size firstly
@@ -60,7 +64,8 @@ int find_max(__chan_t chan) {
   }
 
   chan << max[0];
-  __CoroC_Quit;
+  
+  return 0;
 }
 
 /* -- the user entry -- */

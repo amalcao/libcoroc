@@ -1,17 +1,19 @@
 /* Copyright (c) 2005 Russ Cox, MIT; see COPYRIGHT */
+#include <stdlib.h>
+#include <stdio.h>
 
 int quiet = 0;
 int goal = 100;
 int buffer = 0;
 
-int primetask(__chan_t c) {
+int primetask(__chan_t<unsigned long> c) {
   unsigned long p, i;
 
   c >> p;
 
   if (p > goal) exit(0);
 
-  if (!quiet) printf("%d\n", p);
+  if (!quiet) printf("%lu\n", p);
 
   __chan_t nc = __CoroC_Chan<unsigned long, buffer>;
   __CoroC_Spawn primetask(nc);

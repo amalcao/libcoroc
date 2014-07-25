@@ -1,9 +1,11 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 
 int Num = 1000;
 int NumCPU = 2;
 double *U, *V, *T;
 double *_u, *_v;
-__chan_t finishChan;
 
 static inline double Dot(double *v, double *u, int n) {
   double sum = 0.0;
@@ -17,7 +19,7 @@ static inline double A(int i, int j) {
   return ((i + j) * (i + j + 1) / 2 + i + 1);
 }
 
-void task_Atv(int kk, __chan_t finishChan) {
+void task_Atv(int kk, __chan_t<int> finishChan) {
   int size = (Num + NumCPU - 1) / NumCPU;
   int start = size * kk;
   int end = size * (kk + 1);
@@ -32,11 +34,10 @@ void task_Atv(int kk, __chan_t finishChan) {
     _v[i] = vi;
   }
 
-  int finish = 1;
-  finishChan << finish;
+  finishChan << 1;
 }
 
-void task_Av(int kk, __chan_t finishChan) {
+void task_Av(int kk, __chan_t<int> finishChan) {
   int size = (Num + NumCPU - 1) / NumCPU;
   int start = size * kk;
   int end = size * (kk + 1);
@@ -51,11 +52,10 @@ void task_Av(int kk, __chan_t finishChan) {
     _v[i] = vi;
   }
 
-  int finish = 1;
-  finishChan << finish;
+  finishChan << 1;
 }
 
-void mult_Atv(double *v, double *u, __chan_t finishChan) {
+void mult_Atv(double *v, double *u, __chan_t<int> finishChan) {
   int k;
   int finish;
   _v = v;
@@ -68,7 +68,7 @@ void mult_Atv(double *v, double *u, __chan_t finishChan) {
     finishChan >> finish;
 }
 
-void mult_Av(double *v, double *u, __chan_t finishChan) {
+void mult_Av(double *v, double *u, __chan_t<int> finishChan) {
   int k;
   int finish;
   _v = v;
@@ -81,7 +81,7 @@ void mult_Av(double *v, double *u, __chan_t finishChan) {
     finishChan >> finish;
 }
 
-void mult_AtAv(double *v, double *u, double *x, __chan_t chan) {
+void mult_AtAv(double *v, double *u, double *x, __chan_t<int> chan) {
   mult_Av(x, u, chan);
   mult_Atv(v, x, chan);
 }

@@ -1,10 +1,8 @@
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
 
-typedef unsigned char uint8_t;
-typedef unsigned int  uint32_t;
-typedef int bool;
-
-#define true    1
-#define false   0
 
 const double ZERO = 0;
 const double LIMIT = 2.0;
@@ -19,7 +17,7 @@ int w, h, iter;
 // This func is responsible for rendering a row of pixels,
 // and when complete writing it out to the file.
 
-void renderRow(__chan_t workChan, __chan_t finishChan) {
+void renderRow(__chan_t<int> workChan, __chan_t<bool> finishChan) {
   double Zr, Zi, Tr, Ti, Cr, Ci;
   int x, y, i;
   int offset;
@@ -62,7 +60,7 @@ int main(int argc, char** argv) {
   rows = (uint8_t*)malloc(sizeof(uint8_t) * bytesPerRow * h);
   memset(rows, 0, bytesPerRow * h);
 
-  __chan_t workChan = __CoroC_Chan <int, (2*POOL+1)>;
+  __chan_t workChan = __CoroC_Chan <int, 2*POOL+1>;
   __chan_t finishChan = __CoroC_Chan <bool>;
 
   for (y = 0; y < size; y++) {

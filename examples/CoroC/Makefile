@@ -46,7 +46,7 @@ all: ${APPS}
 	$(CC) -c ${CFLAGS} -Werror $<
 
 %.cc:%.co
-	$(COROC) -cc1 -rewrite-coro-c $< 
+	$(COROC) -rewrite-coro-c $< 
 
 %.run:%.cc ../../lib/libTSC.a
 	$(CXX) $< ${CFLAGS} ${APP_CFLAGS} -L../../lib -lTSC -lpthread -lm -o $@
