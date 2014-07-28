@@ -4,8 +4,8 @@
 
 #include <stdint.h>
 #include "coroutine.h"
-#include "queue.h"
 #include "support.h"
+#include "tsc_queue.h"
 
 // The unlock handler type
 typedef void (*unlock_handler_t)(volatile void *lock);

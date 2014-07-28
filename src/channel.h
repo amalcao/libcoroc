@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 #include "support.h"
-#include "queue.h"
 #include "refcnt.h"
+#include "tsc_queue.h"
 #include "lock_chain.h"
 
 enum { CHAN_SUCCESS = 0, CHAN_AWAKEN = 1, CHAN_BUSY = 2, CHAN_CLOSED = 4, };

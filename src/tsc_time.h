@@ -1,6 +1,7 @@
 #ifndef _TSC_TIME_H_
 #define _TSC_TIME_H_
 
+#include <time.h>
 #include <sys/time.h>
 
 #include "support.h"

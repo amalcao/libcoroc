@@ -1,8 +1,8 @@
 #include <signal.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "clock.h"
 #include "vpu.h"
+#include "tsc_clock.h"
 
 #define TSC_CLOCK_PERIOD_NANOSEC 500000  // 0.5 ms per signal
 

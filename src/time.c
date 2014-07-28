@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "time.h"
+#include "tsc_time.h"
 #if defined(ENABLE_NOTIFY)
 #include "notify.h"
 #endif

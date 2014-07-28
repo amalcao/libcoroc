@@ -1,4 +1,4 @@
-#include "hash.h"
+#include "tsc_hash.h"
 
 static inline uint64_t __hash_fun0(uint64_t code) { return (A * code + B) % M; }
 

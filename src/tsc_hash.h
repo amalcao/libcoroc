@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #include "support.h"
-#include "lock.h"
+#include "tsc_lock.h"
 
 /** Max hash code.*/
 #define MAX_HASH 2147483647

@@ -2,7 +2,7 @@
 #define _TSC_LOCK_CHAIN_H_
 
 #include <stdlib.h>
-#include "lock.h"
+#include "tsc_lock.h"
 
 #define TSC_LOCKCHAIN_DEFAULT_VOLUME 8
 

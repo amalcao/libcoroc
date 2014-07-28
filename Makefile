@@ -33,5 +33,6 @@ format:
 
 clean:
 	cd src && make clean
-	cd examples && make clean
+	cd examples/C && make clean
+	cd examples/CoroC && make clean
 	rm -rf bin lib

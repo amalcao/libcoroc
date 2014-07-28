@@ -107,7 +107,7 @@ bool __tsc_netpoll_polling(bool block) {
       mode = TSC_NETPOLL_ERROR;
     } else {
         if ((desc->mode & TSC_NETPOLL_READ) &&
-            (pfds[i].revents & (POLLIN | POLLRDHUP))
+            (pfds[i].revents & (POLLIN | POLLRDHUP)))
             mode |= TSC_NETPOLL_READ;
         if ((desc->mode & TSC_NETPOLL_WRITE) &&
             (pfds[i].revents & POLLOUT))

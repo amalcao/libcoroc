@@ -4,10 +4,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "tsc_lock.h"
+#include "tsc_time.h"
 #include "support.h"
-#include "lock.h"
 #include "coroutine.h"
-#include "time.h"
 #ifdef ENABLE_REFCNT
 #include "refcnt.h"
 #endif

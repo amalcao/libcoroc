@@ -5,7 +5,7 @@
 #include "vpu.h"
 #include "async.h"
 #include "netpoll.h"
-#include "lock.h"
+#include "tsc_lock.h"
 
 #define MAX_SPIN_LOOP_NUM 1
 #define WAKEUP_THRESHOLD (vpu_manager.alive << 1)

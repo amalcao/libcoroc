@@ -5,8 +5,8 @@
 #include <assert.h>
 
 #include "vpu.h"
-#include "clock.h"
 #include "coroutine.h"
+#include "tsc_clock.h"
 
 extern void tsc_vpu_initialize(int, tsc_coroutine_handler_t);
 extern void tsc_clock_initialize(void);

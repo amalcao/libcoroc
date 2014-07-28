@@ -2,7 +2,7 @@
 #define _TSC_CORE_CLOCK_H
 
 #include "support.h"
-#include "queue.h"
+#include "tsc_queue.h"
 
 typedef struct clock_manager {
   queue_t sleep_queue;  // TODO

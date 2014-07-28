@@ -9,9 +9,11 @@
 
 #ifdef __APPLE__
 
+#include "time_.h"
 #include "pthread_barrier.h"
 
 #define _XOPEN_SOURCE 700
+#define POLLRDHUP 0x2000
 
 #endif  // __APPLE__
 

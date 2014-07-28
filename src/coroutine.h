@@ -5,8 +5,8 @@
 
 #include "support.h"
 #include "context.h"
-#include "queue.h"
 #include "message.h"
+#include "tsc_queue.h"
 
 typedef int32_t (*tsc_coroutine_handler_t)(void* args);
 

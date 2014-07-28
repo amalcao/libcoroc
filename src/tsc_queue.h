@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "lock.h"
+#include "tsc_lock.h"
 
 struct queue;
 
