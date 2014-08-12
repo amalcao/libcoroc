@@ -45,6 +45,15 @@ public:
     return operator= (cr.ref);
   }
 
+  // overload the operator '&'
+  const T* operator&() const {
+    return &ref;
+  }
+
+  T* operator&() {
+    return &ref;
+  }
+
   // detach the reference from the smart pointer
   T detach(void) {
     T _ref = ref;
