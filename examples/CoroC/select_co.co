@@ -2,9 +2,17 @@
 #include <stdio.h>
 
 #define SIZE 4
+#define MAKE_CHAN 2
+
+#if (MAKE_CHAN == 1)
 void make_chan(__chan_t<int> *chan) {
   *chan = __CoroC_Chan<int>;
 }
+#elif (MAKE_CHAN == 2)
+__chan_t<int> make_chan() {
+  return __CoroC_Chan<int>;
+}
+#endif
 
 int sub_task(__chan_t<int> chan) {
   int id = random();
@@ -17,10 +25,12 @@ int main(int argc, char** argv) {
   int i = 0, id;
 
   for (; i < SIZE; i++) {
-#if 0
+#if (MAKE_CHAN == 0)
     chans[i] = __CoroC_Chan<int>;
-#else
+#elif (MAKE_CHAN == 1)
     make_chan(&chans[i]);
+#elif (MAKE_CHAN == 2)
+	chans[i] = make_chan();
 #endif
 	__CoroC_Spawn sub_task(chans[i]);
   }
