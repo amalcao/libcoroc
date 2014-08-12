@@ -1,0 +1,33 @@
+#include <stdlib.h>
+#include <stdio.h>
+
+#define SIZE 4
+
+int sub_task(__chan_t<int> chan) {
+  int id = random();
+  chan << id;
+  __CoroC_Quit;
+}
+
+int main(int argc, char** argv) {
+  __chan_t<int> chans[SIZE];
+  int i = 0, id;
+
+  for (; i < SIZE; i++) {
+    chans[i] = __CoroC_Chan<int>;
+	__CoroC_Spawn sub_task(chans[i]);
+  }
+
+  for (i = 0; i < SIZE; i++) {
+    __CoroC_Select {
+	  __CoroC_Case (chans[0] >> id) {}
+	  __CoroC_Case (chans[1] >> id) {}
+	  __CoroC_Case (chans[2] >> id) {}
+	  __CoroC_Case (chans[3] >> id) {}
+	}
+
+    printf("[main task]: recv id is %d!\n", id);
+  }
+  
+  return 0;
+}

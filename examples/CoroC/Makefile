@@ -2,7 +2,7 @@
 APPS := findmax_co.run primes_co.run
 APPS += mandelbrot_co.run spectral-norm_co.run ## modify from benchmarkgame.org
 APPS += httpload_co.run tcpproxy_co.run
-APPS += ticker_co.run 
+APPS += ticker_co.run select_co.run
 
 OS := $(shell uname)
 

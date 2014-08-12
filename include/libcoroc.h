@@ -15,6 +15,7 @@
 /// basic builtin types
 #define __chan_t        tsc_chan_t
 #define __task_t        tsc_coroutine_t
+#define __select_set_t  tsc_chan_set_t
 
 /// for reference-counting ops
 #define __refcnt_t      tsc_refcnt_t
@@ -32,6 +33,17 @@
 #define __CoroC_Chan tsc_chan_allocate
 #define __CoroC_Chan_Send(C, V) tsc_chan_sende(C, V)
 #define __CoroC_Chan_Recv(C, P) tsc_chan_recv(C, (void*)(P))
-// TODO : channel select op ..
+
+///  channel select op ..
+#define __CoroC_Select_Alloc    tsc_chan_set_allocate
+#define __CoroC_Select_Dealloc  tsc_chan_set_dealloc
+#define __CoroC_Select(S, B) ({ \
+    tsc_chan_t active = NULL;   \
+    _tsc_chan_set_select(S, B, &active); \
+    active; })
+#define __CoroC_Select_Send(S, C, E) \
+    do { typeof(E) __temp = E; \
+         tsc_chan_set_send(S, C, &__temp); } while (0)
+#define __CoroC_Select_Recv     tsc_chan_set_recv
 
 #endif // __LIBCOROC_H__

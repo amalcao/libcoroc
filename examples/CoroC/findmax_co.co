@@ -26,6 +26,7 @@ int check_max_elem(int* array, int size, int max) {
 /* -- the slave entry -- */
 int find_max(__chan_t<int> chan) {
   int size, start, max[2];
+  __chan_t<int> ch[2];
 
   // get the size firstly
   chan >> size; 
@@ -47,18 +48,16 @@ int find_max(__chan_t<int> chan) {
       sz[1] = size - sz[0];
       st[1] = start + sz[0];
 
-      __chan_t ch0 = __CoroC_Chan<int>;
-      __CoroC_Spawn find_max(ch0); 
-      ch0 << sz[0];
-      ch0 << st[0];
+	  int i;
+	  for (i = 0; i < 2; ++i) {
+      	ch[i] = __CoroC_Chan<int>;
+      	__CoroC_Spawn find_max(ch[i]); 
+      	ch[i] << sz[0];
+      	ch[i] << st[0];
+	  }
 
-      __chan_t ch1 = __CoroC_Chan<int>;
-      __CoroC_Spawn find_max(ch1); 
-      ch1 << sz[1];
-      ch1 << st[1];
-
-      ch0 >> max[0];
-      ch1 >> max[1];
+      ch[0] >> max[0];
+      ch[1] >> max[1];
     }
     if (max[0] < max[1]) max[0] = max[1];
   }
