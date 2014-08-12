@@ -2,6 +2,9 @@
 #include <stdio.h>
 
 #define SIZE 4
+void make_chan(__chan_t<int> *chan) {
+  *chan = __CoroC_Chan<int>;
+}
 
 int sub_task(__chan_t<int> chan) {
   int id = random();
@@ -14,7 +17,11 @@ int main(int argc, char** argv) {
   int i = 0, id;
 
   for (; i < SIZE; i++) {
+#if 0
     chans[i] = __CoroC_Chan<int>;
+#else
+    make_chan(&chans[i]);
+#endif
 	__CoroC_Spawn sub_task(chans[i]);
   }
 
