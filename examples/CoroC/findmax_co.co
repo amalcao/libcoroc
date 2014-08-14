@@ -4,6 +4,10 @@
 
 #define MAX 16
 
+#if defined(__COROC__)
+# define ICHAN_T __chan_t<int>
+#endif 
+
 int* array;
 
 void gen_array_elem(int* array, int size) {
@@ -24,14 +28,14 @@ int check_max_elem(int* array, int size, int max) {
 }
 
 /* -- the slave entry -- */
-int find_max(__chan_t<int> chan) {
+int find_max(ICHAN_T chan) {
   int size, start, max[2];
-  __chan_t<int> ch[2];
+  ICHAN_T ch[2];
 
   // get the size firstly
   chan >> size; 
   if (size <= 0) 
-    __CoroC_Quit -1; 
+    return -1; 
     
   // get my tasks' start index
   chan >> start;
@@ -73,7 +77,7 @@ int main(int argc, char** argv) {
   array = (int*)malloc(size * sizeof(int));
   gen_array_elem(array, size);
 
-  __chan_t chan = __CoroC_Chan<int>;
+  ICHAN_T chan = __CoroC_Chan<int>;
   __CoroC_Spawn find_max(chan);
 
   chan << size; //send the size of array
@@ -85,5 +89,6 @@ int main(int argc, char** argv) {
   if (!check_max_elem(array, size, max)) printf("The answer is wrong!\n");
 
   free(array);
-  __CoroC_Quit;
+
+  return 0;
 }
