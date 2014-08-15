@@ -35,15 +35,23 @@
 #define __CoroC_Chan tsc_chan_allocate
 #define __CoroC_Chan_Close(C)  tsc_chan_close(*(C))
 
-#define __CoroC_Chan_Send(C, V) ({ \
-    bool ret = tsc_chan_sende(C, V) != CHAN_CLOSED; \
+#define __CoroC_Chan_SendExpr(C, V) ({ \
+    typeof(V) __temp = (V); \
+    bool ret = tsc_chan_send(C, (void*)(&__temp)) != CHAN_CLOSED; \
+    ret;})
+#define __CoroC_Chan_Send(C, P) ({ \
+    bool ret = tsc_chan_send(C, (void*)(P)) != CHAN_CLOSED; \
     ret;})
 #define __CoroC_Chan_Recv(C, P) ({ \
     bool ret = tsc_chan_recv(C, (void*)(P)) != CHAN_CLOSED; \
     ret;})
 
-#define __CoroC_Chan_Send_NB(C, V) ({ \
-    bool ret = tsc_chan_nbsend(C, V) == CHAN_SUCCESS; \
+#define __CoroC_Chan_SendExpr_NB(C, V) ({ \
+    typeof(V) __temp = (V); \
+    bool ret = tsc_chan_nbsend(C, (void*)(&__temp)) == CHAN_SUCCESS; \
+    ret;})
+#define __CoroC_Chan_Send_NB(C, P) ({ \
+    bool ret = tsc_chan_nbsend(C, (void*)(P)) == CHAN_SUCCESS; \
     ret;})
 #define __CoroC_Chan_Recv_NB(C, P) ({ \
     bool ret = tsc_chan_nbrecv(C, (void*)(P)) == CHAN_SUCCESS; \
@@ -56,9 +64,10 @@
     tsc_chan_t active = NULL;   \
     _tsc_chan_set_select(S, B, &active); \
     active; })
-#define __CoroC_Select_Send(S, C, E) \
+#define __CoroC_Select_SendExpr(S, C, E) \
     do { typeof(E) __temp = E; \
          tsc_chan_set_send(S, C, &__temp); } while (0)
+#define __CoroC_Select_Send     tsc_chan_set_send
 #define __CoroC_Select_Recv     tsc_chan_set_recv
 
 #endif // __LIBCOROC_H__
