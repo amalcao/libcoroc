@@ -6,7 +6,7 @@ APPS += ticker_co.run select_co.run
 
 OS := $(shell uname)
 
-COROC 	?= clang
+COROC 	?= clang-co
 CC  	?= gcc-4.8
 CXX 	?= g++-4.8
 
