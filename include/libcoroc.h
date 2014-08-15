@@ -34,6 +34,7 @@
 /// for channel ops
 #define __CoroC_Chan tsc_chan_allocate
 #define __CoroC_Chan_Close(C)  tsc_chan_close(*(C))
+#define __CoroC_Chan_Null       NULL
 
 #define __CoroC_Chan_SendExpr(C, V) ({ \
     typeof(V) __temp = (V); \
