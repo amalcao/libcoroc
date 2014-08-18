@@ -1,6 +1,6 @@
 #include <sys/time.h>
 
-#include "time.h"
+#include "tsc_time.h"
 #include "notify.h"
 
 void tsc_notify_wakeup(tsc_notify_t *note) {
