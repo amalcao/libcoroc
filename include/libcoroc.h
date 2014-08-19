@@ -13,17 +13,18 @@
 /* standard definations for CoroC internals */
 
 /// basic builtin types
-#define __chan_t        tsc_chan_t
-#define __task_t        tsc_coroutine_t
-#define __select_set_t  tsc_chan_set_t
+typedef tsc_chan_t      __chan_t;
+typedef tsc_coroutine_t __task_t;
+typedef tsc_chan_set_t  __select_set_t;
+typedef unsigned long long  __time_t;
 
 /// for reference-counting ops
-#define __refcnt_t      tsc_refcnt_t
+typedef tsc_refcnt_t    __refcnt_t;
 #define __refcnt_get(R) (typeof(R))tsc_refcnt_get((tsc_refcnt_t)(R))
 #define __refcnt_put(R) tsc_refcnt_put((tsc_refcnt_t)(R))
 
 /// for coroutine ops
-#define __CoroC_spawn_handler_t     tsc_coroutine_handler_t
+typedef tsc_coroutine_handler_t __CoroC_spawn_handler_t;
 #define __CoroC_Spawn(F, A) \
             tsc_coroutine_allocate((F), (A), "", TSC_COROUTINE_NORMAL, NULL)
 #define __CoroC_Yield   tsc_coroutine_yield
@@ -34,7 +35,7 @@
 /// for channel ops
 #define __CoroC_Chan tsc_chan_allocate
 #define __CoroC_Chan_Close(C)  tsc_chan_close(*(C))
-#define __CoroC_Chan_Null       NULL
+#define __CoroC_Null       NULL
 
 #define __CoroC_Chan_SendExpr(C, V) ({ \
     typeof(V) __temp = (V); \
@@ -70,5 +71,35 @@
          tsc_chan_set_send(S, C, &__temp); } while (0)
 #define __CoroC_Select_Send     tsc_chan_set_send
 #define __CoroC_Select_Recv     tsc_chan_set_recv
+
+/// for Task based send / recv
+#define __CoroC_Task_Send(task, buf, sz) tsc_send(*(task), buf, sz)
+#define __CoroC_Task_Recv(buf, sz) tsc_recv(buf, sz, 1)
+#define __CoroC_Task_Recv_NB(buf, sz) tsc_recv(buf, sz, 0)
+
+/// for Timer / Ticker ..
+#define __CoroC_Timer_At(at) ({ \
+    tsc_timer_t __timer = tsc_timer_allocate(0, NULL); \
+    tsc_timer_at(__timer, at); \
+    (tsc_chan_t)(__timer); })
+
+#define __CoroC_Timer_After(after) ({ \
+    tsc_timer_t __timer = tsc_timer_allocate(0, NULL); \
+    tsc_timer_after(__timer, after); \
+    (tsc_chan_t)(__timer); })
+
+#define __CoroC_Ticker(period) ({ \
+    tsc_timer_t __ticker = tsc_timer_allocate(period, NULL); \
+    tsc_timer_after(__ticker, period);  \
+    (tsc_chan_t)(__ticker); })
+
+#define __CoroC_Stop(T)  {  \
+    tsc_timer_stop((tsc_timer_t)(*(T)));   \
+    tsc_timer_dealloc((tsc_timer_t)(*(T)));\
+    (T).detach(); }
+
+/// for time management
+#define __CoroC_Now     tsc_getcurtime
+#define __CoroC_Sleep   tsc_udelay
 
 #endif // __LIBCOROC_H__
