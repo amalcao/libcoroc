@@ -9,3 +9,5 @@ core
 cscope.*
 
 tags
+
+.DS_Store
