@@ -10,6 +10,12 @@ CC ?= gcc-4.8
 
 APP_CFLAGS := -Dmain=user_main -I../../include
 
+APP_LDFLAGS := -L../../lib -lTSC -lpthread -lm 
+
+ifneq (${OS}, Darwin)
+	APP_LDFLAGS += -lrt
+endif
+
 ifeq (${use_clang}, 1)
 	CC := clang
 endif
@@ -45,7 +51,7 @@ all: ${APPS}
 	$(CC) -c ${CFLAGS} -Werror $<
 
 %.run:%.c ../../lib/libTSC.a
-	$(CC) $< ${CFLAGS} ${APP_CFLAGS} -L../../lib -lTSC -lpthread -lm -o $@
+	$(CC) $< ${CFLAGS} ${APP_CFLAGS} ${APP_LDFLAGS} -o $@
 
 .PHONY:clean install
 clean:

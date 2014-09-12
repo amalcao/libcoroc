@@ -13,6 +13,12 @@ CXX 	?= g++-4.8
 
 APP_CFLAGS := -I../../include
 
+APP_LDFLAGS := -L../../lib -lTSC -lpthread -lm 
+
+ifneq (${OS}, Darwin)
+	APP_LDFLAGS += -lrt
+endif
+
 ifeq (${use_clang}, 1)
 	CC := clang
 endif
@@ -51,7 +57,7 @@ all: ${APPS}
 	$(COROC) -rewrite-coroc ${APP_CFLAGS} $< 
 
 %.run:%.cc ../../lib/libTSC.a
-	$(CXX) $< ${CFLAGS} ${APP_CFLAGS} -L../../lib -lTSC -lpthread -lm -o $@
+	$(CXX) $< ${CFLAGS} ${APP_CFLAGS} ${APP_LDFLAGS} -o $@
 
 .PHONY:clean install
 clean:
