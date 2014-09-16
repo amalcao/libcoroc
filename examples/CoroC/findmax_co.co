@@ -56,8 +56,8 @@ int find_max(ICHAN_T chan) {
 	  for (i = 0; i < 2; ++i) {
       	ch[i] = __CoroC_Chan<int>;
       	__CoroC_Spawn find_max(ch[i]); 
-      	ch[i] << sz[0];
-      	ch[i] << st[0];
+      	ch[i] << sz[i];
+      	ch[i] << st[i];
 	  }
 
       ch[0] >> max[0];
