@@ -16,7 +16,7 @@
 typedef tsc_chan_t      __chan_t;
 typedef tsc_coroutine_t __task_t;
 typedef tsc_chan_set_t  __select_set_t;
-typedef unsigned long long  __time_t;
+typedef unsigned long long  __coroc_time_t;
 
 /// for reference-counting ops
 typedef tsc_refcnt_t    __refcnt_t;

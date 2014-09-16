@@ -2,9 +2,9 @@
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-  __time_t awaken = 0;
+  __coroc_time_t awaken = 0;
   int i = 0;
-  __chan_t<__time_t> Timer = __CoroC_Ticker(2000000);
+  __chan_t<__coroc_time_t> Timer = __CoroC_Ticker(2000000);
 
   for (i = 0; i < 3; i++) {
     printf("waiting for 2 seconds...\n");

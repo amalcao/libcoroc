@@ -19,7 +19,7 @@ else
 endif
 
 " CoroC extentions
-syn keyword coType          __task_t __chan_t __refcnt_t __time_t
+syn keyword coType          __task_t __chan_t __refcnt_t __coroc_time_t
 syn keyword coConstant      __CoroC_Null
 
 syn keyword coStatement     __CoroC_Spawn __CoroC_Chan 
