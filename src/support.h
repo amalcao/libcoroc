@@ -18,6 +18,7 @@
 #endif  // __APPLE__
 
 #define TSC_NAME_LENGTH 32
+#define TSC_TASK_NUM_PERVPU 256
 
 // -- for thread APIs --
 typedef pthread_t TSC_OS_THREAD_T;
@@ -169,7 +170,7 @@ typedef pthread_t TSC_OS_THREAD_T;
     volatile uint32_t* __pval = &(n);    \
     for (;;) {                           \
       uint32_t __old = *__pval;          \
-      if (TSC_CAS(__pval, __old)) break; \
+      if (TSC_CAS(__pval, __old, v)) break; \
     }                                    \
   })
 

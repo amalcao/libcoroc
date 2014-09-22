@@ -50,7 +50,7 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
 
     strcpy(coroutine->name, name);
     coroutine->type = type;
-    coroutine->status = TSC_COROUTINE_READY;
+    coroutine->status = TSC_COROUTINE_WAIT;
     coroutine->id = TSC_ALLOC_TID();
     coroutine->entry = entry;
     coroutine->arguments = arguments;
@@ -83,21 +83,16 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
     queue_item_init(&coroutine->trace_link, coroutine);
   }
 
-  if (coroutine->type == TSC_COROUTINE_MAIN) {
-    vpu_manager.main = coroutine;
-  }
-
   if (coroutine->type != TSC_COROUTINE_IDLE) {
     TSC_CONTEXT_INIT(&coroutine->ctx, coroutine->stack_base, size, coroutine);
     atomic_queue_add(&vpu_manager.coroutine_list, &coroutine->trace_link);
-#if 0
-      atomic_queue_add (& vpu_manager . xt[coroutine -> vpu_affinity], 
-                        & coroutine -> status_link);
-
-      vpu_wakeup_one ();
-#else
-    vpu_ready(coroutine);
-#endif
+    if (coroutine->type != TSC_COROUTINE_MAIN) {
+      vpu_ready(coroutine);
+    } else {
+      vpu_manager.main = coroutine;
+      coroutine->status = TSC_COROUTINE_READY;
+      atomic_queue_add(& vpu_manager.xt, & coroutine->status_link);
+    }
   }
 
   TSC_SIGNAL_UNMASK();

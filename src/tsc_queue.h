@@ -82,6 +82,33 @@ static inline void atomic_queue_add(queue_t *queue, queue_item_t *item) {
   lock_release(&queue->lock);
 }
 
+static inline void queue_add_range(queue_t *queue, unsigned int n,
+                                   queue_item_t *from,
+                                   queue_item_t *to) {
+  if (!queue->status) {
+    queue->head = from;
+    queue->tail = to;
+  } else {
+    queue->tail->next = from;
+    from->prev = queue->tail;
+    queue->tail = to;
+  }
+
+  from->que = queue;
+  to->que = queue;
+
+  queue->status += n;
+}
+
+static inline void atomic_queue_add_range(queue_t *queue, unsigned int n,
+                                          queue_item_t *from, 
+                                          queue_item_t *to) {
+  lock_acquire(&queue->lock);
+  queue_add_range(queue, n, from, to);
+  lock_release(&queue->lock);
+}
+
+
 /*---- Remove function ----*/
 static inline void *queue_rem(queue_t *queue) {
   queue_item_t *kitem = NULL;

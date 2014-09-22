@@ -19,8 +19,14 @@ typedef struct vpu {
   uint32_t watchdog;
   uint32_t ticks;
   unsigned rand_seed;
+
   tsc_coroutine_t current;
   tsc_coroutine_t scheduler;
+
+  tsc_coroutine_t runq[TSC_TASK_NUM_PERVPU];
+  uint32_t runqhead;
+  uint32_t runqtail;
+
   void *hold;
   unlock_handler_t unlock_handler;
 } vpu_t;
@@ -28,7 +34,7 @@ typedef struct vpu {
 // Type of the VPU manager
 typedef struct vpu_manager {
   vpu_t *vpu;
-  queue_t *xt;
+  queue_t xt;
   uint32_t xt_index;
   uint32_t last_pid;
   tsc_coroutine_t main;
@@ -56,7 +62,7 @@ extern void vpu_syscall(int (*pfn)(void *));
 extern void vpu_clock_handler(int);
 extern void vpu_wakeup_one(void);
 #ifdef ENABLE_DEADLOCK_DETECT
-extern void vpu_backtrace(int);
+extern void vpu_backtrace(vpu_t*);
 #endif
 
 #define TSC_ALLOC_TID() TSC_ATOMIC_INC(vpu_manager.last_pid)
