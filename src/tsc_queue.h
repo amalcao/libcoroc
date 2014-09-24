@@ -57,6 +57,11 @@ static inline int atomic_queue_size(queue_t *queue) {
   return size;
 }
 
+static inline void queue_link(queue_item_t *item1, queue_item_t *item2) {
+  item1->next = item2;
+  item2->prev = item1;
+}
+
 /*---- Add functions ----*/
 static inline void queue_add(queue_t *queue, queue_item_t *item) {
   /*---- Clean the links ----*/
@@ -96,6 +101,7 @@ static inline void queue_add_range(queue_t *queue, unsigned int n,
 
   from->que = queue;
   to->que = queue;
+  to->next = NULL;
 
   queue->status += n;
 }

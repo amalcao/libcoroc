@@ -53,16 +53,12 @@ static bool __runqputslow(vpu_t *vpu, tsc_coroutine_t task,
     return false;
 
   temp[n] = task;
-  // link the n + 1 tasks ..
-  temp[0]->status_link.next = & temp[1]->status_link;
-  for (i = 1; i < n; ++i) {
-    temp[i]->status_link.next = & temp[i+1]->status_link;
-    temp[i]->status_link.prev = & temp[i-1]->status_link;
-    temp[i]->status_link.que = & vpu_manager.xt;
-  }
-  task->status_link.prev = & temp[n-1]->status_link;
 
-  atomic_queue_add_range(&vpu_manager.xt, n,
+  // link the n + 1 tasks ..
+  for (i = 0; i < n; ++i)
+    queue_link(& temp[i]->status_link, & temp[i+1]->status_link);
+
+  atomic_queue_add_range(&vpu_manager.xt, n+1,
                          &temp[0]->status_link,
                          &task->status_link);
   return true;
@@ -417,7 +413,7 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
 
   vpu_manager.alive = vpu_mp_count;
   vpu_manager.idle = 0;
-  vpu_manager.total_ready = 0;
+  vpu_manager.total_ready = 1;
 
   pthread_cond_init(&vpu_manager.cond, NULL);
   pthread_mutex_init(&vpu_manager.lock, NULL);
@@ -453,6 +449,7 @@ void vpu_ready(tsc_coroutine_t coroutine) {
   assert(coroutine != NULL && coroutine->status == TSC_COROUTINE_WAIT);
   coroutine->status = TSC_COROUTINE_READY;
   
+  TSC_ATOMIC_INC(vpu_manager.total_ready);
   __runqput(vpu, coroutine);
 
   vpu_wakeup_one();

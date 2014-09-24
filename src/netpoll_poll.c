@@ -86,19 +86,16 @@ int __tsc_netpoll_rem(tsc_poll_desc_t desc) {
 }
 
 bool __tsc_netpoll_polling(bool block) {
-  bool ret = false;
   int size, ms, i, mode = 0;
   struct pollfd *pfds = tsc_netpoll_manager.fds;
-
-  pthread_mutex_lock(&tsc_netpoll_manager.mutex);
-
+  
   size = tsc_netpoll_manager.size;
-
-  if (size == 0) goto __exit_polling;
+  if (size == 0) return false;
 
   ms = block ? -1 : 0;
+  if (poll(pfds, size, ms) <= 0) return false;
 
-  if (poll(pfds, size, ms) <= 0) goto __exit_polling;
+  pthread_mutex_lock(&tsc_netpoll_manager.mutex);
 
   for (i = 0; i < size; i++) {
     tsc_poll_desc_t desc = tsc_netpoll_manager.table[i];
@@ -118,9 +115,9 @@ bool __tsc_netpoll_polling(bool block) {
     tsc_netpoll_wakeup(desc);
   }
 
-__exit_polling:
   pthread_mutex_unlock(&tsc_netpoll_manager.mutex);
-  return ret;
+
+  return true;
 }
 
 int __tsc_netpoll_size(void) { return tsc_netpoll_manager.size; }
