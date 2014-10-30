@@ -1,4 +1,5 @@
 /* Copyright (c) 2005 Russ Cox, MIT; see COPYRIGHT */
+#include <libcoroc.h>
 #include <stdlib.h>
 #include <stdio.h>
 

@@ -1,3 +1,4 @@
+#include <libcoroc.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -17,7 +18,7 @@ __chan_t<int> make_chan() {
 int sub_task(__chan_t<int> chan) {
   int id = random();
   chan << id;
-  __CoroC_Quit;
+  __CoroC_Quit 0;
 }
 
 int main(int argc, char** argv) {

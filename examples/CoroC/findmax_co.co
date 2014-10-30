@@ -1,12 +1,13 @@
+#include <libcoroc.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 
 #define MAX 16
 
-#if defined(__COROC__)
-# define ICHAN_T __chan_t<int>
-#endif 
+/* define a macro to slim the channel type name */
+#define ICHAN_T __chan_t<int>
 
 int* array;
 
@@ -90,5 +91,5 @@ int main(int argc, char** argv) {
 
   free(array);
 
-  return 0;
+  __CoroC_Exit(0);
 }
