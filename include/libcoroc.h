@@ -128,6 +128,12 @@
 #define __CoroC_Now     tsc_getcurtime
 #define __CoroC_Sleep   tsc_udelay
 
+/// for explicity release the reference's counter
+#define __CoroC_Task_Release(T) \
+        if (tsc_refcnt_put((tsc_refcnt_t)(T))) (T) = NULL;
+#define __CoroC_Chan_Release(C) \
+        if (tsc_refcnt_put((tsc_refcnt_t)(C))) (C) = NULL; 
+
 #endif // defined(__COROC__)
 
 #endif // __LIBCOROC_H__

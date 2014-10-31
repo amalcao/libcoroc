@@ -252,9 +252,12 @@ static inline void *tsc_refcnt_get(tsc_refcnt_t ref) {
   return (void *)ref;
 }
 
-static inline void tsc_refcnt_put(tsc_refcnt_t ref) {
-  if (ref == NULL) return;
-  if (TSC_ATOMIC_DEC(ref->count) == 0) (ref->release)(ref);
+static inline bool tsc_refcnt_put(tsc_refcnt_t ref) {
+  if (ref != NULL && TSC_ATOMIC_DEC(ref->count) == 0) {
+    (ref->release)(ref); 
+    return true;
+  }
+  return false;
 }
 
 #ifdef __cplusplus
