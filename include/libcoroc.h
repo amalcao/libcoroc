@@ -88,6 +88,39 @@
     _Bool ret = _tsc_chan_recv(C, (void*)(P), 0) == CHAN_SUCCESS; \
     ret;})
 
+#define __CoroC_Chan_SendRef(C, R) ({   \
+    _Bool ret = 1;                      \
+    tsc_refcnt_get((tsc_refcnt_t)(*(R)));  \
+    if (_tsc_chan_send(C, (void*)(R), 1) == CHAN_CLOSED) {  \
+      ret = 0; tsc_refcnt_put((tsc_refcnt_t)(*(R))); }         \
+    ret;})
+#define __CoroC_Chan_RecvRef(C, R) ({       \
+    tsc_refcnt_put((tsc_refcnt_t)(*(R)));   \
+    _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) != CHAN_CLOSED; \
+    ret;})
+
+#if 0
+#define __CoroC_Chan_SendRef_NB(C, R) ({    \
+    _Bool ret = 1;                          \
+    tsc_refcnt_get((tsc_refcnt_t)(R));      \
+    if (_tsc_chan_send(C, (void*)(R), 1) != CHAN_SUCCESS) { \
+      ret = 0; tsc_refcnt_put((tsc_refcnt_t)(R)); }         \
+    ret;})
+#define __CoroC_Chan_RecvRef_NB(C, R) ({    \
+    tsc_refcnt_put((tsc_refcnt_t)(*(R)));   \
+    _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) == CHAN_SUCCESS; \
+    ret;})
+#endif
+
+#define __CoroC_Chan_SendRef_NB(C, R) ({ \
+    tsc_refcnt_get((tsc_refcnt_t)(*(R)));\
+    _Bool ret = _tsc_chan_send(C, (void*)(R), 1) == CHAN_SUCCESS; \
+    ret;)}
+#define __CoroC_Chan_RecvRef_NB(C, R) ({ \
+    tsc_refcnt_put((tsc_refcnt_t)(*(R)));\
+    _Bool ret = _tsc_chan_recv(C, (void*)(R), 1) == CHAN_SUCCESS; \
+    ret;)}
+
 ///  channel select ops ..
 #define __CoroC_Select_Alloc    tsc_chan_set_allocate
 #define __CoroC_Select_Dealloc  tsc_chan_set_dealloc
@@ -100,6 +133,13 @@
          tsc_chan_set_send(S, C, &__temp); } while (0)
 #define __CoroC_Select_Send     tsc_chan_set_send
 #define __CoroC_Select_Recv     tsc_chan_set_recv
+
+#define __CoroC_Select_SendRef(S, C, R) do {        \
+            tsc_refcnt_get((tsc_refcnt_t)(*(R)));   \
+            tsc_chan_set_send(S, C, (void*)(R)); } while (0)
+#define __CoroC_Select_RecvRef(S, C, R) do {        \
+            tsc_refcnt_put((tsc_refcnt_put)(*(R))); \
+            tsc_chan_set_recv(S, C, (void*)(R)); } while (0)
 
 /// for Task based send / recv
 #define __CoroC_Task_Send(task, buf, sz) tsc_send(*(task), buf, sz)
