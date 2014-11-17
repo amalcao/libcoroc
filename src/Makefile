@@ -2,8 +2,9 @@ OS := $(shell uname)
 
 enable_debug ?= 0
 
-TSC_HEADERS:= clock.h channel.h message.h context.h lock.h queue.h support.h coroutine.h vpu.h time.h vfs.h netpoll.h hash.h async.h 
-TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c hash.c async.c 
+TSC_HEADERS:= channel.h message.h context.h support.h coroutine.h vpu.h vfs.h netpoll.h async.h 
+TSC_HEADERS+= tsc_clock.h tsc_lock.h tsc_queue.h tsc_hash.h tsc_time.h tsc_group.h
+TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c hash.c async.c group.c
 
 CFLAGS += -Werror
 
