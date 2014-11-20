@@ -30,6 +30,7 @@
 #define __task_t        tsc_coroutine_t
 #define __select_set_t  tsc_chan_set_t
 #define __coroc_time_t  uint64_t
+#define __group_t       tsc_group_t
 
 /// for reference-counting ops
 #define __refcnt_t      tsc_refcnt_t
@@ -56,10 +57,19 @@
 
 #define __CoroC_Spawn(F, A) \
             tsc_coroutine_allocate((F), (A), "", TSC_COROUTINE_NORMAL, NULL)
+#define __CoroC_Spawn_Opt(F, A, CB) \
+            tsc_coroutine_allocate((F), (A), "", TSC_COROUTINE_NORMAL, (CB))
+
 #define __CoroC_Yield   tsc_coroutine_yield
 #define __CoroC_Self    tsc_coroutine_self
 #define __CoroC_Quit    tsc_coroutine_exit
 #define __CoroC_Exit    tsc_coroutine_exit
+
+/// for group ops
+#define __CoroC_Group       tsc_group_alloc
+#define __CoroC_Add_Task    tsc_group_add_task
+#define __CoroC_Notify      tsc_group_notify
+#define __CoroC_Sync        tsc_group_sync
 
 /// for channel ops
 #define __CoroC_Chan tsc_chan_allocate

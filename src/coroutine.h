@@ -49,8 +49,10 @@ typedef struct tsc_coroutine {
   void* stack_base;
   size_t stack_size;
   tsc_coroutine_handler_t entry;
+  tsc_coroutine_handler_t cleanup;
   void* arguments;
   int32_t retval;
+
   TSC_CONTEXT ctx;
 }* tsc_coroutine_t;
 
@@ -76,7 +78,7 @@ enum tsc_coroutine_deallocate {
 extern tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
                                               void* arguments, const char* name,
                                               uint32_t type,
-                                              tsc_coroutine_attributes_t* attr);
+                                              tsc_coroutine_handler_t cleanup);
 extern void tsc_coroutine_deallocate(tsc_coroutine_t);
 extern void tsc_coroutine_exit(int value);
 extern void tsc_coroutine_yield(void);
