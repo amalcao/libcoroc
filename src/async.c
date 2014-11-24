@@ -19,23 +19,13 @@ TSC_SIGNAL_MASK_DECLARE
 
 // the routine loop of each `async thread'
 static void *tsc_async_thread_routine(void *unused) {
-  struct timespec wait = {.tv_sec = 0, .tv_nsec = 10000000};
-
   pthread_mutex_lock(&tsc_async_pool_manager.mutex);
   for (;;) {
     while (tsc_async_pool_manager.wait_que.status == 0) {
-#if 0
-      // release the mutex before doing the polling
-      pthread_mutex_unlock(&tsc_async_pool_manager.mutex);
-      __tsc_netpoll_polling(false);
-      // alloc the mutex before cond wait ..
-      pthread_mutex_lock(&tsc_async_pool_manager.mutex);
-#endif
       // prepare to waitting for next job or timeout ..
-      pthread_cond_timedwait(&tsc_async_pool_manager.cond,
-                             &tsc_async_pool_manager.mutex, &wait);
+      pthread_cond_wait(&tsc_async_pool_manager.cond,
+                        &tsc_async_pool_manager.mutex);
     }
-
     // get a request from the waiting queue
     tsc_async_request_t *req = queue_rem(&tsc_async_pool_manager.wait_que);
     assert(req != 0);
@@ -71,9 +61,6 @@ void tsc_async_pool_initialize(int n) {
   pthread_cond_init(&tsc_async_pool_manager.cond, NULL);
   // the wait queue will be protected by the manager's mutex!
   queue_init(&tsc_async_pool_manager.wait_que);
-#if 0
-  atomic_queue_init(&tsc_async_pool_manager.ready_que);
-#endif
   // alloc the thread pool ..
   tsc_async_pool_manager.threads = TSC_ALLOC(n * sizeof(TSC_OS_THREAD_T));
 
@@ -86,28 +73,6 @@ void tsc_async_pool_initialize(int n) {
   return;
 }
 
-#if 0
-// FIXME: ugly code !!
-// find if any coroutines park here.
-//  for deadlock checking ..
-bool tsc_async_pool_working(void) {
-  bool ret = true;
-  pthread_mutex_lock(&tsc_async_pool_manager.mutex);
-  if (!tsc_async_pool_manager.busy)
-    ret = (tsc_async_pool_manager.ready_que.status +
-           tsc_async_pool_manager.wait_que.status) > 0;
-  pthread_mutex_unlock(&tsc_async_pool_manager.mutex);
-  return ret;
-}
-
-// find a runnable coroutine .
-tsc_coroutine_t tsc_async_pool_fetch(void) {
-  tsc_async_request_t *req =
-      atomic_queue_rem(&tsc_async_pool_manager.ready_que);
-  if (req != NULL) return req->wait;
-  return NULL;
-}
-#else
 bool tsc_async_pool_working(void) {
   bool busy;
   pthread_mutex_lock(&tsc_async_pool_manager.mutex);
@@ -115,7 +80,6 @@ bool tsc_async_pool_working(void) {
   pthread_mutex_unlock(&tsc_async_pool_manager.mutex);
   return busy;
 }
-#endif
 
 // init and submit the async request,
 // NOTE the req must be allocated on the calling stack
