@@ -266,7 +266,9 @@ static inline bool tsc_refcnt_put(tsc_refcnt_t ref) {
   return false;
 }
 
-
+/* -- async call APIs -- */
+typedef void *(*tsc_async_callback_t)(void *);
+void *tsc_async_request_submit(tsc_async_callback_t, void*);
 
 #ifdef __cplusplus
 }

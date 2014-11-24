@@ -184,6 +184,10 @@
 #define __CoroC_Chan_Release(C) \
         if (tsc_refcnt_put((tsc_refcnt_t)(C))) (C) = NULL; 
 
+/// for async call APIs
+#define __CoroC_async_handler_t tsc_async_callback_t
+#define __CoroC_Async_Call tsc_async_request_submit
+
 #endif // defined(__COROC__)
 
 #endif // __LIBCOROC_H__
