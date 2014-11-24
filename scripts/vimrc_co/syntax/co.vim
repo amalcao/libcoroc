@@ -30,6 +30,11 @@ syn keyword coStatement     __CoroC_Timer_At __CoroC_Timer_After
 syn keyword coStatement     __CoroC_Ticker __CoroC_Stop
 syn keyword coStatement     __CoroC_Now __CoroC_Sleep
 
+syn keyword coType          __group_t
+syn keyword coStatement     __CoroC_Group __CoroC_Sync
+
+syn keyword coStatement     __CoroC_Async_Call
+
 syn keyword coConditional   __CoroC_Select
 syn keyword coLabel         __CoroC_Case __CoroC_Default
 
