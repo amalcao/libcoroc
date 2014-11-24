@@ -1,0 +1,27 @@
+#include "libcoroc.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+#define N   10
+
+int subtask(unsigned *a) {
+  *a = rand() % N;
+  return 0;
+}
+
+int main() {
+  __group_t grp = __CoroC_Group();
+  unsigned i, A[N];
+
+  for (i = 0; i < N; ++i) {
+    __CoroC_Spawn<grp > subtask(&A[i]);
+  }
+
+  __CoroC_Sync(grp);
+  
+  for (i = 0; i < N; ++i) {
+    printf("%d : %d\n", i, A[i]);
+  }
+
+  __CoroC_Quit 0;
+}

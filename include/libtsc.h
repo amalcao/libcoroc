@@ -8,8 +8,16 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-/* coroutine API */
+/* group API */
+struct tsc_group;
+typedef struct tsc_group* tsc_group_t;
 
+tsc_group_t tsc_group_alloc(void);
+void tsc_group_add_task(tsc_group_t);
+void tsc_group_notify(tsc_group_t);
+void tsc_group_sync(tsc_group_t);
+
+/* coroutine API */
 enum tsc_coroutine_status {
   TSC_COROUTINE_SLEEP = 0xBAFF,
   TSC_COROUTINE_READY = 0xFACE,
@@ -38,13 +46,11 @@ typedef struct tsc_coroutine_attributes {
 typedef struct tsc_coroutine *tsc_coroutine_t;
 typedef int (*tsc_coroutine_handler_t)(void *);
 
-void tsc_coroutine_attr_init(tsc_coroutine_attributes_t *);
-
 tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t, void *,
                                        const char *, uint32_t type,
-                                       tsc_coroutine_attributes_t *);
+                                       tsc_coroutine_handler_t);
 
-void tsc_coroutine_exit(int);
+void tsc_coroutine_exit(int) __attribute__((noreturn));
 void tsc_coroutine_yield(void);
 tsc_coroutine_t tsc_coroutine_self(void);
 
@@ -247,13 +253,22 @@ static inline void tsc_refcnt_init(tsc_refcnt_t ref,
 }
 
 static inline void *tsc_refcnt_get(tsc_refcnt_t ref) {
+  if (ref == NULL) return NULL;
   TSC_ATOMIC_INC(ref->count);
   return (void *)ref;
 }
 
-static inline void tsc_refcnt_put(tsc_refcnt_t ref) {
-  if (TSC_ATOMIC_DEC(ref->count) == 0) (ref->release)(ref);
+static inline bool tsc_refcnt_put(tsc_refcnt_t ref) {
+  if (ref != NULL && TSC_ATOMIC_DEC(ref->count) == 0) {
+    (ref->release)(ref); 
+    return true;
+  }
+  return false;
 }
+
+/* -- async call APIs -- */
+typedef void *(*tsc_async_callback_t)(void *);
+void *tsc_async_request_submit(tsc_async_callback_t, void*);
 
 #ifdef __cplusplus
 }

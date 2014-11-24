@@ -3,15 +3,16 @@ APPS := findmax_co.run primes_co.run
 APPS += mandelbrot_co.run spectral-norm_co.run ## modify from benchmarkgame.org
 APPS += httpload_co.run tcpproxy_co.run
 APPS += ticker_co.run select_co.run
+APPS += group_co.run file_co.run
 
 OS := $(shell uname)
 
 COROC 	?= clang-co
 CC  	?= gcc-4.8
-CXX 	?= g++-4.8
+FORMATER?= clang-format
 
 
-APP_CFLAGS := -I../../include
+APP_CFLAGS := -I../../include #-Wno-return-type
 
 APP_LDFLAGS := -L../../lib -lTSC -lpthread -lm 
 
@@ -50,18 +51,16 @@ all: ${APPS}
 %.o:%.S
 	$(CC) -c ${CFLAGS} -Werror $<
 
-%.o:%.c
-	$(CC) -c ${CFLAGS} -Werror $<
-
-%.cc:%.co
+%.c:%.co
 	$(COROC) -rewrite-coroc ${APP_CFLAGS} $< 
+	$(FORMATER) -i -style=LLVM $@
 
-%.run:%.cc ../../lib/libTSC.a
-	$(CXX) $< ${CFLAGS} ${APP_CFLAGS} ${APP_LDFLAGS} -o $@
+%.run:%.c ../../lib/libTSC.a
+	$(CC) $< ${CFLAGS} ${APP_CFLAGS} ${APP_LDFLAGS} -o $@
 
 .PHONY:clean install
 clean:
-	rm -rf *.cc *.o *.run*
+	rm -rf *.c *.o *.run*
 
 install: ${APPS}
 	mkdir -p ../../bin

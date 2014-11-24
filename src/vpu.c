@@ -356,10 +356,8 @@ static void* per_vpu_initalize(void* vpu_id) {
   TSC_TLS_SET(vpu);
 
   // initialize the system scheduler coroutine ..
-  tsc_coroutine_attr_init(&attr);
-  tsc_coroutine_attr_set_stacksize(&attr, 0);  // trick, using current stack !
   scheduler = tsc_coroutine_allocate(NULL, NULL, "sys/scheduler",
-                                     TSC_COROUTINE_IDLE, &attr);
+                                     TSC_COROUTINE_IDLE, NULL);
 
   vpu->current = vpu->scheduler = scheduler;
   vpu->initialized = true;

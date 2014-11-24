@@ -6,6 +6,7 @@
 #include <assert.h>
 #include "coroutine.h"
 #include "vpu.h"
+#include "tsc_group.h"
 
 #if defined(ENABLE_SPLITSTACK)  // && defined(LINKER_SUPPORTS_SPLIT_STACK)
 #define TSC_DEFAULT_STACK_SIZE PTHREAD_STACK_MIN
@@ -35,7 +36,7 @@ void tsc_coroutine_attr_init(tsc_coroutine_attributes_t *attr) {
 tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
                                        void *arguments, const char *name,
                                        uint32_t type,
-                                       tsc_coroutine_attributes_t *attr) {
+                                       tsc_coroutine_handler_t cleanup) {
   TSC_SIGNAL_MASK();
 
   size_t size;
@@ -54,15 +55,23 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
     coroutine->id = TSC_ALLOC_TID();
     coroutine->entry = entry;
     coroutine->arguments = arguments;
+    coroutine->cleanup = cleanup;
     coroutine->syscall = false;
     coroutine->sigmask_nest = 0;
 
+#if 0
     if (attr != NULL) {
       coroutine->stack_size = attr->stack_size;
       coroutine->vpu_affinity = attr->affinity;
       coroutine->init_timeslice = attr->timeslice;
-    } else {
-      coroutine->stack_size = TSC_DEFAULT_STACK_SIZE;
+    } else 
+#endif
+    {
+      if (type == TSC_COROUTINE_IDLE)
+        coroutine->stack_size = 0;
+      else
+        coroutine->stack_size = TSC_DEFAULT_STACK_SIZE;
+
       coroutine->vpu_affinity = TSC_DEFAULT_AFFINITY;
       coroutine->init_timeslice = TSC_DEFAULT_TIMESLICE;
     }
@@ -121,6 +130,14 @@ void tsc_coroutine_deallocate(tsc_coroutine_t coroutine) {
 
 void tsc_coroutine_exit(int value) {
   TSC_SIGNAL_MASK();
+  
+  // call notify API before quit,
+  // if current task belongs to a group!!
+  vpu_t *vpu = TSC_TLS_GET();
+  tsc_coroutine_t self = vpu->current;
+  if (self && self->cleanup)
+    self->cleanup(self->arguments);
+
   vpu_syscall(core_exit);
   TSC_SIGNAL_UNMASK();
 }

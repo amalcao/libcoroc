@@ -1,0 +1,28 @@
+#include <unistd.h>
+#include <stdio.h>
+#include <libcoroc.h>
+
+const char wbuf[] = "Hello the world!\n";
+char rbuf[100];
+
+int main(int argc, char **argv) {
+  int fd;
+
+  if (argc != 2) {
+    fprintf(stderr, "usage: %s filename\n", argv[0]);
+    __CoroC_Exit(-1);
+  }
+
+  fd = __CoroC_Async_Call open(argv[1], O_RDWR | O_APPEND | O_CREAT, 0644);
+  __CoroC_Async_Call write(fd, wbuf, sizeof(wbuf));
+  __CoroC_Async_Call close(fd);
+
+  fd = open(argv[1], O_RDONLY);
+  
+  __CoroC_Async_Call read(fd, rbuf, sizeof(wbuf));
+  printf("%s\n", rbuf);
+
+  close(fd);
+
+  __CoroC_Quit;
+}
