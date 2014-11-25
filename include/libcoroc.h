@@ -53,7 +53,8 @@
               tsc_refcnt_put((tsc_refcnt_t)((A)[i])); })
 
 /// for coroutine ops
-#define __CoroC_spawn_handler_t     tsc_coroutine_handler_t
+#define __CoroC_spawn_entry_t     tsc_coroutine_handler_t
+#define __CoroC_spawn_cleanup_t   tsc_coroutine_cleanup_t
 
 #define __CoroC_Spawn(F, A) \
             tsc_coroutine_allocate((F), (A), "", TSC_COROUTINE_NORMAL, NULL)

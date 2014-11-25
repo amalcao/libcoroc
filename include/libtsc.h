@@ -14,8 +14,8 @@ typedef struct tsc_group* tsc_group_t;
 
 tsc_group_t tsc_group_alloc(void);
 void tsc_group_add_task(tsc_group_t);
-void tsc_group_notify(tsc_group_t);
-void tsc_group_sync(tsc_group_t);
+void tsc_group_notify(tsc_group_t, int);
+int  tsc_group_sync(tsc_group_t);
 
 /* coroutine API */
 enum tsc_coroutine_status {
@@ -45,10 +45,11 @@ typedef struct tsc_coroutine_attributes {
 
 typedef struct tsc_coroutine *tsc_coroutine_t;
 typedef int (*tsc_coroutine_handler_t)(void *);
+typedef int (*tsc_coroutine_cleanup_t)(void *, int);
 
 tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t, void *,
                                        const char *, uint32_t type,
-                                       tsc_coroutine_handler_t);
+                                       tsc_coroutine_cleanup_t);
 
 void tsc_coroutine_exit(int) __attribute__((noreturn));
 void tsc_coroutine_yield(void);

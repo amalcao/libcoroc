@@ -8,7 +8,8 @@
 #include "message.h"
 #include "tsc_queue.h"
 
-typedef int32_t (*tsc_coroutine_handler_t)(void* args);
+typedef int32_t (*tsc_coroutine_handler_t)(void*);
+typedef int32_t (*tsc_coroutine_cleanup_t)(void*, int);
 
 typedef int32_t tsc_coroutine_id_t;
 
@@ -49,7 +50,7 @@ typedef struct tsc_coroutine {
   void* stack_base;
   size_t stack_size;
   tsc_coroutine_handler_t entry;
-  tsc_coroutine_handler_t cleanup;
+  tsc_coroutine_cleanup_t cleanup;
   void* arguments;
   int32_t retval;
 
@@ -78,7 +79,7 @@ enum tsc_coroutine_deallocate {
 extern tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
                                               void* arguments, const char* name,
                                               uint32_t type,
-                                              tsc_coroutine_handler_t cleanup);
+                                              tsc_coroutine_cleanup_t cleanup);
 extern void tsc_coroutine_deallocate(tsc_coroutine_t);
 extern void tsc_coroutine_exit(int value);
 extern void tsc_coroutine_yield(void);

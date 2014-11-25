@@ -13,8 +13,13 @@ void tsc_group_add_task(tsc_group_t group) {
   TSC_ATOMIC_INC(group->count);
 }
 
-void tsc_group_notify(tsc_group_t group) {
+void tsc_group_notify(tsc_group_t group, int retval) {
   assert(group != NULL);
+
+  // increase the error number
+  if (retval != 0)
+    TSC_ATOMIC_INC(group->errors);
+
   // decrease the counter, if reach zero, 
   // try to wakeup the parent task!!
   if (TSC_ATOMIC_DEC(group->count) == 0) {
@@ -31,7 +36,9 @@ bool tsc_group_check(tsc_group_t group) {
   return TSC_ATOMIC_READ(group->count) == 0;
 }
 
-void tsc_group_sync(tsc_group_t group) {
+int tsc_group_sync(tsc_group_t group) {
+  int ret;
+
   // if all subtasks are finish, no need to sleep..
   if (tsc_group_check(group)) 
     goto __quit_sync;
@@ -49,7 +56,8 @@ void tsc_group_sync(tsc_group_t group) {
               (unlock_handler_t)lock_release);
 
 __quit_sync:
+  ret = group->errors;
   TSC_DEALLOC(group);
-  return;
+  return ret;
 }
 

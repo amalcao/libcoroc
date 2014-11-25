@@ -36,7 +36,7 @@ void tsc_coroutine_attr_init(tsc_coroutine_attributes_t *attr) {
 tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
                                        void *arguments, const char *name,
                                        uint32_t type,
-                                       tsc_coroutine_handler_t cleanup) {
+                                       tsc_coroutine_cleanup_t cleanup) {
   TSC_SIGNAL_MASK();
 
   size_t size;
@@ -141,7 +141,7 @@ void tsc_coroutine_exit(int value) {
   vpu_t *vpu = TSC_TLS_GET();
   tsc_coroutine_t self = vpu->current;
   if (self && self->cleanup)
-    self->cleanup(self->arguments);
+    self->cleanup(self->arguments, value);
 
   vpu_syscall(core_exit);
   TSC_SIGNAL_UNMASK();
