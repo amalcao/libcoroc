@@ -9,8 +9,8 @@
 
 #ifdef __APPLE__
 
-#include "time_.h"
-#include "pthread_barrier.h"
+#include "darwin/time_.h"
+#include "darwin/pthread_barrier.h"
 
 #define _XOPEN_SOURCE 700
 #define POLLRDHUP 0x2000

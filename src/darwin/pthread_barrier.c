@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <pthread.h>
-#include "pthread_barrier.h"
+#include "darwin/pthread_barrier.h"
 
 int pthread_barrier_init(pthread_barrier_t *barrier,
                          const pthread_barrierattr_t *attr,

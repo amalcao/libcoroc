@@ -15,11 +15,11 @@
 #define ucontext libthread_ucontext
 #define ucontext_t libthread_ucontext_t
 #if defined(__i386__)
-#include "386-ucontext.h"
+#include "darwin/386-ucontext.h"
 #elif defined(__x86_64__)
-#include "amd64-ucontext.h"
+#include "darwin/amd64-ucontext.h"
 #else
-#include "power-ucontext.h"
+#include "darwin/power-ucontext.h"
 #endif
 #else
 #define USE_UCONTEXT 1  // default for the linux platform

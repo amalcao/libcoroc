@@ -17,8 +17,6 @@ TSC_HEADERS += darwin/pthread_barrier.h \
 				darwin/power-ucontext.h 
 TSC_CFILES += darwin/pthread_barrier.c darwin/ucontext.c
 TSC_OBJS := darwin/asm.o
-
-CFLAGS += -I../include/inter/darwin
 endif
 
 ifeq (${OS}, Linux)

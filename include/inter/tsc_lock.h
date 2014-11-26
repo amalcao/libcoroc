@@ -19,7 +19,7 @@ typedef lock* lock_t;
 /* use pthread_spinlock */
 #include <pthread.h>
 #if defined(__APPLE__)
-#include "pthread_spinlock.h"
+#include "darwin/pthread_spinlock.h"
 #endif
 
 typedef pthread_spinlock_t lock;
