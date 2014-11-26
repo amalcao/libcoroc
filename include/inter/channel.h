@@ -103,7 +103,6 @@ extern int _tsc_chan_recvp(tsc_chan_t chan, void **pptr, bool block);
 
 extern int tsc_chan_close(tsc_chan_t chan);
 
-#if defined(ENABLE_CHANNEL_SELECT)
 enum { CHAN_SEND = 0, CHAN_RECV, };
 
 typedef struct {
@@ -123,9 +122,20 @@ typedef struct tsc_chan_set {
   tsc_scase_t cases[0];
 } *tsc_chan_set_t;
 
+#define CHAN_SET_SIZE(n) \
+  (sizeof(struct tsc_chan_set) + (n) * (sizeof(tsc_scase_t) + sizeof(lock_t)))
+
 /* multi-channel send / recv , like select clause in GoLang .. */
 tsc_chan_set_t tsc_chan_set_allocate(int n);
 void tsc_chan_set_dealloc(tsc_chan_set_t set);
+
+static inline 
+void tsc_chan_set_init(tsc_chan_set_t set, int n) {
+  set->sorted = false;
+  set->volume = n;
+  set->size = 0;
+  set->locks = (lock_t*)(&set->cases[n]);
+}
 
 void tsc_chan_set_send(tsc_chan_set_t set, tsc_chan_t chan, void *buf);
 void tsc_chan_set_recv(tsc_chan_set_t set, tsc_chan_t chan, void *buf);
@@ -140,7 +150,5 @@ extern int _tsc_chan_set_select(tsc_chan_set_t set, bool block,
 static inline void __chan_memcpy(void *dst, const void *src, size_t size) {
   if (dst && src) memcpy(dst, src, size);
 }
-
-#endif  // ENABLE_CHANNEL_SELECT
 
 #endif  // _TSC_CORE_CHANNEL_H_

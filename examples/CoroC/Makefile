@@ -53,7 +53,7 @@ all: ${APPS}
 
 %.c:%.co
 	$(COROC) -rewrite-coroc ${APP_CFLAGS} $< 
-	$(FORMATER) -i -style=LLVM $@
+	## $(FORMATER) -i -style=LLVM $@
 
 %.run:%.c ../../lib/libTSC.a
 	$(CC) $< ${CFLAGS} ${APP_CFLAGS} ${APP_LDFLAGS} -o $@

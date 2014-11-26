@@ -37,8 +37,6 @@ bool tsc_group_check(tsc_group_t group) {
 }
 
 int tsc_group_sync(tsc_group_t group) {
-  int ret;
-
   // if all subtasks are finish, no need to sleep..
   if (tsc_group_check(group)) 
     goto __quit_sync;
@@ -56,8 +54,6 @@ int tsc_group_sync(tsc_group_t group) {
               (unlock_handler_t)lock_release);
 
 __quit_sync:
-  ret = group->errors;
-  TSC_DEALLOC(group);
-  return ret;
+  return group->errors;
 }
 

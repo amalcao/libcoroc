@@ -34,23 +34,23 @@
 
 /// for reference-counting ops
 #define __refcnt_t      tsc_refcnt_t
-#define __refcnt_get(R) (typeof(R))tsc_refcnt_get((tsc_refcnt_t)(R))
-#define __refcnt_put(R) tsc_refcnt_put((tsc_refcnt_t)(R))
+#define __refcnt_get(R) (typeof(R))__tsc_refcnt_get((tsc_refcnt_t)(R))
+#define __refcnt_put(R) __tsc_refcnt_put((tsc_refcnt_t)(R))
 
 /* more interfaces for new auto scope branch */
 #define __refcnt_assign(D, S) ({ \
             tsc_refcnt_put((tsc_refcnt_t)(D)); \
-            D = (typeof(D))tsc_refcnt_get((tsc_refcnt_t)(S)); \
+            D = (typeof(D))__tsc_refcnt_get((tsc_refcnt_t)(S)); \
             D; })
 
 #define __refcnt_assign_expr(D, E) ({ \
-            tsc_refcnt_put((tsc_refcnt_t)(D)); \
+            __tsc_refcnt_put((tsc_refcnt_t)(D)); \
             D = (typeof(D))(E); D; })
 
 #define __refcnt_put_array(A, N) ({ \
             int i = 0;  \
             for (i = 0; i < (N); ++i) \
-              tsc_refcnt_put((tsc_refcnt_t)((A)[i])); })
+              __tsc_refcnt_put((tsc_refcnt_t)((A)[i])); })
 
 /// for coroutine ops
 #define __CoroC_spawn_entry_t     tsc_coroutine_handler_t
@@ -70,7 +70,9 @@
 #define __CoroC_Group       tsc_group_alloc
 #define __CoroC_Add_Task    tsc_group_add_task
 #define __CoroC_Notify      tsc_group_notify
-#define __CoroC_Sync        tsc_group_sync
+#define __CoroC_Sync(G) ({      \
+    int ret = tsc_group_sync(G);\
+    if (G) { free(G); G = 0; } ret; })
 
 /// for channel ops
 #define __CoroC_Chan tsc_chan_allocate
@@ -101,40 +103,32 @@
 
 #define __CoroC_Chan_SendRef(C, R) ({   \
     _Bool ret = 1;                      \
-    tsc_refcnt_get((tsc_refcnt_t)(*(R)));  \
+    __tsc_refcnt_get((tsc_refcnt_t)(*(R)));  \
     if (_tsc_chan_send(C, (void*)(R), 1) == CHAN_CLOSED) {  \
-      ret = 0; tsc_refcnt_put((tsc_refcnt_t)(*(R))); }         \
+      ret = 0; __tsc_refcnt_put((tsc_refcnt_t)(*(R))); }         \
     ret;})
 #define __CoroC_Chan_RecvRef(C, R) ({       \
-    tsc_refcnt_put((tsc_refcnt_t)(*(R)));   \
+    __tsc_refcnt_put((tsc_refcnt_t)(*(R)));   \
     _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) != CHAN_CLOSED; \
     ret;})
 
-#if 0
-#define __CoroC_Chan_SendRef_NB(C, R) ({    \
-    _Bool ret = 1;                          \
-    tsc_refcnt_get((tsc_refcnt_t)(R));      \
-    if (_tsc_chan_send(C, (void*)(R), 1) != CHAN_SUCCESS) { \
-      ret = 0; tsc_refcnt_put((tsc_refcnt_t)(R)); }         \
-    ret;})
-#define __CoroC_Chan_RecvRef_NB(C, R) ({    \
-    tsc_refcnt_put((tsc_refcnt_t)(*(R)));   \
-    _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) == CHAN_SUCCESS; \
-    ret;})
-#endif
-
 #define __CoroC_Chan_SendRef_NB(C, R) ({ \
-    tsc_refcnt_get((tsc_refcnt_t)(*(R)));\
+    __tsc_refcnt_get((tsc_refcnt_t)(*(R)));\
     _Bool ret = _tsc_chan_send(C, (void*)(R), 1) == CHAN_SUCCESS; \
     ret;)}
 #define __CoroC_Chan_RecvRef_NB(C, R) ({ \
-    tsc_refcnt_put((tsc_refcnt_t)(*(R)));\
+    __tsc_refcnt_put((tsc_refcnt_t)(*(R)));\
     _Bool ret = _tsc_chan_recv(C, (void*)(R), 1) == CHAN_SUCCESS; \
     ret;)}
 
 ///  channel select ops ..
-#define __CoroC_Select_Alloc    tsc_chan_set_allocate
-#define __CoroC_Select_Dealloc  tsc_chan_set_dealloc
+#define __CoroC_Select_Size(N)      \
+    (sizeof(struct tsc_chan_set) +  \
+      (N) * (sizeof(tsc_scase_t) + sizeof(lock_t)))
+
+#define __CoroC_Select_Alloc(N) alloca(__CoroC_Select_Size(N))
+#define __CoroC_Select_Init(S, N) tsc_chan_set_init(S, N)
+
 #define __CoroC_Select(S, B) ({ \
     tsc_chan_t active = NULL;   \
     _tsc_chan_set_select(S, B, &active); \
@@ -146,10 +140,10 @@
 #define __CoroC_Select_Recv     tsc_chan_set_recv
 
 #define __CoroC_Select_SendRef(S, C, R) do {        \
-            tsc_refcnt_get((tsc_refcnt_t)(*(R)));   \
+            __tsc_refcnt_get((tsc_refcnt_t)(*(R)));   \
             tsc_chan_set_send(S, C, (void*)(R)); } while (0)
 #define __CoroC_Select_RecvRef(S, C, R) do {        \
-            tsc_refcnt_put((tsc_refcnt_put)(*(R))); \
+            __tsc_refcnt_put((tsc_refcnt_put)(*(R))); \
             tsc_chan_set_recv(S, C, (void*)(R)); } while (0)
 
 /// for Task based send / recv
@@ -181,9 +175,9 @@
 
 /// for explicity release the reference's counter
 #define __CoroC_Task_Release(T) \
-        if (tsc_refcnt_put((tsc_refcnt_t)(T))) (T) = NULL;
+        if (__tsc_refcnt_put((tsc_refcnt_t)(T))) (T) = NULL;
 #define __CoroC_Chan_Release(C) \
-        if (tsc_refcnt_put((tsc_refcnt_t)(C))) (C) = NULL; 
+        if (__tsc_refcnt_put((tsc_refcnt_t)(C))) (C) = NULL; 
 
 /// for async call APIs
 #define __CoroC_async_handler_t tsc_async_callback_t

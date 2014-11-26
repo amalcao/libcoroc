@@ -3,10 +3,11 @@ OS := $(shell uname)
 enable_debug ?= 0
 
 TSC_HEADERS:= channel.h message.h context.h support.h coroutine.h vpu.h vfs.h netpoll.h async.h 
-TSC_HEADERS+= tsc_clock.h tsc_lock.h tsc_queue.h tsc_hash.h tsc_time.h tsc_group.h
+TSC_HEADERS+= tsc_clock.h tsc_lock.h tsc_queue.h tsc_hash.h tsc_time.h tsc_group.h refcnt.h
 TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c time.c vfs.c netpoll.c net.c tsc_main.c hash.c async.c group.c
 
 CFLAGS += -Werror
+CFLAGS += -I../include/inter
 
 ifeq (${OS}, Darwin)
 TSC_HEADERS += darwin/pthread_barrier.h \
@@ -17,7 +18,7 @@ TSC_HEADERS += darwin/pthread_barrier.h \
 TSC_CFILES += darwin/pthread_barrier.c darwin/ucontext.c
 TSC_OBJS := darwin/asm.o
 
-CFLAGS += -Idarwin
+CFLAGS += -I../include/inter/darwin
 endif
 
 ifeq (${OS}, Linux)
@@ -40,13 +41,9 @@ endif
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
 CFLAGS += -DENABLE_WORKSTEALING
-CFLAGS += -DENABLE_CHANNEL_SELECT
-CFLAGS += -DENABLE_VFS
-CFLAGS += -DENABLE_REFCNT
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMER
-	TSC_HEADERS += refcnt.h
 endif
 
 ifeq (${use_clang}, 1)

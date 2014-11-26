@@ -1,6 +1,9 @@
 #ifndef _TSC_REFCNT_H_
 #define _TSC_REFCNT_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+
 typedef void (*release_handler_t)(void *);
 
 typedef struct tsc_refcnt {
@@ -19,8 +22,12 @@ static inline void *__tsc_refcnt_get(tsc_refcnt_t ref) {
   return (void *)ref;
 }
 
-static inline void __tsc_refcnt_put(tsc_refcnt_t ref) {
-  if (TSC_ATOMIC_DEC(ref->count) == 0) (ref->release)(ref);
+static inline bool __tsc_refcnt_put(tsc_refcnt_t ref) {
+  if (ref != NULL && TSC_ATOMIC_DEC(ref->count) == 0) {
+    (ref->release)(ref);
+    return true;
+  }
+  return false;
 }
 
 #define tsc_refcnt_get(ref) (typeof(ref)) __tsc_refcnt_get((tsc_refcnt_t)(ref))

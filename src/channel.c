@@ -229,19 +229,11 @@ int tsc_chan_close(tsc_chan_t chan) {
   return ret;
 }
 
-#if defined(ENABLE_CHANNEL_SELECT)
-
 /* -- the public APIs for channel select -- */
 tsc_chan_set_t tsc_chan_set_allocate(int n) {
-  tsc_chan_set_t set = TSC_ALLOC(sizeof(struct tsc_chan_set) +
-                                 n * sizeof(tsc_scase_t) + n * sizeof(lock_t));
+  tsc_chan_set_t set = TSC_ALLOC( CHAN_SET_SIZE(n) );
   assert(set != NULL);
-
-  set->sorted = false;
-  set->volume = n;
-  set->size = 0;
-  set->locks = (lock_t *)(&set->cases[n]);
-
+  tsc_chan_set_init(set, n);
   return set;
 }
 
@@ -368,5 +360,3 @@ __leave_select:
   TSC_SIGNAL_UNMASK();
   return ret;
 }
-
-#endif  // ENABLE_CHANNEL_SELECT
