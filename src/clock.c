@@ -11,7 +11,7 @@ extern bool __tsc_netpoll_polling(bool);
 clock_manager_t clock_manager;
 
 void tsc_clock_initialize(void) {
-#ifdef ENABLE_TIMER
+#ifdef ENABLE_TIMESHARE
   struct sigaction act;
 
   sigaddset(&act.sa_mask, TSC_CLOCK_SIGNAL);
@@ -28,7 +28,7 @@ void clock_routine(void) {
   sigfillset(&sigmask);
 
   while (true) {
-#ifdef ENABLE_TIMER
+#ifdef ENABLE_TIMESHARE
     struct timespec period = {0, TSC_CLOCK_PERIOD_NANOSEC};
     pselect(0, NULL, NULL, NULL, &period, &sigmask);
 
@@ -39,6 +39,6 @@ void clock_routine(void) {
     __tsc_netpoll_polling(false);
 #else
     __tsc_netpoll_polling(true);
-#endif  // ENABLE_TIMER
+#endif  // ENABLE_TIMESHARE
   }
 }

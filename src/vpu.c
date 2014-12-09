@@ -271,12 +271,12 @@ static void* per_vpu_initalize(void* vpu_id) {
     pfn = scheduler->entry;
     (*pfn)(scheduler->arguments);
   }
-#ifdef ENABLE_TIMER
+#ifdef ENABLE_TIMESHARE
   // set the sigmask of the system coroutine !!
   else {
     TSC_CONTEXT_SIGADDMASK(&scheduler->ctx, TSC_CLOCK_SIGNAL);
   }
-#endif  // ENABLE_TIMER
+#endif  // ENABLE_TIMESHARE
 
   // Spawn
   core_sched();
@@ -379,7 +379,7 @@ void vpu_syscall(int (*pfn)(void*)) {
     assert(0);
   }
 
-#if ENABLE_DEADLOCK_DETECT
+#ifdef ENABLE_DEADLOCK_DETECT
   /* check if grouine is returned for backtrace */
   if (self && self->backtrace) {
     tsc_coroutine_backtrace(self);

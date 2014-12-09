@@ -7,6 +7,10 @@
 #include <stdint.h>
 #include <pthread.h>
 
+#ifdef USE_CMAKE
+#include "config.h"
+#endif // USE_CMAKE
+
 #ifdef __APPLE__
 
 #include "darwin/time_.h"
@@ -74,7 +78,7 @@ typedef pthread_t TSC_OS_THREAD_T;
 // -- for signals --
 #define TSC_CLOCK_SIGNAL SIGUSR1
 
-#ifdef ENABLE_TIMER
+#ifdef ENABLE_TIMESHARE
 
 #define TSC_SIGNAL_MASK_DEFINE \
   sigset_t __vpu_sigmask;      \
@@ -175,7 +179,7 @@ typedef pthread_t TSC_OS_THREAD_T;
 
 #endif
 
-#ifdef USE_FUTEX_LOCK
+#ifdef ENABLE_FUTEX
 extern void _tsc_futex_sleep(uint32_t*, uint32_t, int64_t);
 extern void _tsc_futex_wakeup(uint32_t*, uint32_t);
 #endif

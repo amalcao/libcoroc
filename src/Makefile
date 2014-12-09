@@ -41,7 +41,7 @@ TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 CFLAGS += -DENABLE_WORKSTEALING
 
 ifeq (${enable_timer}, 1)
-	CFLAGS += -DENABLE_TIMER
+	CFLAGS += -DENABLE_TIMESHARE
 endif
 
 ifeq (${use_clang}, 1)

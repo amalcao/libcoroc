@@ -1,0 +1,11 @@
+#ifndef _LIBCOROC_CONFIG_H_
+#define _LIBCOROC_CONFIG_H_
+
+#cmakedefine ENABLE_TIMESHARE
+#cmakedefine ENABLE_DEADLOCK_DETECT
+#cmakedefine ENABLE_FUTEX
+#cmakedefine ENABLE_SPLITSTACK
+#cmakedefine ENABLE_WORKSTEALING
+
+#endif // _LIBCOROC_CONFIG_H_:w
+

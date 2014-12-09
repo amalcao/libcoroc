@@ -39,7 +39,7 @@ endif
 CFLAGS += -DENABLE_REFCNT
 
 ifeq (${enable_timer}, 1)
-	CFLAGS += -DENABLE_TIMER
+	CFLAGS += -DENABLE_TIMESHARE
 endif
 
 all: ${APPS}

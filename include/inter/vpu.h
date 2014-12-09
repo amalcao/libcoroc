@@ -33,13 +33,11 @@ typedef struct vpu_manager {
   uint32_t last_pid;
   tsc_coroutine_t main;
   queue_t coroutine_list;
-#ifdef ENABLE_DEADLOCK_DETECT
   pthread_cond_t cond;
   pthread_mutex_t lock;
   uint16_t alive;
   uint16_t idle;
   uint32_t total_ready;
-#endif
 } vpu_manager_t;
 
 extern vpu_manager_t vpu_manager;

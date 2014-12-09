@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "futex_lock.h"
 #include "coroutine.h"
 
 void _tsc_futex_init(volatile _tsc_futex_t *lock) {

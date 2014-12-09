@@ -14,7 +14,7 @@ void sub_task(void* arg) {
   printf("[sub_task:] id is %i!\n", id);
 
   for (;;) {
-#ifndef ENABLE_TIMER
+#ifndef ENABLE_TIMESHARE
     tsc_coroutine_yield();
 #endif
   }
@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
   }
 
   for (;;) {
-#ifndef ENABLE_TIMER
+#ifndef ENABLE_TIMESHARE
     tsc_coroutine_yield();
 #endif
   }
