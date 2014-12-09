@@ -69,3 +69,8 @@ IF(BUILD_COROC_EXAMPLES)
         MESSAGE(FATAL_ERROR "clang-co not found -- ${CLANG_COROC}")
     ENDIF(CLANG_COROC)
 ENDIF(BUILD_COROC_EXAMPLES)
+
+ADD_SUBDIRECTORY(include)
+
+## install the auto-generated config header
+INSTALL_FILES(/include/inter FILES ${CMAKE_CURRENT_BINARY_DIR}/include/inter/config.h)
