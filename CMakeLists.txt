@@ -27,6 +27,8 @@ MACRO(SET_SPLITSTACK_FLAGS)
         ELSE()
             SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsplit-stack")
         ENDIF()
+    ELSE()
+        MESSAGE(FATAL_ERROR "\"split-stack\" requires gcc 4.7 or greater.")
     ENDIF()
 ENDMACRO()
 
