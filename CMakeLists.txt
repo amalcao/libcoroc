@@ -11,23 +11,23 @@ INCLUDE_DIRECTORIES(${LibCoroC_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(${LibCoroC_SOURCE_DIR}/include/inter)
 
 ## Option to enable Split-stack
-OPTION(ENABLE_SPLITSTACK OFF)
+OPTION(ENABLE_SPLITSTACK "Enable the split-stack for coroutines" OFF)
 IF(ENABLE_SPLITSTACK)
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsplit-stack")
 ENDIF(ENABLE_SPLITSTACK)
 
 ## Option to enable time-sharing schedule
-OPTION(ENABLE_TIMESHARE OFF)
+OPTION(ENABLE_TIMESHARE "Enable the time-sharing scheduler" OFF)
 
 ## Option to enable deadlock detect
-OPTION(ENABLE_DEADLOCK_DETECT ON)
+OPTION(ENABLE_DEADLOCK_DETECT "Enable deadlock detection at runtime" ON)
 IF(ENABLE_DEADLOCK_DETECT AND CMAKE_SYSTEM MATCHES "Linux")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
 ENDIF()
 
 
 ## Option to enable futex-based lock
-OPTION(ENABLE_FUTEX OFF)
+OPTION(ENABLE_FUTEX "Enable futex based locks (Linux only)" OFF)
 IF(ENABLE_FUTEX)
     IF(NOT CMAKE_SYSTEM MATCHES "Linux")
         MESSAGE(FATAL_ERROR "FUTEX is only supported on Linux!")
@@ -35,7 +35,7 @@ IF(ENABLE_FUTEX)
 ENDIF(ENABLE_FUTEX)
 
 ## Option to enable the work-stealing
-OPTION(ENABLE_WORKSTEALING ON)
+OPTION(ENABLE_WORKSTEALING "Enable the work-stealing scheduler" ON)
 
 ## The config header auto-generating in config time
 CONFIGURE_FILE(include/inter/config.h.in include/inter/config.h)

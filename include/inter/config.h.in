@@ -7,5 +7,5 @@
 #cmakedefine ENABLE_SPLITSTACK
 #cmakedefine ENABLE_WORKSTEALING
 
-#endif // _LIBCOROC_CONFIG_H_:w
+#endif // _LIBCOROC_CONFIG_H_
 
