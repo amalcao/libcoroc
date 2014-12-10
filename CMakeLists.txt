@@ -7,13 +7,41 @@ ENDIF(WIN32)
 
 PROJECT(LibCoroC)
 
+## Get the architecture of current platform
+EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCH)
+MESSAGE(STATUS "Architecture: ${ARCH}")
+
+## Default include path:
 INCLUDE_DIRECTORIES(${LibCoroC_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(${LibCoroC_SOURCE_DIR}/include/inter)
+
+## Check the version of GCC to decide if it support `-fsplit-stack'
+## option or not.
+MACRO(SET_SPLITSTACK_FLAGS)
+    IF(${CMAKE_C_COMPILER_ID} MATCHES "GNU")
+        EXECUTE_PROCESS(
+            COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+    
+        IF(NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
+            MESSAGE(FATAL_ERROR "\"split-stack\" requires gcc 4.7 or greater.")
+        ELSE()
+            SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsplit-stack")
+        ENDIF()
+    ENDIF()
+ENDMACRO()
 
 ## Option to enable Split-stack
 OPTION(ENABLE_SPLITSTACK "Enable the split-stack for coroutines" OFF)
 IF(ENABLE_SPLITSTACK)
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsplit-stack")
+    IF(CMAKE_SYSTEM MATCHES "Linux")
+        IF(${ARCH} MATCHES "x86.*")
+            SET_SPLITSTACK_FLAGS()
+        ELSE()
+            MESSAGE(FATAL_ERROR "split-stack only supported on x86/amd64 architures!")
+        ENDIF()
+    ELSE()
+        MESSAGE(FATAL_ERROR "split-stack only supported on Linux!")
+    ENDIF()
 ENDIF(ENABLE_SPLITSTACK)
 
 ## Option to enable time-sharing schedule

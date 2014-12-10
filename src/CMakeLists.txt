@@ -1,4 +1,6 @@
 SET(LIBRARY_NAME coroc)
+    
+ENABLE_LANGUAGE(C ASM)
 
 SET(INCLUDE_FILES ../include/inter/support.h
                   ../include/inter/coroutine.h
@@ -38,7 +40,20 @@ IF(APPLE)
                   darwin/pthread_barrier.c
                   darwin/asm.S)
     SET(INCLUDE_FILES ${INCLUDE_FILES}
-                      ../include/inter/darwin/*)
+                      ../include/inter/darwin/pthread_barrier.h
+                      ../include/inter/darwin/pthread_spinlock.h
+                      ../include/inter/darwin/time_.h)
+    
+    IF(${ARCH} MATCHES "x86_64")
+        SET(INCLUDE_FILES ${INCLUDE_FILES}
+                          ../include/inter/darwin/amd64-ucontext.h)
+    ELSEIF(${ARCH} MATCHES "x86")
+        SET(INCLUDE_FILES ${INCLUDE_FILES}
+                          ../include/inter/darwin/386-ucontext.h)
+    ELSE()
+        SET(INCLUDE_FILES ${INCLUDE_FILES}
+                          ../include/inter/darwin/power-ucontext.h)
+    ENDIF()
 ENDIF(APPLE)
 
 IF(CMAKE_SYSTEM MATCHES "Linux")
