@@ -21,6 +21,10 @@ ifneq (${OS}, Darwin)
 	APP_LDFLAGS += -lrt
 endif
 
+ifeq (${enable_lockfree_runq}, 1)
+    CFLAGS += -DENABLE_LOCKFREE_RUNQ
+endif
+
 ifeq (${use_clang}, 1)
 	CC := clang
 endif

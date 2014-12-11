@@ -9,6 +9,8 @@ TSC_CFILES := boot.c channel.c message.c clock.c context.c coroutine.c vpu.c tim
 CFLAGS += -Werror
 CFLAGS += -I../include/inter
 
+CFLAGS += -DIGNORE_CONFIG_H ## do not include the cmake generated config.h
+
 ifeq (${OS}, Darwin)
 TSC_HEADERS += darwin/pthread_barrier.h \
 				darwin/pthread_spinlock.h \
@@ -32,8 +34,6 @@ TSC_CFILES += futex_lock.c
 CFLAGS += -DUSE_FUTEX_LOCK
 endif
 
-CFLAGS += -DIGNORE_CONFIG_H ## do not include the cmake generated config.h
-
 else
 TSC_CFILES += netpoll_poll.c
 endif
@@ -41,6 +41,10 @@ endif
 TSC_OBJS += $(subst .c,.o,$(TSC_CFILES))
 
 CFLAGS += -DENABLE_WORKSTEALING
+
+ifeq (${enable_lockfree_runq}, 1)
+	CFLAGS += -DENABLE_LOCKFREE_RUNQ
+endif
 
 ifeq (${enable_timer}, 1)
 	CFLAGS += -DENABLE_TIMESHARE

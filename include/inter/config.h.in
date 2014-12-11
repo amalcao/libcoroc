@@ -6,6 +6,7 @@
 #cmakedefine ENABLE_FUTEX
 #cmakedefine ENABLE_SPLITSTACK
 #cmakedefine ENABLE_WORKSTEALING
+#cmakedefine ENABLE_LOCKFREE_RUNQ
 
 #endif // _LIBCOROC_CONFIG_H_
 

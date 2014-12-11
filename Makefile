@@ -9,6 +9,7 @@ enable_debug ?= 1
 enable_splitstack ?= 0
 enable_deadlock_detect ?= 1
 enable_futex ?= 1
+enable_lockfree_runq ?= 0
 
 ifeq ($(shell uname), Darwin)
     use_clang ?= 1
@@ -19,7 +20,8 @@ ARGS := enable_timer=${enable_timer} \
 	enable_splitstack=${enable_splitstack} \
 	enable_deadlock_detect=${enable_deadlock_detect} \
 	enable_futex=${enable_futex} \
-	use_clang=${use_clang} 
+	use_clang=${use_clang} \
+	enable_lockfree_runq=${enable_lockfree_runq}
 
 library:
 	cd src && make install $(ARGS)

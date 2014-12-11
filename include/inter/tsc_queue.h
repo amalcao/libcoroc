@@ -57,6 +57,11 @@ static inline int atomic_queue_size(queue_t *queue) {
   return size;
 }
 
+static inline void queue_link(queue_item_t *item1, queue_item_t *item2) {
+  item1->next = item2;
+  item2->prev = item1;
+}
+
 /*---- Add functions ----*/
 static inline void queue_add(queue_t *queue, queue_item_t *item) {
   /*---- Clean the links ----*/
@@ -81,6 +86,34 @@ static inline void atomic_queue_add(queue_t *queue, queue_item_t *item) {
   queue_add(queue, item);
   lock_release(&queue->lock);
 }
+
+static inline void queue_add_range(queue_t *queue, unsigned int n,
+                                   queue_item_t *from,
+                                   queue_item_t *to) {
+  if (!queue->status) {
+    queue->head = from;
+    queue->tail = to;
+  } else {
+    queue->tail->next = from;
+    from->prev = queue->tail;
+    queue->tail = to;
+  }
+
+  from->que = queue;
+  to->que = queue;
+  to->next = NULL;
+
+  queue->status += n;
+}
+
+static inline void atomic_queue_add_range(queue_t *queue, unsigned int n,
+                                          queue_item_t *from, 
+                                          queue_item_t *to) {
+  lock_acquire(&queue->lock);
+  queue_add_range(queue, n, from, to);
+  lock_release(&queue->lock);
+}
+
 
 /*---- Remove function ----*/
 static inline void *queue_rem(queue_t *queue) {

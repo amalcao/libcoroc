@@ -64,8 +64,17 @@ IF(ENABLE_FUTEX)
     ENDIF()
 ENDIF(ENABLE_FUTEX)
 
+## Option to enable the lock-free scheduler
+OPTION(ENABLE_LOCKFREE_RUNQ "Enable the lock-free scheduler" OFF)
+
 ## Option to enable the work-stealing
 OPTION(ENABLE_WORKSTEALING "Enable the work-stealing scheduler" ON)
+
+IF(ENABLE_LOCKFREE_RUNQ)
+    IF(NOT ENABLE_WORKSTEALING)
+        MESSAGE(FATAL_ERROR "Must enable work-stealing when using lock-free scheduler!")
+    ENDIF(NOT ENABLE_WORKSTEALING)
+ENDIF(ENABLE_LOCKFREE_RUNQ)
 
 ## The config header auto-generating in config time
 CONFIGURE_FILE(include/inter/config.h.in include/inter/config.h)
