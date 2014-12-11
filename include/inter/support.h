@@ -8,9 +8,9 @@
 #include <signal.h>
 #include <pthread.h>
 
-#ifdef USE_CMAKE
+#ifndef IGNORE_CONFIG_H
 #include "config.h"
-#endif // USE_CMAKE
+#endif // IGNORE_CONFIG_H
 
 #ifdef __APPLE__
 

@@ -69,7 +69,6 @@ OPTION(ENABLE_WORKSTEALING "Enable the work-stealing scheduler" ON)
 
 ## The config header auto-generating in config time
 CONFIGURE_FILE(include/inter/config.h.in include/inter/config.h)
-ADD_DEFINITIONS(-DUSE_CMAKE)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include/)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/include/inter)

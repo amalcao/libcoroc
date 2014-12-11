@@ -13,6 +13,7 @@ FORMATER?= clang-format
 
 
 APP_CFLAGS := -I../../include #-Wno-return-type
+APP_CFLAGS += -DIGNORE_CONFIG_H ## do not include the cmake generated config.h
 
 APP_LDFLAGS := -L../../lib -lTSC -lpthread -lm 
 

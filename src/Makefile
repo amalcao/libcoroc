@@ -32,6 +32,8 @@ TSC_CFILES += futex_lock.c
 CFLAGS += -DUSE_FUTEX_LOCK
 endif
 
+CFLAGS += -DIGNORE_CONFIG_H ## do not include the cmake generated config.h
+
 else
 TSC_CFILES += netpoll_poll.c
 endif

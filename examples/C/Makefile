@@ -10,6 +10,8 @@ CC ?= gcc-4.8
 
 APP_CFLAGS := -Dmain=user_main -I../../include
 
+APP_CFLAGS += -DIGNORE_CONFIG_H ## do not include the cmake generated config.h
+
 APP_LDFLAGS := -L../../lib -lTSC -lpthread -lm 
 
 ifneq (${OS}, Darwin)
