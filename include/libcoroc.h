@@ -37,6 +37,20 @@
 #define __refcnt_get(R) (typeof(R))__tsc_refcnt_get((tsc_refcnt_t)(R))
 #define __refcnt_put(R) __tsc_refcnt_put((tsc_refcnt_t)(R))
 
+#define __CoroC_release_handler_t release_handler_t
+
+#define __CoroC_New(F0, T0, T, S, F) ({ \
+            T0 *ref = calloc(sizeof(T0) + (S-1)*sizeof(T), 1); \
+            ref->__refcnt.release = (F0);       \
+            ref->__user_fini = (F);             \
+            ref->__obj_num = (S);               \
+            __refcnt_get(ref); })
+
+#define __CoroC_New_Basic(T0, T, S) ({ \
+            T0 *ref = calloc(sizeof(T0) + (S-1)*sizeof(T), 1); \
+            ref->__refcnt.release = free;       \
+            __refcnt_get(ref); })
+
 /* more interfaces for new auto scope branch */
 #define __refcnt_assign(D, S) ({ \
             tsc_refcnt_put((tsc_refcnt_t)(D)); \
