@@ -1,0 +1,35 @@
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "libcoroc.h"
+
+struct TreeNode {
+  unsigned level;
+  __refcnt_t<struct TreeNode> leftTree;
+  __refcnt_t<struct TreeNode> rigthTree;
+};
+
+void freeTree(struct TreeNode *node) {
+  printf("delete tree node level %d..\n", node->level);
+}
+
+typedef __refcnt_t<struct TreeNode> TreeNodePtr;
+
+TreeNodePtr buildTree(unsigned level) {
+  TreeNodePtr node = __CoroC_New<struct TreeNode, 1, freeTree>;
+  
+  // using `$' to get the C pointer inside.
+  ($node)->level = level;
+  if (level < 3) {
+    // using `->' / '*' as same as normal C pointers.
+    node->leftTree = buildTree(level+1);
+    (*node).rigthTree = buildTree(level+1);
+  }
+  return node;
+}
+
+int main() {
+  TreeNodePtr root = buildTree(0);
+
+  return 0;
+}

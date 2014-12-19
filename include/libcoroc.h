@@ -44,12 +44,12 @@
             ref->__refcnt.release = (F0);       \
             ref->__user_fini = (F);             \
             ref->__obj_num = (S);               \
-            __refcnt_get(ref); })
+            __tsc_refcnt_get((tsc_refcnt_t)(ref)); })
 
 #define __CoroC_New_Basic(T0, T, S) ({ \
             T0 *ref = calloc(sizeof(T0) + (S-1)*sizeof(T), 1); \
             ref->__refcnt.release = free;       \
-            __refcnt_get(ref); })
+            __tsc_refcnt_get((tsc_refcnt_t)(ref)); })
 
 /* more interfaces for new auto scope branch */
 #define __refcnt_assign(D, S) ({ \
