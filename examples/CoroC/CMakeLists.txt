@@ -5,15 +5,22 @@ LINK_DIRECTORIES(${LibCoroC_SOURCE_DIR}/src)
 SET(COROC_DIR ${LibCoroC_SOURCE_DIR}/examples/CoroC)
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Dmain=user_main")
 
+SET(COROC_FLAGS "-rewrite-coroc"
+                "-I${LibCoroC_SOURCE_DIR}/include"
+                "-I${LibCoroC_SOURCE_DIR}/include/inter"
+                "-I${LibCoroC_BINARY_DIR}/include/inter")
 
+## Fix this for OS X Yosemite.
+IF(APPLE)
+  SET(COROC_FLAGS "-isysroot"
+                  ${CMAKE_OSX_SYSROOT}
+                  ${COROC_FLAGS})
+ENDIF(APPLE)
 
 MACRO(add_libcoroc_coroc_example name)
     
     SET(COROC_COMMAND ${CLANG_COROC} 
-                      "-rewrite-coroc"
-                      "-I${LibCoroC_SOURCE_DIR}/include"
-                      "-I${LibCoroC_SOURCE_DIR}/include/inter"
-                      "-I${LibCoroC_BINARY_DIR}/include/inter"
+                      ${COROC_FLAGS}
                       ${COROC_DIR}/${name}_co.co)
 
     ADD_CUSTOM_COMMAND(
