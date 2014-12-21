@@ -53,7 +53,7 @@
 
 /* more interfaces for new auto scope branch */
 #define __refcnt_assign(D, S) ({ \
-            tsc_refcnt_put((tsc_refcnt_t)(D)); \
+            __tsc_refcnt_put((tsc_refcnt_t)(D)); \
             D = (typeof(D))__tsc_refcnt_get((tsc_refcnt_t)(S)); \
             D; })
 
