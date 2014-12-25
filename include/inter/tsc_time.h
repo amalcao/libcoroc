@@ -57,4 +57,6 @@ static inline int64_t tsc_getnanotime(void) {
   return abstime.tv_sec * 1000000000LL + abstime.tv_nsec;
 }
 
+void tsc_udelay(uint64_t us);
+
 #endif  // _TSC_TIME_H_
