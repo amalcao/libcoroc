@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <setjmp.h>
 #include <math.h>
 
 #include <libtsc.h>
@@ -41,14 +42,14 @@
 
 #define __CoroC_New(F0, T0, T, S, F) ({ \
             T0 *ref = calloc(sizeof(T0) + (S-1)*sizeof(T), 1); \
-            ref->__refcnt.release = (F0);       \
-            ref->__user_fini = (F);             \
+            ref->__refcnt.release = ((release_handler_t)(F0)); \
+            ref->__user_fini = ((typeof(ref->__user_fini))(F));\
             ref->__obj_num = (S);               \
             __tsc_refcnt_get((tsc_refcnt_t)(ref)); })
 
 #define __CoroC_New_Basic(T0, T, S) ({ \
             T0 *ref = calloc(sizeof(T0) + (S-1)*sizeof(T), 1); \
-            ref->__refcnt.release = free;       \
+            ref->__refcnt.release = ((release_handler_t)free); \
             __tsc_refcnt_get((tsc_refcnt_t)(ref)); })
 
 /* more interfaces for new auto scope branch */

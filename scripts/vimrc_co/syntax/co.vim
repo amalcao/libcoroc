@@ -34,6 +34,7 @@ syn keyword coType          __group_t
 syn keyword coStatement     __CoroC_Group __CoroC_Sync
 
 syn keyword coStatement     __CoroC_Async_Call
+syn keyword coStatement     __CoroC_New
 
 syn keyword coConditional   __CoroC_Select
 syn keyword coLabel         __CoroC_Case __CoroC_Default
