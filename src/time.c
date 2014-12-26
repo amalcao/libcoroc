@@ -253,7 +253,9 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
     vpu_ready(tsc_intertimer_manager.daemon);
   }
 #if defined(ENABLE_NOTIFY)
-  tsc_notify_wakeup(&tsc_intertimer_manager.note);
+  else {
+    tsc_notify_wakeup(&tsc_intertimer_manager.note);
+  }
 #endif
   lock_release(&tsc_intertimer_manager.lock);
 
