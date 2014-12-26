@@ -4,7 +4,7 @@ APPS += mandelbrot_co.run spectral-norm_co.run ## modify from benchmarkgame.org
 APPS += httpload_co.run tcpproxy_co.run
 APPS += ticker_co.run select_co.run
 APPS += group_co.run file_co.run 
-APPS += smart-pointer_co.run smart-poiter-2_co.run
+APPS += smart-pointer_co.run smart-pointer-2_co.run
 
 OS := $(shell uname)
 
