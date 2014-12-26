@@ -479,7 +479,10 @@ void vpu_ready(tsc_coroutine_t coroutine) {
 
   coroutine->status = TSC_COROUTINE_READY;
 #ifdef ENABLE_LOCKFREE_RUNQ
-  __runqput(vpu, coroutine);
+  if (vpu != NULL) 
+    __runqput(vpu, coroutine);
+  else /* called by the asynchornized threads */
+    atomic_queue_add(&vpu_manager.xt, &coroutine->status_link);
 #else
   atomic_queue_add(&vpu_manager.xt[coroutine->vpu_affinity],
                    &coroutine->status_link);
