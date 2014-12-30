@@ -45,7 +45,7 @@ typedef struct tsc_vfs_driver {
 } *tsc_vfs_driver_t;
 
 // the default file driver
-struct tsc_vfs_driver tsc_vfs_file_drv;
+extern struct tsc_vfs_driver tsc_vfs_file_drv;
 
 typedef struct {
   int fd;
