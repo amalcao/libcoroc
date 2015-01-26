@@ -47,7 +47,7 @@ int tsc_net_announce(bool istcp, const char *server, int port);
 int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec);
 int tsc_net_accept(int fd, char *server, int *port);
 int tsc_net_lookup(const char *name, uint32_t *ip);
-int tsc_net_timed_dial(bool istcp, char *server, int port, int64_t usec);
-int tsc_net_dial(bool istcp, char *server, int port);
+int tsc_net_timed_dial(bool istcp, const char *server, int port, int64_t usec);
+int tsc_net_dial(bool istcp, const char *server, int port);
 
 #endif  // _TSC_NETPOLL_H_

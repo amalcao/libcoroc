@@ -65,7 +65,8 @@ int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
     return -1;
 
   len = sizeof sa;
-  if ((cfd = accept(fd, (void *)&sa, &len)) < 0) return -1;
+  if ((cfd = accept4(fd, (void *)&sa, &len, 
+                     SOCK_NONBLOCK | SOCK_CLOEXEC)) < 0) return -1;
 
   if (server) {
     ip = (uint8_t *)&sa.sin_addr;
@@ -74,7 +75,7 @@ int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
 
   if (port) *port = ntohs(sa.sin_port);
 
-  tsc_net_nonblock(cfd);
+  // tsc_net_nonblock(cfd);
   one = 1;
   setsockopt(cfd, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof one);
 
@@ -141,7 +142,7 @@ int tsc_net_lookup(const char *name, uint32_t *ip) {
   return -1;
 }
 
-int tsc_net_timed_dial(bool istcp, char *server, int port, int64_t usec) {
+int tsc_net_timed_dial(bool istcp, const char *server, int port, int64_t usec) {
   int proto, fd, n;
   uint32_t ip;
   struct sockaddr_in sa;
@@ -192,6 +193,6 @@ int tsc_net_timed_dial(bool istcp, char *server, int port, int64_t usec) {
   return -1;
 }
 
-int tsc_net_dial(bool istcp, char *server, int port) {
+int tsc_net_dial(bool istcp, const char *server, int port) {
   return tsc_net_timed_dial(istcp, server, port, 0);
 }
