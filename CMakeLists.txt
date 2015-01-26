@@ -76,6 +76,17 @@ IF(ENABLE_LOCKFREE_RUNQ)
     ENDIF(NOT ENABLE_WORKSTEALING)
 ENDIF(ENABLE_LOCKFREE_RUNQ)
 
+## Option to use the tc-malloc 
+OPTION(ENABLE_TCMALLOC "Using tc-malloc for memory management" OFF)
+IF(ENABLE_TCMALLOC)
+    FIND_LIBRARY(LIB_TCMALLOC "libtcmalloc_minimal")
+    IF(LIB_TCMALLOC)
+      MESSAGE(STATUS "found libtcmalloc as ${LIB_TCMALLOC}")
+    ELSE()
+      MESSAGE(FATAL_ERROR "libtcmalloc not found")
+    ENDIF()
+ENDIF(ENABLE_TCMALLOC)
+
 ## The config header auto-generating in config time
 CONFIGURE_FILE(include/inter/config.h.in include/inter/config.h)
 

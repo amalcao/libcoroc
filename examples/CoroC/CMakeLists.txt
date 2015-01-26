@@ -19,27 +19,34 @@ ENDIF(APPLE)
 
 MACRO(add_libcoroc_coroc_example name)
     
-    SET(COROC_COMMAND ${CLANG_COROC} 
-                      ${COROC_FLAGS}
-                      ${COROC_DIR}/${name}_co.co)
+  SET(COROC_COMMAND ${CLANG_COROC} 
+                    ${COROC_FLAGS}
+                    ${COROC_DIR}/${name}_co.co)
 
-    ADD_CUSTOM_COMMAND(
-        OUTPUT ${name}_co.c
-        PRE_BUILD
-        COMMAND ${COROC_COMMAND}
-        DEPENDS ${name}_co.co)
+  ADD_CUSTOM_COMMAND(
+      OUTPUT ${name}_co.c
+      PRE_BUILD
+      COMMAND ${COROC_COMMAND}
+      DEPENDS ${name}_co.co)
 
-    ADD_EXECUTABLE(
+  ADD_EXECUTABLE(
+      ${name}_co.run
+      ${name}_co.c
+      ${INCLUDE_FILES}
+  )
+
+  IF(LIB_TCMALLOC)
+     TARGET_LINK_LIBRARIES(
         ${name}_co.run
-        ${name}_co.c
-        ${INCLUDE_FILES}
-    )
-
-    TARGET_LINK_LIBRARIES(
+        ${COROC_LIB} ${LIB_TCMALLOC} pthread m
+     )
+  ELSE(LIB_TCMALLOC)
+     TARGET_LINK_LIBRARIES(
         ${name}_co.run
         ${COROC_LIB} pthread m
-    )
- 
+     )
+  ENDIF(LIB_TCMALLOC)
+
 ENDMACRO(add_libcoroc_coroc_example)
 
 add_libcoroc_coroc_example(findmax)
