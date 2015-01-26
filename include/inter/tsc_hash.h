@@ -33,7 +33,7 @@ typedef struct {
 
 /** The structure of the hash table. */
 typedef struct {
-  lock lock;
+  tsc_lock lock;
   int capacity;
   int cursor;
   hash_entry_t **table[2];

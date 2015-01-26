@@ -17,7 +17,7 @@ typedef struct queue_item {
 } queue_item_t;
 
 typedef struct queue {
-  lock lock;
+  tsc_lock lock;
   queue_item_t *head;
   queue_item_t *tail;
   volatile uint32_t status;

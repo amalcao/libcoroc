@@ -81,7 +81,7 @@ int tsc_timer_reset(tsc_timer_t t, uint64_t when) {
 //
 
 static struct {
-  lock lock;
+  tsc_lock lock;
 #if defined(ENABLE_NOTIFY)
   tsc_notify_t note;
 #endif

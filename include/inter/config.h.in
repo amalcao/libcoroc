@@ -7,6 +7,7 @@
 #cmakedefine ENABLE_SPLITSTACK
 #cmakedefine ENABLE_WORKSTEALING
 #cmakedefine ENABLE_LOCKFREE_RUNQ
+#cmakedefine ENABLE_NOTIFY
 
 #endif // _LIBCOROC_CONFIG_H_
 

@@ -8,7 +8,7 @@
 typedef struct tsc_group {
   uint32_t count;
   uint32_t errors;
-  lock lock;
+  tsc_lock lock;
   tsc_coroutine_t parent;
 } *tsc_group_t;
 

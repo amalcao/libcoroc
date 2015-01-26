@@ -59,10 +59,11 @@ ENDIF(APPLE)
 IF(CMAKE_SYSTEM MATCHES "Linux")
     SET(SRC_FILES ${SRC_FILES}
                   netpoll_epoll.c 
-                  futex_impl.c
-                  notify.c)
+                  futex_impl.c)
 
-    ADD_DEFINITIONS(-DENABLE_NOTIFY)
+    IF(ENABLE_NOTIFY)
+      SET(SRC_FILES ${SRC_FILES} notify.c)
+    ENDIF(ENABLE_NOTIFY)
     
     IF(ENABLE_FUTEX)
         SET(SRC_FILES ${SRC_FILES} futex_lock.c)

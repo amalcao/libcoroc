@@ -22,7 +22,7 @@ typedef struct tsc_poll_desc {
   int id;  // for fast delete ...
   tsc_coroutine_t wait;
   tsc_inter_timer_t *deadline;
-  lock lock;
+  tsc_lock lock;
 } *tsc_poll_desc_t;
 
 // internal netpoll API..

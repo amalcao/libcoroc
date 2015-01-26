@@ -55,14 +55,15 @@ IF(ENABLE_DEADLOCK_DETECT AND CMAKE_SYSTEM MATCHES "Linux")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
 ENDIF()
 
+OPTION(ENABLE_NOTIFY "Enable kernel notify (Linux only)" ON)
 
 ## Option to enable futex-based lock
 OPTION(ENABLE_FUTEX "Enable futex based locks (Linux only)" OFF)
-IF(ENABLE_FUTEX)
+IF(ENABLE_FUTEX OR ENABLE_NOTIFY)
     IF(NOT CMAKE_SYSTEM MATCHES "Linux")
-        MESSAGE(FATAL_ERROR "FUTEX is only supported on Linux!")
+        MESSAGE(FATAL_ERROR "FUTEX / NOTIFY is only supported on Linux!")
     ENDIF()
-ENDIF(ENABLE_FUTEX)
+ENDIF(ENABLE_FUTEX OR ENABLE_NOTIFY)
 
 ## Option to enable the lock-free scheduler
 OPTION(ENABLE_LOCKFREE_RUNQ "Enable the lock-free scheduler" OFF)

@@ -18,7 +18,7 @@ typedef struct tsc_chan {
   struct tsc_refcnt refcnt;
   bool close;
   bool select;
-  lock lock;
+  tsc_lock lock;
   int32_t elemsize;
   queue_t recv_que;
   queue_t send_que;
