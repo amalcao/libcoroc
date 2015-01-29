@@ -7,7 +7,6 @@
 
 // the asynchronized thread pool manager ..
 struct {
-  uint32_t busy;
   pthread_mutex_t mutex;
   pthread_cond_t cond;
   queue_t wait_que;
@@ -41,7 +40,6 @@ static void *tsc_async_thread_routine(void *unused) {
     vpu_ready(req->wait);
 
     pthread_mutex_lock(&tsc_async_pool_manager.mutex);
-    tsc_async_pool_manager.busy--;
   }
   // never return here maybe ..
   pthread_exit(0);
@@ -56,7 +54,6 @@ void tsc_async_pool_initialize(int n) {
   int i;
 
   // init the async thread pool manager ..
-  tsc_async_pool_manager.busy = 0;
   pthread_mutex_init(&tsc_async_pool_manager.mutex, NULL);
   
   if (n == 0) {  // ignore the async threads pool
@@ -77,14 +74,6 @@ void tsc_async_pool_initialize(int n) {
   }
 
   return;
-}
-
-bool tsc_async_pool_working(void) {
-  bool busy;
-  pthread_mutex_lock(&tsc_async_pool_manager.mutex);
-  busy = tsc_async_pool_manager.busy > 0;
-  pthread_mutex_unlock(&tsc_async_pool_manager.mutex);
-  return busy;
 }
 
 // init and submit the async request,
@@ -109,12 +98,12 @@ void *tsc_async_request_submit(tsc_async_callback_t func, void *argument) {
 
     // add req to the wait queue
     queue_add(&tsc_async_pool_manager.wait_que, &req.link);
-    tsc_async_pool_manager.busy++;
 
     if (tsc_async_pool_manager.wait_que.status == 1)
       pthread_cond_signal(&tsc_async_pool_manager.cond);
 
     // suspend current coroutine and release the mutex ..
+    req.wait->async_wait = 1;
     vpu_suspend(&tsc_async_pool_manager.mutex,
                 (unlock_handler_t)pthread_mutex_unlock);
   }

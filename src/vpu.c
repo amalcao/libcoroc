@@ -258,6 +258,7 @@ static void core_sched(void) {
 
       candidate->syscall = false;
       candidate->status = TSC_COROUTINE_RUNNING;
+      candidate->async_wait = 0;
       candidate->vpu_id = vpu->id;
       // FIXME : how to decide the affinity ?
       candidate->vpu_affinity = vpu->id;
@@ -276,8 +277,9 @@ static void core_sched(void) {
       pthread_mutex_lock(&vpu_manager.lock);
       vpu_manager.alive--;
 
-      if (vpu_manager.alive == 0 && vpu_manager.total_ready == 0 &&
-          !tsc_async_pool_working()) {
+      if (vpu_manager.alive == 0 && 
+          vpu_manager.total_ready == 0 &&
+          vpu_manager.total_iowait == 0) {
 #ifdef ENABLE_DEADLOCK_DETECT
         pthread_mutex_unlock(&vpu_manager.lock);
         /* wait until one net job coming ..*/
@@ -289,7 +291,7 @@ static void core_sched(void) {
         else if (vpu_manager.total_ready == 0)
           vpu_backtrace(vpu);
 #endif
-      } else if (vpu_manager.alive > 0) {
+      } else /*if (vpu_manager.alive > 0)*/ {
         TSC_ATOMIC_DEC(vpu_manager.idle);
         pthread_cond_wait(&vpu_manager.cond, &vpu_manager.lock);
         // wake up by other vpu ..
@@ -327,6 +329,9 @@ int core_wait(void* args) {
   tsc_coroutine_t victim = (tsc_coroutine_t)args;
 
   victim->status = TSC_COROUTINE_WAIT;
+
+  if (victim->async_wait)
+    TSC_ATOMIC_INC(vpu_manager.total_iowait);
 
   if (vpu->hold != NULL) {
     TSC_DEBUG("[core_wait unlock %p] vid is %d, coid is %ld\n", vpu->hold,
@@ -488,6 +493,8 @@ void vpu_ready(tsc_coroutine_t coroutine) {
                    &coroutine->status_link);
 #endif // ENABLE_LOCKFREE_RUNQ
   TSC_ATOMIC_INC(vpu_manager.total_ready);
+  if (coroutine->async_wait)
+    TSC_ATOMIC_DEC(vpu_manager.total_iowait);
 
   vpu_wakeup_one();
 }

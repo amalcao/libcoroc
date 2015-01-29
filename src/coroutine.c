@@ -52,6 +52,7 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
     strcpy(coroutine->name, name);
     coroutine->type = type;
     coroutine->status = TSC_COROUTINE_WAIT;
+    coroutine->async_wait = 0;
     coroutine->id = TSC_ALLOC_TID();
     coroutine->entry = entry;
     coroutine->arguments = arguments;

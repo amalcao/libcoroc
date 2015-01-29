@@ -4,7 +4,7 @@ import sys
 
 sys.stderr.write("Loading the LibTSC runtime support..\n")
 
-sts = { 0xBAFF:"sleep", 0xFACE:"ready", 0xBEEF:"run", 0xBADD:"wait", 0xDEAD:"exit"}
+sts = { 0xBAFF:"sleep", 0xFACE:"ready", 0xBEEF:"run", 0xBADD:"wait", 0xBADE:"iowait", 0xDEAD:"exit"}
 
 def linked_list(ptr, linkfield):
     cop = gdb.lookup_type('struct tsc_coroutine').pointer()

@@ -29,10 +29,12 @@ typedef struct tsc_coroutine {
   tsc_coroutine_id_t pid;  // DEBUG
   char name[TSC_NAME_LENGTH];
 
-  uint32_t type;
+  uint32_t type:8;
+  uint32_t vpu_id:8;
+  uint32_t vpu_affinity:8;
+  uint32_t async_wait:8;
+
   uint32_t status;
-  uint32_t vpu_affinity;
-  uint32_t vpu_id;
 
   queue_item_t status_link;
   queue_item_t trace_link;
@@ -62,6 +64,7 @@ enum tsc_coroutine_status {
   TSC_COROUTINE_READY = 0xFACE,
   TSC_COROUTINE_RUNNING = 0xBEEF,
   TSC_COROUTINE_WAIT = 0xBADD,
+  TSC_COROUTINE_IOWAIT = 0xBADE,
   TSC_COROUTINE_EXIT = 0xDEAD,
 };
 

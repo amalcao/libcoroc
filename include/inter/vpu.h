@@ -47,6 +47,7 @@ typedef struct vpu_manager {
   uint16_t alive;
   uint16_t idle;
   uint32_t total_ready;
+  uint32_t total_iowait;
 } vpu_manager_t;
 
 extern vpu_manager_t vpu_manager;
