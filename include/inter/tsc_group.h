@@ -18,11 +18,11 @@ void tsc_group_init(tsc_group_t group) {
   assert(group != NULL);
 
   lock_init(& group->lock);
-  group->count = 0;
+  group->count = 1;
   group->errors = 0;
   // this field will be assgined when parent task
   // calls the `tsc_group_sync' ..
-  group->parent = NULL;
+  group->parent = NULL; 
 }
 
 /// Alloc the group from heap and init it

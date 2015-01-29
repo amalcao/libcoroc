@@ -132,6 +132,9 @@ void tsc_coroutine_exit(int value) {
   // if current task belongs to a group!!
   vpu_t *vpu = TSC_TLS_GET();
   tsc_coroutine_t self = vpu->current;
+  
+  assert(self && (self->status == TSC_COROUTINE_RUNNING));
+
   if (self && self->cleanup)
     self->cleanup(self->arguments, value);
 

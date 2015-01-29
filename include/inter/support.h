@@ -73,7 +73,7 @@ typedef pthread_t TSC_OS_THREAD_T;
 #endif
 
 // -- for memory alloc api --
-#define TSC_ALLOC malloc
+#define TSC_ALLOC   malloc
 #define TSC_REALLOC realloc
 #define TSC_DEALLOC free
 
