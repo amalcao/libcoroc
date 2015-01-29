@@ -124,3 +124,6 @@ ADD_SUBDIRECTORY(include)
 
 ## install the auto-generated config header
 INSTALL_FILES(/include/inter FILES ${CMAKE_CURRENT_BINARY_DIR}/include/inter/config.h)
+
+## install the gdb-helper script 
+INSTALL_FILES(/share FILES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gdb_helper.py)
