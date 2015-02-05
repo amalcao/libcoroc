@@ -18,7 +18,7 @@ struct tsc_vfs_driver tsc_vfs_file_drv = {.open = open,
                                           .ioctl = NULL, };
 
 // the vfs sub-system APIs
-void *tsc_vfs_callback(tsc_vfs_ops *ops) {
+void tsc_vfs_callback(tsc_vfs_ops *ops) {
   assert(ops != NULL);
 
   switch (ops->ops_type) {

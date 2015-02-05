@@ -15,7 +15,7 @@ typedef struct {
 // the internal sleep / tsleep
 
 void tsc_notify_wakeup(tsc_notify_t *note);
-void *__tsc_notify_tsleep(void *);
+void __tsc_notify_tsleep(void *);
 
 static inline void tsc_notify_clear(tsc_notify_t *note) {
   note->key = 0;
@@ -39,7 +39,7 @@ static inline void tsc_notify_tsleep_u(tsc_notify_t *note, int64_t ns) {
 }
 
 // user task space nanosleep call
-extern void *__tsc_nanosleep(void *);
+extern void __tsc_nanosleep(void *);
 static inline void tsc_nanosleep(uint64_t ns) {
   if (ns == 0) return;
   tsc_async_request_submit(__tsc_nanosleep, &ns);

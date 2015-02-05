@@ -7,7 +7,7 @@
 #include "support.h"
 #include "coroutine.h"
 
-typedef void *(*tsc_async_callback_t)(void *);
+typedef void (*tsc_async_callback_t)(void *);
 
 // the asynchronize request type ..
 typedef struct {
@@ -15,11 +15,10 @@ typedef struct {
   tsc_coroutine_t wait;
   tsc_async_callback_t func;
   void *argument;
-  void *retval;
 } tsc_async_request_t;
 
 // the API for the coroutines ..
-void *tsc_async_request_submit(tsc_async_callback_t func, void *argument);
+void tsc_async_request_submit(tsc_async_callback_t func, void *argument);
 
 // the API for the vpus or framework ..
 tsc_coroutine_t tsc_async_pool_fetch(void);

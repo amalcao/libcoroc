@@ -33,7 +33,7 @@ static void *tsc_async_thread_routine(void *unused) {
 
     // do the work of this request,
     // NOTE that the call will block current thread ..
-    req->retval = req->func(req->argument);
+    req->func(req->argument);
 
     // after the callback done, add the wait coroutine
     // to the ready queue..
@@ -79,13 +79,13 @@ void tsc_async_pool_initialize(int n) {
 // init and submit the async request,
 // NOTE the req must be allocated on the calling stack
 // of the current coroutine !!
-void *tsc_async_request_submit(tsc_async_callback_t func, void *argument) {
+void tsc_async_request_submit(tsc_async_callback_t func, void *argument) {
   tsc_async_request_t req;
 
   TSC_SIGNAL_MASK();
   
   if (tsc_async_pool_manager.threads == NULL) {
-    req.retval = (void*)(func(argument));
+    func(argument);
   } else {
     // init ..
     req.wait = tsc_coroutine_self();
@@ -99,8 +99,7 @@ void *tsc_async_request_submit(tsc_async_callback_t func, void *argument) {
     // add req to the wait queue
     queue_add(&tsc_async_pool_manager.wait_que, &req.link);
 
-    if (tsc_async_pool_manager.wait_que.status == 1)
-      pthread_cond_signal(&tsc_async_pool_manager.cond);
+    pthread_cond_signal(&tsc_async_pool_manager.cond);
 
     // suspend current coroutine and release the mutex ..
     req.wait->async_wait = 1;
@@ -110,6 +109,5 @@ void *tsc_async_request_submit(tsc_async_callback_t func, void *argument) {
 
   // return from the block func ..
   TSC_SIGNAL_UNMASK();
-
-  return req.retval;
+  return;
 }
