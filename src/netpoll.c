@@ -19,6 +19,14 @@ int tsc_net_read(int fd, void *buf, int n) {
   return m;
 }
 
+int tsc_net_timed_read(int fd, void *buf, int n, int64_t timeout) {
+  int m;
+  while ((m = read(fd, buf, n)) < 0 && errno == EAGAIN)
+    if (!tsc_net_timedwait(fd, TSC_NETPOLL_READ, timeout))
+      return -1;
+  return m;
+}
+
 int tsc_net_write(int fd, void *buf, int n) {
   int m, total;
 

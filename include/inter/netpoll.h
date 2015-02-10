@@ -39,6 +39,7 @@ int tsc_netpoll_wakeup(tsc_poll_desc_t desc);
 // the public netpoll API ..
 int tsc_net_nonblock(int fd);
 int tsc_net_read(int fd, void *buf, int size);
+int tsc_net_timed_read(int fd, void *buf, int size, int64_t usec);
 int tsc_net_write(int fd, void *buf, int size);
 int tsc_net_wait(int fd, int mode);
 int tsc_net_timedwait(int fd, int mode, int64_t usec);
