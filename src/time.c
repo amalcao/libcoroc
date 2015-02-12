@@ -86,8 +86,12 @@ static struct {
   tsc_notify_t note;
 #endif
   tsc_inter_timer_t **timers;
+  
+  bool suspend;
+
   int32_t cap;
   int32_t size;
+  
   tsc_coroutine_t daemon;
 } tsc_intertimer_manager;
 
@@ -195,13 +199,14 @@ static int tsc_intertimer_routine(void *unused) {
 
     // no alive timers here, just suspend myself ..
     if (__size == 0) {
+      tsc_intertimer_manager.suspend = true;
       vpu_suspend((void *)(&tsc_intertimer_manager.lock),
                   (unlock_handler_t)(lock_release));
     } else {
+      int64_t left = 1000 * (__timers[0]->when - now);
       lock_release(&tsc_intertimer_manager.lock);
 #if defined(ENABLE_NOTIFY)
-      tsc_notify_tsleep_u(&tsc_intertimer_manager.note,
-                          1000 * (__timers[0]->when - now));
+      tsc_notify_tsleep_u(&tsc_intertimer_manager.note, left);
       tsc_notify_clear(&tsc_intertimer_manager.note);
 #else
       tsc_coroutine_yield();  // let others run ..
@@ -250,7 +255,10 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
     tsc_intertimer_start();
   } else if (__size == 0) {
     // awaken the timer daemon thread ..
-    vpu_ready(tsc_intertimer_manager.daemon);
+    if (tsc_intertimer_manager.suspend) {
+      tsc_intertimer_manager.suspend = false;
+      vpu_ready(tsc_intertimer_manager.daemon);
+    }
   }
 #if defined(ENABLE_NOTIFY)
   else {

@@ -124,16 +124,16 @@
     ret;})
 #define __CoroC_Chan_RecvRef(C, R) ({       \
     __tsc_refcnt_put((tsc_refcnt_t)(*(R)));   \
-    _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) != CHAN_CLOSED; \
+    _Bool ret = _tsc_chan_recv(C, (void*)(R), 1) != CHAN_CLOSED; \
     ret;})
 
 #define __CoroC_Chan_SendRef_NB(C, R) ({ \
     __tsc_refcnt_get((tsc_refcnt_t)(*(R)));\
-    _Bool ret = _tsc_chan_send(C, (void*)(R), 1) == CHAN_SUCCESS; \
+    _Bool ret = _tsc_chan_send(C, (void*)(R), 0) == CHAN_SUCCESS; \
     ret;)}
 #define __CoroC_Chan_RecvRef_NB(C, R) ({ \
     __tsc_refcnt_put((tsc_refcnt_t)(*(R)));\
-    _Bool ret = _tsc_chan_recv(C, (void*)(R), 1) == CHAN_SUCCESS; \
+    _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) == CHAN_SUCCESS; \
     ret;)}
 
 ///  channel select ops ..

@@ -13,9 +13,14 @@ int tsc_net_nonblock(int fd) {
 }
 
 int tsc_net_read(int fd, void *buf, int n) {
-  int m;
-  while ((m = read(fd, buf, n)) < 0 && errno == EAGAIN)
-    tsc_net_wait(fd, TSC_NETPOLL_READ);
+  int m, total;
+  for (total = 0; total < n; total += m) {
+    while ((m = read(fd, (char*)buf + total, n - total)) < 0 &&
+            errno == EAGAIN)
+      tsc_net_wait(fd, TSC_NETPOLL_READ);
+    if (m < 0) return m;
+    if (m == 0) break;
+  }
   return m;
 }
 
@@ -91,7 +96,7 @@ __exit_netpoll_timeout:
 }
 
 int tsc_net_timedwait(int fd, int mode, int64_t usec) {
-  if (usec <= 0) return -1;
+  assert (usec > 0);
 
   tsc_inter_timer_t deadline;
   struct tsc_poll_desc *desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
