@@ -40,8 +40,8 @@
 
 #define __CoroC_release_handler_t release_handler_t
 
-#define __CoroC_New(F0, T0, T, S, F) ({ \
-            T0 *ref = calloc(sizeof(T0) + (S-1)*sizeof(T), 1); \
+#define __CoroC_New(F0, T0, T, S, F, A) ({ \
+            T0 *ref = calloc(sizeof(T0) + (S-1)*sizeof(T) + A, 1); \
             ref->__refcnt.release = ((release_handler_t)(F0)); \
             ref->__user_fini = ((typeof(ref->__user_fini))(F));\
             ref->__obj_num = (S);               \
@@ -124,16 +124,16 @@
     ret;})
 #define __CoroC_Chan_RecvRef(C, R) ({       \
     __tsc_refcnt_put((tsc_refcnt_t)(*(R)));   \
-    _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) != CHAN_CLOSED; \
+    _Bool ret = _tsc_chan_recv(C, (void*)(R), 1) != CHAN_CLOSED; \
     ret;})
 
 #define __CoroC_Chan_SendRef_NB(C, R) ({ \
     __tsc_refcnt_get((tsc_refcnt_t)(*(R)));\
-    _Bool ret = _tsc_chan_send(C, (void*)(R), 1) == CHAN_SUCCESS; \
+    _Bool ret = _tsc_chan_send(C, (void*)(R), 0) == CHAN_SUCCESS; \
     ret;)}
 #define __CoroC_Chan_RecvRef_NB(C, R) ({ \
     __tsc_refcnt_put((tsc_refcnt_t)(*(R)));\
-    _Bool ret = _tsc_chan_recv(C, (void*)(R), 1) == CHAN_SUCCESS; \
+    _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) == CHAN_SUCCESS; \
     ret;)}
 
 ///  channel select ops ..
@@ -158,7 +158,7 @@
             __tsc_refcnt_get((tsc_refcnt_t)(*(R)));   \
             tsc_chan_set_send(S, C, (void*)(R)); } while (0)
 #define __CoroC_Select_RecvRef(S, C, R) do {        \
-            __tsc_refcnt_put((tsc_refcnt_put)(*(R))); \
+            __tsc_refcnt_put((tsc_refcnt_t)(*(R))); \
             tsc_chan_set_recv(S, C, (void*)(R)); } while (0)
 
 /// for Task based send / recv

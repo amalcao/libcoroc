@@ -69,7 +69,7 @@ void tsc_vfs_callback(tsc_vfs_ops *ops) {
       assert(0);
   }  // switch
 
-  return NULL;
+  return ;
 }
 
 static inline void __tsc_vfs_add_ops(tsc_vfs_ops *ops) {
