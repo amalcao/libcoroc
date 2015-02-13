@@ -65,8 +65,13 @@ int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
     return -1;
 
   len = sizeof sa;
+#if defined(__APPLE__)
+  if ((cfd = accept(fd, (void*)&sa, &len)) < 0) return -1;
+  tsc_net_nonblock(cfd);
+#else
   if ((cfd = accept4(fd, (void *)&sa, &len, 
                      SOCK_NONBLOCK | SOCK_CLOEXEC)) < 0) return -1;
+#endif
 
   if (server) {
     ip = (uint8_t *)&sa.sin_addr;
