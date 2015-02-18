@@ -130,11 +130,11 @@
 #define __CoroC_Chan_SendRef_NB(C, R) ({ \
     __tsc_refcnt_get((tsc_refcnt_t)(*(R)));\
     _Bool ret = _tsc_chan_send(C, (void*)(R), 0) == CHAN_SUCCESS; \
-    ret;)}
+    ret;})
 #define __CoroC_Chan_RecvRef_NB(C, R) ({ \
     __tsc_refcnt_put((tsc_refcnt_t)(*(R)));\
     _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) == CHAN_SUCCESS; \
-    ret;)}
+    ret;})
 
 ///  channel select ops ..
 #define __CoroC_Select_Size(N)      \
