@@ -35,7 +35,7 @@ static bool __tsc_copy_from_mque(tsc_chan_t chan, void *buf) {
 }
 
 void tsc_async_chan_init(tsc_async_chan_t achan) {
-  tsc_chan_init((tsc_chan_t)achan, sizeof(struct tsc_msg), __tsc_copy_to_mque,
+  tsc_chan_init((tsc_chan_t)achan, sizeof(struct tsc_msg), false, __tsc_copy_to_mque,
                 __tsc_copy_from_mque);
   tsc_refcnt_init((tsc_refcnt_t)achan, TSC_DEALLOC);
   atomic_queue_init(&achan->mque);

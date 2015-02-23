@@ -90,7 +90,7 @@
     if (G) { free(G); G = 0; } ret; })
 
 /// for channel ops
-#define __CoroC_Chan tsc_chan_allocate
+#define __CoroC_Chan _tsc_chan_allocate
 #define __CoroC_Chan_Close(C)  tsc_chan_close((C))
 #define __CoroC_Null       NULL
 
@@ -130,11 +130,12 @@
 #define __CoroC_Chan_SendRef_NB(C, R) ({ \
     __tsc_refcnt_get((tsc_refcnt_t)(*(R)));\
     _Bool ret = _tsc_chan_send(C, (void*)(R), 0) == CHAN_SUCCESS; \
-    ret;)}
+    if (!ret) __tsc_refcnt_put((tsc_refcnt_t)(*(R))); \
+    ret;})
 #define __CoroC_Chan_RecvRef_NB(C, R) ({ \
     __tsc_refcnt_put((tsc_refcnt_t)(*(R)));\
     _Bool ret = _tsc_chan_recv(C, (void*)(R), 0) == CHAN_SUCCESS; \
-    ret;)}
+    ret;})
 
 ///  channel select ops ..
 #define __CoroC_Select_Size(N)      \

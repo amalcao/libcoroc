@@ -27,7 +27,7 @@ static void tsc_send_timer(void *arg) {
 static void inline __tsc_timer_init(tsc_timer_t t, uint32_t period,
                                     void (*func)(void)) {
   // init the buffered channel ..
-  tsc_buffered_chan_init(&t->_chan, sizeof(uint64_t), 1);
+  tsc_buffered_chan_init(&t->_chan, sizeof(uint64_t), 1, false);
 
   // init the internal timer ..
   t->timer.when = 0;
