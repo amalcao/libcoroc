@@ -57,25 +57,39 @@ bool __tsc_copy_from_buff(tsc_chan_t chan, void *buf) {
   return false;
 }
 
-tsc_chan_t tsc_chan_allocate(int32_t elemsize, int32_t bufsize) {
+void __tsc_clean_buff(tsc_chan_t chan) {
+  tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
+
+  while (bchan->nbuf > 0) {
+    uint8_t *p = bchan->buf;
+    p += (chan->elemsize) * (bchan->recvx++);
+    tsc_refcnt_put(*((tsc_refcnt_t*)p));
+    (bchan->recvx) %= (bchan->bufsize);
+    bchan->nbuf--;
+  }
+}
+
+tsc_chan_t _tsc_chan_allocate(int32_t elemsize, int32_t bufsize, bool isref) {
   struct tsc_chan *chan;
+  bool _isref = (bufsize > 0) && isref; // if no buffer, we don't handle the refcnt types!!
 
   if (bufsize > 0) {
     tsc_buffered_chan_t bchan =
         TSC_ALLOC(sizeof(struct tsc_buffered_chan) + elemsize * bufsize);
     // init the buffered channel ..
-    tsc_buffered_chan_init(bchan, elemsize, bufsize);
+    tsc_buffered_chan_init(bchan, elemsize, bufsize, _isref);
     chan = (tsc_chan_t)bchan;
   } else {
     chan = TSC_ALLOC(sizeof(struct tsc_chan));
-    tsc_chan_init(chan, elemsize, NULL, NULL);
+    tsc_chan_init(chan, elemsize, _isref, NULL, NULL);
   }
 
   return chan;
 }
 
-void tsc_chan_dealloc(tsc_chan_t chan) {
+void _tsc_chan_dealloc(tsc_chan_t chan) {
   /* TODO: awaken the sleeping coroutines */
+  tsc_chan_close(chan);
   lock_fini(&chan->lock);
   TSC_DEALLOC(chan);
 }
@@ -221,6 +235,10 @@ int tsc_chan_close(tsc_chan_t chan) {
       TSC_SYNC_ALL();
       vpu_ready(qp->coroutine);
     }
+
+    // clean the auto-refcnt elements in the buffer
+    if (chan->isref) 
+      __tsc_clean_buff(chan);
   }
 
   lock_release(&chan->lock);

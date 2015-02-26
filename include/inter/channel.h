@@ -19,7 +19,8 @@ typedef struct tsc_chan {
   bool close;
   bool select;
   tsc_lock lock;
-  int32_t elemsize;
+  int32_t isref:1;
+  int32_t elemsize:31;
   queue_t recv_que;
   queue_t send_que;
   tsc_chan_handler copy_to_buff;
@@ -36,15 +37,16 @@ typedef struct tsc_buffered_chan {
   uint8_t *buf;
 } *tsc_buffered_chan_t;
 
-extern void tsc_chan_dealloc(tsc_chan_t);
+extern void _tsc_chan_dealloc(tsc_chan_t);
 
 // init the general channel ..
-static inline void tsc_chan_init(tsc_chan_t ch, int32_t elemsize,
+static inline void tsc_chan_init(tsc_chan_t ch, int32_t elemsize, bool isref,
                                  tsc_chan_handler to, tsc_chan_handler from) {
-  tsc_refcnt_init(&ch->refcnt, (release_handler_t)tsc_chan_dealloc);
+  tsc_refcnt_init(&ch->refcnt, (release_handler_t)_tsc_chan_dealloc);
 
   ch->close = false;
   ch->select = false;
+  ch->isref = isref ? 1 : 0;
   ch->elemsize = elemsize;
   ch->copy_to_buff = to;
   ch->copy_from_buff = from;
@@ -59,8 +61,9 @@ extern bool __tsc_copy_from_buff(tsc_chan_t, void *);
 
 // init the buffered channel ..
 static inline void tsc_buffered_chan_init(tsc_buffered_chan_t ch,
-                                          int32_t elemsize, int32_t bufsize) {
-  tsc_chan_init((tsc_chan_t)ch, elemsize, __tsc_copy_to_buff,
+                                          int32_t elemsize, 
+                                          int32_t bufsize, bool isref) {
+  tsc_chan_init((tsc_chan_t)ch, elemsize, isref, __tsc_copy_to_buff,
                 __tsc_copy_from_buff);
 
   ch->bufsize = bufsize;
@@ -69,8 +72,11 @@ static inline void tsc_buffered_chan_init(tsc_buffered_chan_t ch,
   ch->recvx = ch->sendx = 0;
 }
 
-tsc_chan_t tsc_chan_allocate(int32_t elemsize, int32_t bufsize);
-void tsc_chan_dealloc(tsc_chan_t chan);
+tsc_chan_t _tsc_chan_allocate(int32_t elemsize, int32_t bufsize, bool isref);
+void _tsc_chan_dealloc(tsc_chan_t chan);
+
+#define tsc_chan_allocate(es, bs) _tsc_chan_allocate(es, bs, false)
+#define tsc_chan_dealloc(chan) _tsc_chan_dealloc(chan)
 
 extern int _tsc_chan_send(tsc_chan_t chan, void *buf, bool block);
 extern int _tsc_chan_recv(tsc_chan_t chan, void *buf, bool block);
