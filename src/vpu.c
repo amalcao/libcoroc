@@ -277,25 +277,30 @@ static void core_sched(void) {
       pthread_mutex_lock(&vpu_manager.lock);
       vpu_manager.alive--;
 
-      if (vpu_manager.alive == 0 && 
-          vpu_manager.total_ready == 0 &&
-          vpu_manager.total_iowait == 0) {
-#ifdef ENABLE_DEADLOCK_DETECT
+      if (vpu_manager.alive > 0 || 
+          (TSC_ATOMIC_READ(vpu_manager.total_ready) == 0 &&
+           TSC_ATOMIC_READ(vpu_manager.total_iowait) > 0)) {
+        // if this vpu is not the last awake one or 
+        // there're some running async io tasks, go sleep ..
+        TSC_ATOMIC_DEC(vpu_manager.idle);
+        pthread_cond_wait(&vpu_manager.cond, &vpu_manager.lock);
+        // wake up by other vpu ..
+        TSC_ATOMIC_INC(vpu_manager.idle);
+      } else if (TSC_ATOMIC_READ(vpu_manager.total_ready) == 0) {
         pthread_mutex_unlock(&vpu_manager.lock);
         /* wait until one net job coming ..*/
         if (__tsc_netpoll_size() > 0) {
           __tsc_netpoll_polling(false);
           pthread_mutex_lock(&vpu_manager.lock);
+
+          // FIXME : go sleep and wait the net IO ..
+          TSC_ATOMIC_DEC(vpu_manager.idle);
+          pthread_cond_wait(&vpu_manager.cond, &vpu_manager.lock);
+          TSC_ATOMIC_INC(vpu_manager.idle);
         }
         /* no any ready coroutines, just halt .. */
-        else if (vpu_manager.total_ready == 0)
+        else/* if (vpu_manager.total_ready == 0)*/
           vpu_backtrace(vpu);
-#endif
-      } else /*if (vpu_manager.alive > 0)*/ {
-        TSC_ATOMIC_DEC(vpu_manager.idle);
-        pthread_cond_wait(&vpu_manager.cond, &vpu_manager.lock);
-        // wake up by other vpu ..
-        TSC_ATOMIC_INC(vpu_manager.idle);
       }
 
       idle_loops = 0;
@@ -439,15 +444,12 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
 #endif // ENABLE_LOCKFREE_RUNQ
   atomic_queue_init(&vpu_manager.coroutine_list);
 
-#ifdef ENABLE_DEADLOCK_DETECT
-
   vpu_manager.alive = vpu_mp_count;
   vpu_manager.idle = 0;
   vpu_manager.total_ready = 1;
 
   pthread_cond_init(&vpu_manager.cond, NULL);
   pthread_mutex_init(&vpu_manager.lock, NULL);
-#endif
 
   TSC_BARRIER_INIT(vpu_manager.xt_index + 1);
   TSC_TLS_INIT();
@@ -533,12 +535,10 @@ void vpu_syscall(int (*pfn)(void*)) {
     assert(0);
   }
 
-#ifdef ENABLE_DEADLOCK_DETECT
   /* check if grouine is returned for backtrace */
   if (self && self->backtrace) {
     tsc_coroutine_backtrace(self);
   }
-#endif
 
   return;
 }
@@ -578,15 +578,15 @@ void vpu_clock_handler(int signal) {
 void vpu_wakeup_one(void) {
   // wakeup a VPU thread who waiting the pthread_cond_t.
   pthread_mutex_lock(&vpu_manager.lock);
-  if (vpu_manager.alive < vpu_manager.xt_index &&
-      TSC_ATOMIC_READ(vpu_manager.idle) == 0 &&
-      TSC_ATOMIC_READ(vpu_manager.total_ready) > WAKEUP_THRESHOLD) {
+  if (vpu_manager.alive == 0 ||
+      (vpu_manager.alive < vpu_manager.xt_index &&
+       TSC_ATOMIC_READ(vpu_manager.idle) == 0 &&
+       TSC_ATOMIC_READ(vpu_manager.total_ready) > WAKEUP_THRESHOLD) ) {
     pthread_cond_signal(&vpu_manager.cond);
   }
   pthread_mutex_unlock(&vpu_manager.lock);
 }
 
-#ifdef ENABLE_DEADLOCK_DETECT
 void vpu_backtrace(vpu_t *vpu) {
   fprintf(stderr, "All threads are sleep, deadlock may happen!\n\n");
 
@@ -618,4 +618,3 @@ void vpu_backtrace(vpu_t *vpu) {
                    &(vpu_manager.main->status_link));
 #endif // ENABLE_LOCKFREE_RUNQ
 }
-#endif
