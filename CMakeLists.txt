@@ -50,8 +50,7 @@ ENDIF(ENABLE_SPLITSTACK)
 OPTION(ENABLE_TIMESHARE "Enable the time-sharing scheduler" OFF)
 
 ## Option to enable deadlock detect
-OPTION(ENABLE_DEADLOCK_DETECT "Enable deadlock detection at runtime" ON)
-IF(ENABLE_DEADLOCK_DETECT AND CMAKE_SYSTEM MATCHES "Linux")
+IF(CMAKE_SYSTEM MATCHES "Linux")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
 ENDIF()
 

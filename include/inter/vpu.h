@@ -63,9 +63,7 @@ extern void vpu_ready(tsc_coroutine_t coroutine);
 extern void vpu_syscall(int (*pfn)(void *));
 extern void vpu_clock_handler(int);
 extern void vpu_wakeup_one(void);
-#ifdef ENABLE_DEADLOCK_DETECT
 extern void vpu_backtrace(vpu_t*);
-#endif
 
 #define TSC_ALLOC_TID() TSC_ATOMIC_INC(vpu_manager.last_pid)
 
