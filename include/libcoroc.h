@@ -53,17 +53,15 @@
             __tsc_refcnt_get((tsc_refcnt_t)(ref)); })
 
 /* more interfaces for new auto scope branch */
-#define __refcnt_assign(D, S) ({ \
-            __tsc_refcnt_put((tsc_refcnt_t)(D)); \
-            if (S != ((void*)0)) \
-              D = (typeof(D))__tsc_refcnt_get((tsc_refcnt_t)(S)); \
-            else \
-              D = ((void*)0); \
-            D; })
+#define __refcnt_assign(D, S) \
+            (typeof(D)) __tsc_refcnt_assign( \
+                            (tsc_refcnt_t*)(&(D)), \
+                            (tsc_refcnt_t)(S) )
 
-#define __refcnt_assign_expr(D, E) ({ \
-            __tsc_refcnt_put((tsc_refcnt_t)(D)); \
-            D = (typeof(D))(E); D; })
+#define __refcnt_assign_expr(D, E) \
+            (typeof(D)) __tsc_refcnt_assign_expr( \
+                            (tsc_refcnt_t*)(&(D)), \
+                            (tsc_refcnt_t)(E) )
 
 #define __refcnt_put_array(A, N) ({ \
             int i = 0;  \
@@ -189,7 +187,7 @@
 #define __CoroC_Stop(T)  tsc_timer_stop((tsc_timer_t)(T))
 
 /// for time management
-#define __CoroC_Now     tsc_getcurtime
+#define __CoroC_Now     tsc_getmicrotime
 #define __CoroC_Sleep   tsc_udelay
 
 /// for explicity release the reference's counter

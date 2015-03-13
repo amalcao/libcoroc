@@ -30,7 +30,26 @@ static inline bool __tsc_refcnt_put(tsc_refcnt_t ref) {
   return false;
 }
 
+static inline tsc_refcnt_t 
+__tsc_refcnt_assign(tsc_refcnt_t* to, tsc_refcnt_t from) {
+  __tsc_refcnt_put(*to);
+  return (*to = __tsc_refcnt_get(from));
+}
+
+static inline tsc_refcnt_t
+__tsc_refcnt_assign_expr(tsc_refcnt_t* to, tsc_refcnt_t from) {
+  __tsc_refcnt_put(*to);
+  return (*to = from);
+}
+
+
 #define tsc_refcnt_get(ref) (typeof(ref)) __tsc_refcnt_get((tsc_refcnt_t)(ref))
 #define tsc_refcnt_put(ref) __tsc_refcnt_put((tsc_refcnt_t)(ref))
+
+#define tsc_refcnt_assign(to, from) \
+         (typeof(to)) __tsc_refcnt_assign((tsc_refcnt_t*)(&(to)), (tsc_refcnt_t)(from))
+
+#define tsc_refcnt_assign_expr(to, from) \
+        (typeof(to)) __tsc_refcnt_assign_expr((tsc_refcnt_t*)(&(to)), (tsc_refcnt_t)(from))
 
 #endif  // _TSC_REFCNT_H_
