@@ -139,11 +139,16 @@
     ret;})
 
 ///  channel select ops ..
+#if 0
 #define __CoroC_Select_Size(N)      \
     (sizeof(struct tsc_chan_set) +  \
       (N) * (sizeof(tsc_scase_t) + sizeof(lock_t)))
 
 #define __CoroC_Select_Alloc(N) alloca(__CoroC_Select_Size(N))
+#endif
+
+#define __CoroC_Select_Alloc(N)   tsc_chan_set_allocate(N)
+#define __CoroC_Select_Dealloc(S) tsc_chan_set_dealloc(S)
 #define __CoroC_Select_Init(S, N) tsc_chan_set_init(S, N)
 
 #define __CoroC_Select(S, B) ({ \
