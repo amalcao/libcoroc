@@ -29,6 +29,10 @@ static void inline __tsc_timer_init(tsc_timer_t t, uint32_t period,
   // init the buffered channel ..
   tsc_buffered_chan_init(&t->_chan, sizeof(uint64_t), 1, false);
 
+  // re-init the refcnt's release handler ..
+  tsc_refcnt_init(&(t->_chan._chan.refcnt), 
+                  (release_handler_t)(tsc_timer_dealloc));
+
   // init the internal timer ..
   t->timer.when = 0;
   t->timer.period = period;

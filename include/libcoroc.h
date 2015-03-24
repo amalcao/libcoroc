@@ -53,14 +53,15 @@
             __tsc_refcnt_get((tsc_refcnt_t)(ref)); })
 
 /* more interfaces for new auto scope branch */
-#define __refcnt_assign(D, S) ({ \
-            __tsc_refcnt_put((tsc_refcnt_t)(D)); \
-            D = (typeof(D))__tsc_refcnt_get((tsc_refcnt_t)(S)); \
-            D; })
+#define __refcnt_assign(D, S) \
+            (typeof(D)) __tsc_refcnt_assign( \
+                            (tsc_refcnt_t*)(&(D)), \
+                            (tsc_refcnt_t)(S) )
 
-#define __refcnt_assign_expr(D, E) ({ \
-            __tsc_refcnt_put((tsc_refcnt_t)(D)); \
-            D = (typeof(D))(E); D; })
+#define __refcnt_assign_expr(D, E) \
+            (typeof(D)) __tsc_refcnt_assign_expr( \
+                            (tsc_refcnt_t*)(&(D)), \
+                            (tsc_refcnt_t)(E) )
 
 #define __refcnt_put_array(A, N) ({ \
             int i = 0;  \
@@ -138,11 +139,16 @@
     ret;})
 
 ///  channel select ops ..
+#if 0
 #define __CoroC_Select_Size(N)      \
     (sizeof(struct tsc_chan_set) +  \
       (N) * (sizeof(tsc_scase_t) + sizeof(lock_t)))
 
 #define __CoroC_Select_Alloc(N) alloca(__CoroC_Select_Size(N))
+#endif
+
+#define __CoroC_Select_Alloc(N)   tsc_chan_set_allocate(N)
+#define __CoroC_Select_Dealloc(S) tsc_chan_set_dealloc(S)
 #define __CoroC_Select_Init(S, N) tsc_chan_set_init(S, N)
 
 #define __CoroC_Select(S, B) ({ \
@@ -186,7 +192,7 @@
 #define __CoroC_Stop(T)  tsc_timer_stop((tsc_timer_t)(T))
 
 /// for time management
-#define __CoroC_Now     tsc_getcurtime
+#define __CoroC_Now     tsc_getmicrotime
 #define __CoroC_Sleep   tsc_udelay
 
 /// for explicity release the reference's counter
