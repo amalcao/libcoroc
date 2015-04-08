@@ -21,7 +21,7 @@ int tsc_net_read(int fd, void *buf, int n) {
     if (m < 0) return m;
     if (m == 0) break;
   }
-  return m;
+  return total;
 }
 
 int tsc_net_timed_read(int fd, void *buf, int n, int64_t timeout) {
