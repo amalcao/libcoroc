@@ -137,13 +137,12 @@ int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
   // if (desc->done) goto __exit_netpoll_wakeup;
   if (!TSC_CAS(&desc->done, false, true)) goto __exit_netpoll_wakeup;
 
+  // removing the desc before make the waiting task ready!!
   __tsc_netpoll_rem(desc);
   // this function must be called by
   // system context, so don not need
   // to mask the signals ..
   vpu_ready(desc->wait);
-  // put the ready task back to running queue
-  // before removing the `desc' from the netpoll !!
 
 __exit_netpoll_wakeup:
   lock_release(&desc->lock);
