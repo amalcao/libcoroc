@@ -21,7 +21,7 @@ int tsc_net_read(int fd, void *buf, int n) {
     if (m < 0) return m;
     if (m == 0) break;
   }
-  return m;
+  return total;
 }
 
 int tsc_net_timed_read(int fd, void *buf, int n, int64_t timeout) {
@@ -59,18 +59,22 @@ static void __tsc_poll_desc_init(tsc_poll_desc_t desc, int fd, int mode,
 }
 
 int tsc_net_wait(int fd, int mode) {
-  struct tsc_poll_desc desc;
-  __tsc_poll_desc_init(&desc, fd, mode, NULL);
+  tsc_poll_desc_t desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
+  __tsc_poll_desc_init(desc, fd, mode, NULL);
 
   TSC_SIGNAL_MASK();
   // calling the low level Netpoll APIs to add ..
-  lock_acquire(&desc.lock);
-  __tsc_netpoll_add(&desc);
+  lock_acquire(&desc->lock);
+  __tsc_netpoll_add(desc);
   // then suspend current thread ..
-  vpu_suspend(&desc.lock, (unlock_handler_t)lock_release);
+  vpu_suspend(&desc->lock, (unlock_handler_t)lock_release);
 
   TSC_SIGNAL_UNMASK();
-  return desc.mode;
+
+  mode = desc->mode;
+  tsc_refcnt_put(desc);
+
+  return mode;
 }
 
 static void __tsc_netpoll_timeout(void *arg) {
@@ -85,8 +89,8 @@ static void __tsc_netpoll_timeout(void *arg) {
 
   desc->mode = 0;
 
-  vpu_ready(desc->wait);
   __tsc_netpoll_rem(desc);
+  vpu_ready(desc->wait);
 
 __exit_netpoll_timeout:
   lock_release(&desc->lock);
@@ -133,13 +137,13 @@ int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
   // if (desc->done) goto __exit_netpoll_wakeup;
   if (!TSC_CAS(&desc->done, false, true)) goto __exit_netpoll_wakeup;
 
+  __tsc_netpoll_rem(desc);
   // this function must be called by
   // system context, so don not need
   // to mask the signals ..
   vpu_ready(desc->wait);
   // put the ready task back to running queue
   // before removing the `desc' from the netpoll !!
-  __tsc_netpoll_rem(desc);
 
 __exit_netpoll_wakeup:
   lock_release(&desc->lock);
