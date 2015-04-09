@@ -1,7 +1,7 @@
 #ifndef _TSC_SUPPORT_LOCK_H_
 #define _TSC_SUPPORT_LOCK_H_
 
-#ifdef ENABLE_FUTEXT
+#ifdef ENABLE_FUTEX
 /* use a customized futex lock like Go */
 #include "futex_lock.h"
 
