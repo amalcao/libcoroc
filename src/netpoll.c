@@ -132,21 +132,26 @@ int tsc_net_timedwait(int fd, int mode, int64_t usec) {
 
 int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
   lock_acquire(&desc->lock);
-
+#if 0
   // hazard checking, maybe not neccessary..
   // if (desc->done) goto __exit_netpoll_wakeup;
   if (!TSC_CAS(&desc->done, false, true)) goto __exit_netpoll_wakeup;
+#endif
 
+  // must remove the desc before wakeup the wait task,
+  // so the netpoll will not return this desc again!!
   __tsc_netpoll_rem(desc);
+  
+  // since the `desc->wait' will release the desc, 
+  // so we must release the lock before calling vpu_ready
+  // to wakeup `desc->wait' !!
+  lock_release(&desc->lock);
+
   // this function must be called by
   // system context, so don not need
   // to mask the signals ..
   vpu_ready(desc->wait);
-  // put the ready task back to running queue
-  // before removing the `desc' from the netpoll !!
 
-__exit_netpoll_wakeup:
-  lock_release(&desc->lock);
   return 0;
 }
 

@@ -57,6 +57,12 @@ bool __tsc_netpoll_polling(bool block) {
 
   for (i = 0; i < ready; i++) {
     tsc_poll_desc_t desc = events[i].data.ptr;
+
+    // FIXME: hazard checking here, make sure only one
+    //        thread will wakeup this desc !!
+    if (!TSC_CAS(&desc->done, false, true)) 
+      continue;
+
     if (events[i].events & EPOLLERR) {
       mode = TSC_NETPOLL_ERROR;
     } else {
