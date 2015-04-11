@@ -14,13 +14,13 @@ MACRO(add_libcoroc_c_example name)
   IF(LIB_TCMALLOC)
      TARGET_LINK_LIBRARIES(
         ${name}.run
-        ${COROC_LIB} ${LIB_TCMALLOC} pthread m
+        ${COROC_LIB} ${LIB_TCMALLOC} pthread m rt
      )
   ELSE(LIB_TCMALLOC)
      TARGET_LINK_LIBRARIES(
         ${name}.run
-        ${COROC_LIB} pthread m
-     )
+        ${COROC_LIB} pthread m rt
+     ) 
   ENDIF(LIB_TCMALLOC)
 ENDMACRO(add_libcoroc_c_example)
 

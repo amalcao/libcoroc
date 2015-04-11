@@ -100,6 +100,11 @@ bool __tsc_netpoll_polling(bool block) {
   for (i = 0; i < size; i++) {
     tsc_poll_desc_t desc = tsc_netpoll_manager.table[i];
 
+    // FIXME: hazard checking here, make sure only one
+    //        thread will wakeup this desc !!
+    if (!TSC_CAS(&desc->done, false, true)) 
+      continue;
+
     if (pfds[i].revents & POLLERR) {
       mode = TSC_NETPOLL_ERROR;
     } else {
