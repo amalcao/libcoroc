@@ -6,6 +6,8 @@ sys.stderr.write("Loading the LibTSC runtime support..\n")
 
 sts = { 0xBAFF:"sleep", 0xFACE:"ready", 0xBEEF:"run", 0xBADD:"wait", 0xBADE:"iowait", 0xDEAD:"exit"}
 
+prios = { 0:"HIGHEST", 1:"HIGH", 2:"NORMAL", 3:"LOW", 4:"IDLE" }
+
 def linked_list(ptr, linkfield):
     cop = gdb.lookup_type('struct tsc_coroutine').pointer()
     while ptr:
@@ -46,6 +48,7 @@ class CoroutinesCmd(gdb.Command):
                 name = "<anno>"
 
             print (s, ptr['id'], "%5s" % sts[int(ptr['status'])], \
+               "[%s]" % prios[int(ptr['priority'])], \
                "\"%s\"" % name, blk.function, sl.symtab, sl.line)
 
 

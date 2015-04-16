@@ -26,6 +26,7 @@ syn keyword coStatement     __CoroC_Spawn __CoroC_Chan
 syn keyword coStatement     __CoroC_Yield __CoroC_Quit
 syn keyword coStatement     __CoroC_Chan_Close __CoroC_Self __CoroC_Exit
 syn keyword coStatement     __CoroC_Task_Send __CoroC_Task_Recv __CoroC_Task_Recv_NB
+syn keyword coStatement     __CoroC_Set_Name __CoroC_Set_Prio
 syn keyword coStatement     __CoroC_Timer_At __CoroC_Timer_After
 syn keyword coStatement     __CoroC_Ticker __CoroC_Stop
 syn keyword coStatement     __CoroC_Now __CoroC_Sleep
