@@ -364,8 +364,9 @@ int core_yield(void* args) {
   return 0;
 }
 
-static void __priv_task_queue_init(p_task_que *que) {
+static void __priv_task_queue_init(p_task_que *que, unsigned prio) {
 #ifdef ENABLE_LOCKFREE_RUNQ
+  que->prio = prio;
   que->runqhead = que->runqtail = 0;
 #else
   atomic_queue_init(que);
@@ -390,7 +391,7 @@ static void* per_vpu_initalize(void* vpu_id) {
 
   unsigned prio;
   for (prio = 0; prio < TSC_PRIO_NUM; ++prio) {
-    __priv_task_queue_init(& vpu->xt[prio]);
+    __priv_task_queue_init(& vpu->xt[prio], prio);
   }
 
   TSC_TLS_SET(vpu);
