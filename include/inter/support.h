@@ -23,7 +23,9 @@
 #endif  // __APPLE__
 
 #define TSC_NAME_LENGTH 32
-#define TSC_TASK_NUM_PERVPU 256
+#define TSC_TASK_NUM_PERPRIO 256
+
+#define TSC_PRIO_NUM 4
 
 // -- for thread APIs --
 typedef pthread_t TSC_OS_THREAD_T;

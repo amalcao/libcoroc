@@ -47,11 +47,13 @@ int find_max(void* arg) {
       sz1 = size - sz0;
 
       slave0 = tsc_coroutine_allocate(find_max, tsc_refcnt_get(self), "s0",
-                                      TSC_COROUTINE_NORMAL, 0);
+                                      TSC_COROUTINE_NORMAL, 
+                                      TSC_DEFAULT_PRIO, 0);
       tsc_send(slave0, buf, sz0 * sizeof(int));
 
       slave1 = tsc_coroutine_allocate(find_max, tsc_refcnt_get(self), "s1",
-                                      TSC_COROUTINE_NORMAL, 0);
+                                      TSC_COROUTINE_NORMAL,
+                                      TSC_DEFAULT_PRIO, 0);
       tsc_send(slave1, buf + sz0, sz1 * sizeof(int));
 
       tsc_recv(&buf[0], sizeof(int), true);
@@ -77,7 +79,8 @@ int main(void* arg) {
 
   gen_array_elem(array, size);
   slave = tsc_coroutine_allocate(find_max, tsc_refcnt_get(self), "s",
-                                 TSC_COROUTINE_NORMAL, 0);
+                                 TSC_COROUTINE_NORMAL, 
+                                 TSC_DEFAULT_PRIO, 0);
 
   tsc_send(slave, array, size * sizeof(int));  // tsc_send the content of array
   tsc_recv(&max, sizeof(int), true);

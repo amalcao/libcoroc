@@ -35,11 +35,13 @@ int main(int argc, char** argv) {
   for (; i < SIZE; i++) {
     chans[i] = tsc_chan_allocate(sizeof(int), 0);
     thrds[i] = tsc_coroutine_allocate(sub_task, chans[i], "",
-                                      TSC_COROUTINE_NORMAL, NULL);
+                                      TSC_COROUTINE_NORMAL, 
+                                      TSC_DEFAULT_PRIO, NULL);
     tsc_chan_set_recv(set, chans[i], &id);
   }
 
-  tsc_coroutine_allocate(sub_task2, me, "msg", TSC_COROUTINE_NORMAL, NULL);
+  tsc_coroutine_allocate(sub_task2, me, "msg", 
+                         TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL);
   tsc_chan_set_recv(set, NULL, &message);
 
   for (i = 0; i <= SIZE; i++) {

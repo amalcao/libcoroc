@@ -72,7 +72,8 @@ void main(int argc, char** argv) {
 
   for (y = 0; y < size; y++) {
     tsc_coroutine_t slave = tsc_coroutine_allocate(renderRow, chans, "",
-                                                   TSC_COROUTINE_NORMAL, NULL);
+                                                   TSC_COROUTINE_NORMAL, 
+                                                   TSC_DEFAULT_PRIO, NULL);
     tsc_chan_send(chans[WORK_CHAN], &y);
   }
 

@@ -68,7 +68,9 @@ void mult_Atv(double *v, double *u) {
   _u = u;
   for (k = 0; k < NumCPU; k++) {
     tsc_coroutine_t task =
-        tsc_coroutine_allocate(task_Atv, k, "", TSC_COROUTINE_NORMAL, NULL);
+        tsc_coroutine_allocate(task_Atv, k, "", 
+                               TSC_COROUTINE_NORMAL, 
+                               TSC_DEFAULT_PRIO, NULL);
   }
 
   for (k = 0; k < NumCPU; k++) tsc_chan_recv(finishChan, &finish);
@@ -81,7 +83,9 @@ void mult_Av(double *v, double *u) {
   _u = u;
   for (k = 0; k < NumCPU; k++) {
     tsc_coroutine_t task =
-        tsc_coroutine_allocate(task_Av, k, "", TSC_COROUTINE_NORMAL, NULL);
+        tsc_coroutine_allocate(task_Av, k, "",
+                               TSC_COROUTINE_NORMAL, 
+                               TSC_DEFAULT_PRIO, NULL);
   }
 
   for (k = 0; k < NumCPU; k++) tsc_chan_recv(finishChan, &finish);

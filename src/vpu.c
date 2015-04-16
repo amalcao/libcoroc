@@ -22,35 +22,35 @@ TSC_SIGNAL_MASK_DEFINE
 #ifdef ENABLE_LOCKFREE_RUNQ
 // local runq lock-free interfaces
 // the algorithm is as same as Go 1.3 runtime.
-static inline tsc_coroutine_t __runqget(vpu_t *vpu) {
+static inline tsc_coroutine_t __runqget(p_task_que *pq) {
   tsc_coroutine_t task = NULL;
   uint32_t tail, head;
 
   while (1) {
-    head = TSC_ATOMIC_READ(vpu->runqhead);
-    tail = vpu->runqtail;
+    head = TSC_ATOMIC_READ(pq->runqhead);
+    tail = pq->runqtail;
     if (tail == head)
       return NULL;
-    task = vpu->runq[head % TSC_TASK_NUM_PERVPU];
-    if (TSC_CAS(& vpu->runqhead, head, head+1))
+    task = pq->runq[head % TSC_TASK_NUM_PERPRIO];
+    if (TSC_CAS(& pq->runqhead, head, head+1))
       break;
   }
   return task;
 }
 
-static bool __runqputslow(vpu_t *vpu, tsc_coroutine_t task,
+static bool __runqputslow(p_task_que *pq, tsc_coroutine_t task,
         uint32_t head, uint32_t tail) {
 
-  tsc_coroutine_t temp[TSC_TASK_NUM_PERVPU/2+1];
+  tsc_coroutine_t temp[TSC_TASK_NUM_PERPRIO/2+1];
   uint32_t n, i;
 
   n = (tail - head) / 2;
-  assert (n == TSC_TASK_NUM_PERVPU/2);
+  assert (n == TSC_TASK_NUM_PERPRIO/2);
 
   for (i = 0; i < n; ++i)
-    temp[i] = vpu->runq[(head+i) % TSC_TASK_NUM_PERVPU];
+    temp[i] = pq->runq[(head+i) % TSC_TASK_NUM_PERPRIO];
 
-  if (!TSC_CAS(&vpu->runqhead, head, head+n))
+  if (!TSC_CAS(&pq->runqhead, head, head+n))
     return false;
 
   temp[n] = task;
@@ -59,57 +59,57 @@ static bool __runqputslow(vpu_t *vpu, tsc_coroutine_t task,
   for (i = 0; i < n; ++i)
     queue_link(& temp[i]->status_link, & temp[i+1]->status_link);
 
-  atomic_queue_add_range(&vpu_manager.xt, n+1,
+  atomic_queue_add_range(&vpu_manager.xt[pq->prio], n+1,
                          &temp[0]->status_link,
                          &task->status_link);
   return true;
 }
 
-static void __runqput(vpu_t *vpu, tsc_coroutine_t task) {
+static void __runqput(p_task_que *pq, tsc_coroutine_t task) {
   uint32_t tail, head;
 
   while (1) {
-    head = TSC_ATOMIC_READ(vpu->runqhead);
-    tail = vpu->runqtail;
-    if (tail - head < TSC_TASK_NUM_PERVPU) {
-      vpu->runq[tail % TSC_TASK_NUM_PERVPU] = task;
-      TSC_ATOMIC_WRITE(vpu->runqtail, tail+1);
+    head = TSC_ATOMIC_READ(pq->runqhead);
+    tail = pq->runqtail;
+    if (tail - head < TSC_TASK_NUM_PERPRIO) {
+      pq->runq[tail % TSC_TASK_NUM_PERPRIO] = task;
+      TSC_ATOMIC_WRITE(pq->runqtail, tail+1);
       break;
     }
 
     // if the local queue is full,
     // try to move half tasks to the global queue.
-    if (__runqputslow(vpu, task, head, tail))
+    if (__runqputslow(pq, task, head, tail))
       break;
   }
 
   return;
 }
 
-static uint32_t __runqgrab(vpu_t *vpu, tsc_coroutine_t *temp) {
+static uint32_t __runqgrab(p_task_que *pq, tsc_coroutine_t *temp) {
   uint32_t tail, head, n, i;
 
   while (1) {
-    head = TSC_ATOMIC_READ(vpu->runqhead);
-    tail = TSC_ATOMIC_READ(vpu->runqtail);
+    head = TSC_ATOMIC_READ(pq->runqhead);
+    tail = TSC_ATOMIC_READ(pq->runqtail);
     n = tail - head;
     n = n - n / 2;
     if (n == 0)
       break;
-    if (n > TSC_TASK_NUM_PERVPU/2)
+    if (n > TSC_TASK_NUM_PERPRIO/2)
       continue;
     for (i = 0; i < n; ++i)
-      temp[i] = vpu->runq[(head + i)%TSC_TASK_NUM_PERVPU];
-    if (TSC_CAS(&vpu->runqhead, head, head+n))
+      temp[i] = pq->runq[(head + i)%TSC_TASK_NUM_PERPRIO];
+    if (TSC_CAS(& pq->runqhead, head, head+n))
       break;
   }
 
   return n;
 }
 
-static tsc_coroutine_t __runqsteal(vpu_t *vpu, vpu_t *victim) {
+static tsc_coroutine_t __runqsteal(p_task_que *pq, p_task_que *victim) {
   tsc_coroutine_t task;
-  tsc_coroutine_t temp[TSC_TASK_NUM_PERVPU/2];
+  tsc_coroutine_t temp[TSC_TASK_NUM_PERPRIO/2];
   uint32_t tail, head, n, i;
 
   n = __runqgrab(victim, temp);
@@ -119,13 +119,13 @@ static tsc_coroutine_t __runqsteal(vpu_t *vpu, vpu_t *victim) {
   if (n == 0)
     return task;
 
-  head = TSC_ATOMIC_READ(vpu->runqhead);
-  tail = vpu->runqtail;
-  assert (tail - head + n < TSC_TASK_NUM_PERVPU);
+  head = TSC_ATOMIC_READ(pq->runqhead);
+  tail = pq->runqtail;
+  assert (tail - head + n < TSC_TASK_NUM_PERPRIO);
 
   for (i = 0; i < n; i++, tail++)
-    vpu->runq[tail % TSC_TASK_NUM_PERVPU] = temp[i];
-  TSC_ATOMIC_WRITE(vpu->runqtail, tail);
+    pq->runq[tail % TSC_TASK_NUM_PERPRIO] = temp[i];
+  TSC_ATOMIC_WRITE(pq->runqtail, tail);
   return task;
 }
 
@@ -160,46 +160,38 @@ static inline void __mysrand(vpu_t* vpu, unsigned seed) {
   vpu->rand_seed = seed;
 }
 
-static inline void* __random_steal(vpu_t* vpu) {
+static inline void* __random_steal(vpu_t* vpu, unsigned prio) {
   // randomly select a victim to steal
   int victim_id = __myrand(vpu) % (vpu_manager.xt_index);
-
-#if 0
   // ignore it if the victim is the current vpu ..
   if (victim_id == vpu -> id) 
     return NULL;
-#endif
+
+  vpu_t *victim = & vpu_manager.vpu[victim_id];
 
   // try to steal a work ..
 #ifdef ENABLE_LOCKFREE_RUNQ
-  return __runqsteal(vpu, &vpu_manager.vpu[victim_id]);
+  return __runqsteal(& vpu->xt[prio], & victim->xt[prio]);
 #else
-  return atomic_queue_rem(&vpu_manager.xt[victim_id]);
+  return atomic_queue_rem(& victim->xt[prio]);
 #endif // ENABLE_LOCKFREE_RUNQ
 }
 // }}
 
-static inline tsc_coroutine_t core_elect(vpu_t* vpu) {
-#if 0
-  if (TSC_ATOMIC_READ(vpu_manager . total_ready) == 0)
-    return NULL;
-#endif
-
-#ifdef ENABLE_LOCKFREE_RUNQ
-  tsc_coroutine_t candidate = atomic_queue_rem(&vpu_manager.xt);
-#else
-  tsc_coroutine_t candidate =
-      atomic_queue_rem(&vpu_manager.xt[vpu_manager.xt_index]);
-#endif // ENABLE_LOCKFREE_RUNQ
-
-#ifdef ENABLE_WORKSTEALING
+static inline tsc_coroutine_t core_elect(vpu_t *vpu, unsigned prio) {
+  
+  // try to fetch a ready task from the global queue.
+  tsc_coroutine_t candidate = 
+    atomic_queue_rem(&vpu_manager.xt[prio]);
+  
+  // if global queue is empty, 
+  // try to steal a task from other vpu.
   if (candidate == NULL) {
     int failure_time = 0;
-    while ((candidate = __random_steal(vpu)) == NULL) {
+    while ((candidate = __random_steal(vpu, prio)) == NULL) {
       if (failure_time++ > MAX_STEALING_FAIL_NUM) break;
     }
   }
-#endif  // ENABLE_WORKSTEALING
 
   return candidate;
 }
@@ -230,49 +222,56 @@ static void core_sched(void) {
 
   /* --- the actual loop -- */
   while (true) {
+    unsigned prio;
+    for (prio = 0; prio < TSC_PRIO_NUM; ++prio) {
+      // ignore the 
+      if (TSC_ATOMIC_READ(vpu_manager.ready[prio]) == 0) continue;
+
+      // try to fetch one ready task from the private queue
 #ifdef ENABLE_LOCKFREE_RUNQ
-    candidate = __runqget(vpu);
+      candidate = __runqget(& vpu->xt[prio]);
 #else
-    candidate = atomic_queue_try_rem(&vpu_manager.xt[vpu->id]);
+      candidate = atomic_queue_try_rem(& vpu->xt[prio]);
 #endif // ENABLE_LOCKFREE_RUNQ
 
-    if (candidate == NULL) {
-      // polling the async net IO ..
-      __tsc_netpoll_polling(false);
+      if (candidate == NULL) {
+        // polling the async net IO ..
+        __tsc_netpoll_polling(false);
 
-      // try to fetch tasks from the global queue,
-      // or stealing from other VPUs' queue ..
-      candidate = core_elect(vpu);
-    }
+        // try to fetch tasks from the global queue,
+        // or stealing from other VPUs' queue ..
+        candidate = core_elect(vpu, prio);
+      }
 
-    if (candidate != NULL) {
-#if 0 /* the timeslice is not used in this version */
-          if (candidate -> rem_timeslice == 0)
-            candidate -> rem_timeslice = candidate -> init_timeslice;
-#endif
-      // atomic dec the total idle number
-      TSC_ATOMIC_DEC(vpu_manager.idle);
+      if (candidate != NULL) {
+        assert(candidate->priority == prio);
 
-      // atomic dec the total ready jobs' number
-      TSC_ATOMIC_DEC(vpu_manager.total_ready);
+        // atomic dec the total idle number
+        TSC_ATOMIC_DEC(vpu_manager.idle);
 
-      candidate->syscall = false;
-      candidate->status = TSC_COROUTINE_RUNNING;
-      candidate->async_wait = 0;
-      candidate->vpu_id = vpu->id;
-      // FIXME : how to decide the affinity ?
-      candidate->vpu_affinity = vpu->id;
+        // atomic dec the total ready jobs' number
+        TSC_ATOMIC_DEC(vpu_manager.total_ready);
+        TSC_ATOMIC_DEC(vpu_manager.ready[candidate->priority]);
 
-      /* restore the sigmask nested level */
-      TSC_SIGNAL_STATE_LOAD(&candidate->sigmask_nest);
+        candidate->syscall = false;
+        candidate->status = TSC_COROUTINE_RUNNING;
+        candidate->async_wait = 0;
+        candidate->vpu_id = vpu->id;
+        // FIXME : how to decide the affinity ?
+        candidate->vpu_affinity = vpu->id;
 
-      vpu->current = candidate;  // important !!
+        /* restore the sigmask nested level */
+        TSC_SIGNAL_STATE_LOAD(&candidate->sigmask_nest);
+
+        vpu->current = candidate;  // important !!
 #ifdef ENABLE_SPLITSTACK
-      TSC_STACK_CONTEXT_LOAD(&candidate->ctx);
+        TSC_STACK_CONTEXT_LOAD(&candidate->ctx);
 #endif
-      /* swap to the candidate's context */
-      TSC_CONTEXT_LOAD(&candidate->ctx);
-    }
+        /* swap to the candidate's context */
+        TSC_CONTEXT_LOAD(&candidate->ctx);
+      }
+    } // for each priority level ..
+
     if (++idle_loops > MAX_SPIN_LOOP_NUM) {
       pthread_mutex_lock(&vpu_manager.lock);
       vpu_manager.alive--;
@@ -356,15 +355,21 @@ int core_yield(void* args) {
   tsc_coroutine_t victim = (tsc_coroutine_t)args;
 
   victim->status = TSC_COROUTINE_READY;
-#ifdef ENABLE_LOCKFREE_RUNQ
-  atomic_queue_add(&vpu_manager.xt, &victim->status_link);
-#else
-  atomic_queue_add(&vpu_manager.xt[vpu_manager.xt_index],
+  atomic_queue_add(&vpu_manager.xt[victim->priority], 
                    &victim->status_link);
-#endif
+
+  TSC_ATOMIC_INC(vpu_manager.ready[victim->priority]);
   TSC_ATOMIC_INC(vpu_manager.total_ready);
 
   return 0;
+}
+
+static void __priv_task_queue_init(p_task_que *que) {
+#ifdef ENABLE_LOCKFREE_RUNQ
+  que->runqhead = que->runqtail = 0;
+#else
+  atomic_queue_init(que);
+#endif // ENABLE_LOCKFREE_RUNQ
 }
 
 // init every vpu thread, and make current stack context
@@ -379,17 +384,22 @@ static void* per_vpu_initalize(void* vpu_id) {
   vpu->id = (int)((tsc_word_t)vpu_id);
   vpu->ticks = 0;
   vpu->watchdog = 0;
-#ifdef ENABLE_LOCKFREE_RUNQ
-  vpu->runqhead = vpu->runqtail = 0;
-#endif
+
   // add by zhj, init the rand seed.
   __mysrand(vpu, vpu->id + 1);
+
+  unsigned prio;
+  for (prio = 0; prio < TSC_PRIO_NUM; ++prio) {
+    __priv_task_queue_init(& vpu->xt[prio]);
+  }
 
   TSC_TLS_SET(vpu);
 
   // initialize the system scheduler coroutine ..
-  scheduler = tsc_coroutine_allocate(NULL, NULL, "sys/scheduler",
-                                     TSC_COROUTINE_IDLE, NULL);
+  scheduler = tsc_coroutine_allocate(NULL, NULL, 
+                                     "sys/scheduler",
+                                     TSC_COROUTINE_IDLE, 
+                                     0, NULL);
 
   vpu->current = vpu->scheduler = scheduler;
   vpu->initialized = true;
@@ -436,17 +446,18 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
   vpu_manager.vpu = (vpu_t*)TSC_ALLOC(vpu_mp_count * sizeof(vpu_t));
 
   // global queues initialization
-#ifdef ENABLE_LOCKFREE_RUNQ
-  atomic_queue_init(&vpu_manager.xt);
-#else
-  vpu_manager.xt = (queue_t*)TSC_ALLOC((vpu_mp_count + 1) * sizeof(vpu_t));
-  atomic_queue_init(&vpu_manager.xt[vpu_manager.xt_index]);
-#endif // ENABLE_LOCKFREE_RUNQ
+  unsigned prio;
+  for (prio = 0; prio < TSC_PRIO_NUM; ++prio) {
+    atomic_queue_init(& vpu_manager.xt[prio]);
+    vpu_manager.ready[prio] = 0;
+  }
+  vpu_manager.ready[TSC_PRIO_NUM] = 0;
+
   atomic_queue_init(&vpu_manager.coroutine_list);
 
   vpu_manager.alive = vpu_mp_count;
   vpu_manager.idle = 0;
-  vpu_manager.total_ready = 1;
+  vpu_manager.total_ready = 0;
 
   pthread_cond_init(&vpu_manager.cond, NULL);
   pthread_mutex_init(&vpu_manager.lock, NULL);
@@ -457,7 +468,8 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
 
   // create the first coroutine, "init" ..
   tsc_coroutine_t init =
-      tsc_coroutine_allocate(entry, NULL, "init", TSC_COROUTINE_MAIN, 0);
+      tsc_coroutine_allocate(entry, NULL, "init", 
+                             TSC_COROUTINE_MAIN, TSC_PRIO_LOW, 0);
 
   // VPU initialization
   tsc_word_t index = 0;
@@ -466,9 +478,6 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
     TSC_OS_THREAD_ATTR_INIT(&attr);
     TSC_OS_THREAD_ATTR_SETSTACKSZ(&attr, stacksize);
 
-#ifndef ENABLE_LOCKFREE_RUNQ
-    atomic_queue_init(&vpu_manager.xt[index]);
-#endif // ENABLE_LOCKFREE_RUNQ
     TSC_OS_THREAD_CREATE(&(vpu_manager.vpu[index].os_thr), NULL,
                          per_vpu_initalize, (void*)index);
   }
@@ -485,16 +494,24 @@ void vpu_ready(tsc_coroutine_t coroutine) {
          coroutine->status == TSC_COROUTINE_WAIT);
 
   coroutine->status = TSC_COROUTINE_READY;
+  unsigned p = coroutine->priority;
+
+  if (vpu != NULL) {
+    // try to add this task to current vpu's private queue
 #ifdef ENABLE_LOCKFREE_RUNQ
-  if (vpu != NULL) 
-    __runqput(vpu, coroutine);
-  else /* called by the asynchornized threads */
-    atomic_queue_add(&vpu_manager.xt, &coroutine->status_link);
+    __runqput(& vpu->xt[p], coroutine);
 #else
-  atomic_queue_add(&vpu_manager.xt[coroutine->vpu_affinity],
-                   &coroutine->status_link);
+    atomic_queue_add(& vpu->xt[p], & coroutine->status_link);
 #endif // ENABLE_LOCKFREE_RUNQ
+  } else {
+    /* called by the asynchornized threads */
+    atomic_queue_add(& vpu_manager.xt[p],
+                     & coroutine->status_link);
+  }
+
   TSC_ATOMIC_INC(vpu_manager.total_ready);
+  TSC_ATOMIC_INC(vpu_manager.ready[p]);
+
   if (coroutine->async_wait)
     TSC_ATOMIC_DEC(vpu_manager.total_iowait);
 
@@ -600,9 +617,9 @@ void vpu_backtrace(vpu_t *vpu) {
       // schedule the rescent suspended one,
       // in order to traceback whose call stack..
 #ifdef ENABLE_LOCKFREE_RUNQ
-      __runqput(vpu, wait_thr);
+      __runqput(&vpu->xt[wait_thr->priority], wait_thr);
 #else
-      atomic_queue_add(&vpu_manager.xt[vpu->id], 
+      atomic_queue_add(&vpu->xt[wait_thr->priority], 
                        &wait_thr->status_link);
 #endif // ENABLE_LOCKFREE_RUNQ
     }
@@ -612,9 +629,10 @@ void vpu_backtrace(vpu_t *vpu) {
   // because the main coroutine exits will kill the program.
   vpu_manager.main->backtrace = true;
 #ifdef ENABLE_LOCKFREE_RUNQ
-  __runqput(vpu, vpu_manager.main);
+  __runqput(& vpu->xt[vpu_manager.main->priority], 
+            vpu_manager.main);
 #else
-  atomic_queue_add(&vpu_manager.xt[vpu->id], 
+  atomic_queue_add(&vpu->xt[vpu_manager.main->priority], 
                    &(vpu_manager.main->status_link));
 #endif // ENABLE_LOCKFREE_RUNQ
 }

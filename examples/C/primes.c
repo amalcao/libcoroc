@@ -22,7 +22,8 @@ int primetask(void *arg) {
   if (!quiet) printf("%d\n", p);
 
   nc = tsc_chan_allocate(sizeof(unsigned long), buffer);
-  tsc_coroutine_allocate(primetask, nc, "", TSC_COROUTINE_NORMAL, NULL);
+  tsc_coroutine_allocate(primetask, nc, "", 
+                         TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL);
   for (;;) {
     tsc_chan_recv(c, &i);
     if (i % p) tsc_chan_send(nc, &i);
@@ -37,6 +38,7 @@ void main(int argc, char **argv) {
   printf("goal=%d\n", goal);
 
   c = tsc_chan_allocate(sizeof(unsigned long), buffer);
-  tsc_coroutine_allocate(primetask, c, "", TSC_COROUTINE_NORMAL, NULL);
+  tsc_coroutine_allocate(primetask, c, "", 
+                         TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL);
   for (i = 2;; i++) tsc_chan_send(c, &i);
 }

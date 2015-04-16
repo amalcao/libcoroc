@@ -228,7 +228,8 @@ static void tsc_intertimer_start(void) {
   assert(tsc_intertimer_manager.daemon == NULL);
 
   tsc_coroutine_t daemon = tsc_coroutine_allocate(
-      tsc_intertimer_routine, NULL, "timer", TSC_COROUTINE_NORMAL, NULL);
+      tsc_intertimer_routine, NULL, "timer", 
+      TSC_COROUTINE_NORMAL, TSC_PRIO_HIGH, NULL);
   tsc_intertimer_manager.daemon = daemon;
 }
 

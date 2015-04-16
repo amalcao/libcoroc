@@ -56,7 +56,8 @@ int find_max(tsc_chan_t chan) {
       for (; i < 2; ++i) {
         ch[i] = tsc_chan_allocate(sizeof(int), 0);
         slave[i] = tsc_coroutine_allocate(find_max, ch[i], "",
-                                          TSC_COROUTINE_NORMAL, 0);
+                                          TSC_COROUTINE_NORMAL,
+                                          TSC_DEFAULT_PRIO, 0);
         tsc_chan_send(ch[i], &sz[i]);
         tsc_chan_send(ch[i], &st[i]);
       }
@@ -80,7 +81,9 @@ int main(int argc, char** argv) {
 
   gen_array_elem(array, size);
   chan = tsc_chan_allocate(sizeof(int), 0);
-  slave = tsc_coroutine_allocate(find_max, chan, "s", TSC_COROUTINE_NORMAL, 0);
+  slave = tsc_coroutine_allocate(find_max, chan, "s", 
+                                 TSC_COROUTINE_NORMAL,
+                                 TSC_DEFAULT_PRIO, 0);
 
   tsc_chan_send(chan, &size);   // send the size of array
   tsc_chan_send(chan, &start);  // send the start index of array

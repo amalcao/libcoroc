@@ -35,6 +35,7 @@ typedef struct tsc_coroutine {
   uint32_t async_wait:8;
 
   uint32_t status;
+  unsigned priority;
 
   queue_item_t status_link;
   queue_item_t trace_link;
@@ -74,15 +75,25 @@ enum tsc_coroutine_type {
   TSC_COROUTINE_MAIN = 0x2,
 };
 
+enum {
+  TSC_PRIO_HIGHEST = 0,
+  TSC_PRIO_HIGH = 1,
+  TSC_PRIO_NORMAL = 2,
+  TSC_PRIO_LOW = 3,
+};
+
+#define TSC_DEFAULT_PRIO TSC_PRIO_NORMAL
+
 enum tsc_coroutine_deallocate {
   TSC_COROUTINE_UNDETACH = 0x0,
   TSC_COROUTINE_DETACH = 0x1,
 };
 
-extern tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
-                                              void* arguments, const char* name,
-                                              uint32_t type,
-                                              tsc_coroutine_cleanup_t cleanup);
+extern tsc_coroutine_t 
+tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
+                       void* arguments, const char* name,
+                       uint32_t type, unsigned priority,
+                       tsc_coroutine_cleanup_t cleanup);
 extern void tsc_coroutine_deallocate(tsc_coroutine_t);
 extern void tsc_coroutine_exit(int value);
 extern void tsc_coroutine_yield(void);
@@ -95,22 +106,21 @@ extern void tsc_coroutine_detach(void);
 
 #define tsc_coroutine_spawn(entry, args, name)                            \
   tsc_coroutine_allocate((tsc_coroutine_handler_t)(entry), (void*)(args), \
-                         (name), TSC_COROUTINE_NORMAL, NULL)
+                         (name), TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL)
 
-// -- interfaces for tsc_coroutine_attributes --
-extern void tsc_coroutine_attr_init(tsc_coroutine_attributes_t* attr);
 
-static inline void tsc_coroutine_attr_set_stacksize(
-    tsc_coroutine_attributes_t* attr, uint32_t sz) {
-  attr->stack_size = sz;
+static inline void 
+tsc_coroutine_set_priority(unsigned priority) {
+  assert(priority < TSC_PRIO_NUM);
+  tsc_coroutine_t me = tsc_coroutine_self();
+  me->priority = priority;
 }
-static inline void tsc_coroutine_attr_set_timeslice(
-    tsc_coroutine_attributes_t* attr, uint32_t slice) {
-  attr->timeslice = slice;
-}
-static inline void tsc_coroutine_attr_set_affinity(
-    tsc_coroutine_attributes_t* attr, uint32_t affinity) {
-  attr->affinity = affinity;
+
+static inline void 
+tsc_coroutine_set_name(const char *name) {
+  assert(name != NULL);
+  tsc_coroutine_t me = tsc_coroutine_self();
+  strncpy(me->name, name, sizeof(me->name) - 1);
 }
 
 #endif  // _TSC_CORE_COROUTINE_H_

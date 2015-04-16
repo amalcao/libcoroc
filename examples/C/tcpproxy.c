@@ -49,7 +49,8 @@ int main(int argc, char **argv) {
   tsc_net_nonblock(fd);
   while ((cfd = tsc_net_accept(fd, remote, &rport)) >= 0) {
     fprintf(stderr, "connection from %s:%d\n", remote, rport);
-    tsc_coroutine_allocate(proxy_task, cfd, "proxy", TSC_COROUTINE_NORMAL, 0);
+    tsc_coroutine_allocate(proxy_task, (void*)cfd, "proxy",
+                           TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL);
   }
 
   tsc_coroutine_exit(0);
@@ -67,9 +68,9 @@ int proxy_task(void *v) {
   fprintf(stderr, "connected to %s:%d\n", server, port);
 
   tsc_coroutine_allocate(rwtask, mkfd2(fd, remotefd), "rwtask",
-                         TSC_COROUTINE_NORMAL, 0);
+                         TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL);
   tsc_coroutine_allocate(rwtask, mkfd2(remotefd, fd), "rwtask",
-                         TSC_COROUTINE_NORMAL, 0);
+                         TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL);
 
   tsc_coroutine_exit(0);
 }

@@ -23,7 +23,8 @@ int main(int argc, char **argv) {
   url = argv[3];
 
   for (i = 0; i < n; i++) {
-    tsc_coroutine_allocate(fetchtask, 0, "fetch", TSC_COROUTINE_NORMAL, 0);
+    tsc_coroutine_allocate(fetchtask, 0, "fetch", 
+                           TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, 0);
     tsc_udelay(1000);
   }
 

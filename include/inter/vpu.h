@@ -10,6 +10,18 @@
 // The unlock handler type
 typedef void (*unlock_handler_t)(volatile void *lock);
 
+// Type of the private task queue
+#ifdef ENABLE_LOCKFREE_RUNQ
+typedef struct private_task_queue {
+  unsigned prio; // the priority level for this pq
+  tsc_coroutine_t runq[TSC_TASK_NUM_PERPRIO];
+  uint32_t runqhead;
+  uint32_t runqtail;
+} p_task_que;
+#else
+typedef queue_t p_task_que;
+#endif
+
 // Type of VPU information,
 //  It's a OS Thread here!!
 typedef struct vpu {
@@ -21,11 +33,10 @@ typedef struct vpu {
   unsigned rand_seed;
   tsc_coroutine_t current;
   tsc_coroutine_t scheduler;
-#ifdef ENABLE_LOCKFREE_RUNQ
-  tsc_coroutine_t runq[TSC_TASK_NUM_PERVPU]; // local runq
-  uint32_t runqhead; // head index of runq
-  uint32_t runqtail; // tail index of runq
-#endif // ENABLE_LOCKFREE_RUNQ
+  
+  // the private queues for each priority level:
+  p_task_que xt[TSC_PRIO_NUM];
+
   void *hold;
   unlock_handler_t unlock_handler;
 } vpu_t;
@@ -33,11 +44,12 @@ typedef struct vpu {
 // Type of the VPU manager
 typedef struct vpu_manager {
   vpu_t *vpu;
-#ifdef ENABLE_LOCKFREE_RUNQ
-  queue_t xt; // the global runq (list)
-#else
-  queue_t *xt;
-#endif // ENABLE_LOCKFREE_RUNQ
+  
+  // the global running queue for each priority
+  queue_t xt[TSC_PRIO_NUM];
+  // total ready tasks for each priority
+  uint32_t ready[TSC_PRIO_NUM + 1];
+
   uint32_t xt_index;
   uint32_t last_pid;
   tsc_coroutine_t main;

@@ -30,7 +30,8 @@ int main(int argc, char** argv) {
   tsc_timer_after(timer, 1000000 * 1);  // 1 seconds later
 
   tsc_coroutine_allocate(subtask, tsc_refcnt_get(chan), "sub",
-                         TSC_COROUTINE_NORMAL, 0);
+                         TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, 0);
+
   for (i = 0; i < 5; i++) {
     printf("waiting for 1 seconds!\n");
     tsc_chan_recv((tsc_chan_t)timer, &awaken);

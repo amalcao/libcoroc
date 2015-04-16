@@ -35,7 +35,7 @@ void tsc_coroutine_attr_init(tsc_coroutine_attributes_t *attr) {
 
 tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
                                        void *arguments, const char *name,
-                                       uint32_t type,
+                                       uint32_t type, unsigned priority,
                                        tsc_coroutine_cleanup_t cleanup) {
   TSC_SIGNAL_MASK();
 
@@ -60,10 +60,14 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
     coroutine->syscall = false;
     coroutine->sigmask_nest = 0;
 
-    if (type == TSC_COROUTINE_IDLE)
+    if (type == TSC_COROUTINE_IDLE) {
       coroutine->stack_size = 0;
-    else
+      coroutine->priority = TSC_PRIO_NUM; // lower than default
+    } else {
       coroutine->stack_size = TSC_DEFAULT_STACK_SIZE;
+      coroutine->priority = priority < TSC_PRIO_NUM ? 
+                                priority : TSC_PRIO_LOW;
+    }
 
     coroutine->vpu_affinity = TSC_DEFAULT_AFFINITY;
     coroutine->init_timeslice = TSC_DEFAULT_TIMESLICE;
@@ -88,19 +92,12 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
     TSC_CONTEXT_INIT(&coroutine->ctx, coroutine->stack_base, size, coroutine);
     atomic_queue_add(&vpu_manager.coroutine_list, &coroutine->trace_link);
 
-    if (coroutine->type != TSC_COROUTINE_MAIN) {
-      vpu_ready(coroutine);
-    } else {
+    if (coroutine->type == TSC_COROUTINE_MAIN) {
       vpu_manager.main = coroutine;
-      coroutine->status = TSC_COROUTINE_READY;
-      // add the `main' task into global runq:
-#ifdef ENABLE_LOCKFREE_RUNQ
-      atomic_queue_add(& vpu_manager.xt, & coroutine->status_link);
-#else
-      atomic_queue_add(& vpu_manager.xt[vpu_manager.xt_index],
-                       & coroutine->status_link);
-#endif // ENABLE_LOCKFREE_RUNQ
     }
+
+    // add the `main' task into global runq:
+    vpu_ready(coroutine);
   }
   TSC_SIGNAL_UNMASK();
   return coroutine;

@@ -72,15 +72,18 @@
 #define __CoroC_spawn_entry_t     tsc_coroutine_handler_t
 #define __CoroC_spawn_cleanup_t   tsc_coroutine_cleanup_t
 
-#define __CoroC_Spawn(F, A) \
-            tsc_coroutine_allocate((F), (A), "", TSC_COROUTINE_NORMAL, NULL)
-#define __CoroC_Spawn_Opt(F, A, CB) \
-            tsc_coroutine_allocate((F), (A), "", TSC_COROUTINE_NORMAL, (CB))
+#define __CoroC_Spawn(F, A, P, CB) \
+            tsc_coroutine_allocate((F), (A), "", \
+                                   TSC_COROUTINE_NORMAL, \
+                                   P, (CB))
 
 #define __CoroC_Yield   tsc_coroutine_yield
 #define __CoroC_Self    tsc_coroutine_self
 #define __CoroC_Quit    tsc_coroutine_exit
 #define __CoroC_Exit    tsc_coroutine_exit
+
+#define __CoroC_Set_Name    tsc_coroutine_set_name
+#define __CoroC_Set_Prio    tsc_coroutine_set_priority
 
 /// for group ops
 #define __CoroC_Group       tsc_group_alloc
