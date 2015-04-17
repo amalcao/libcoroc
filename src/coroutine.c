@@ -97,7 +97,7 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
     }
 
     // add the `main' task into global runq:
-    vpu_ready(coroutine);
+    vpu_ready(coroutine, true);
   }
   TSC_SIGNAL_UNMASK();
   return coroutine;
@@ -174,3 +174,4 @@ void tsc_coroutine_backtrace(tsc_coroutine_t self) {
   vpu_syscall(core_exit);
   TSC_SIGNAL_UNMASK();
 }
+

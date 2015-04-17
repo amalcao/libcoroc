@@ -112,7 +112,7 @@ static int __tsc_chan_send(tsc_chan_t chan, void *buf, bool block) {
   quantum *qp = fetch_quantum(&chan->recv_que);
   if (qp != NULL) {
     __chan_memcpy(qp->itembuf, buf, chan->elemsize);
-    vpu_ready(qp->coroutine);
+    vpu_ready(qp->coroutine, false);
     return CHAN_SUCCESS;
   }
 
@@ -150,7 +150,7 @@ static int __tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
   quantum *qp = fetch_quantum(&chan->send_que);
   if (qp != NULL) {
     __chan_memcpy(buf, qp->itembuf, chan->elemsize);
-    vpu_ready(qp->coroutine);
+    vpu_ready(qp->coroutine, false);
     return CHAN_SUCCESS;
   }
 
@@ -227,13 +227,13 @@ int tsc_chan_close(tsc_chan_t chan) {
     while ((qp = fetch_quantum(&chan->send_que)) != NULL) {
       qp->close = true;
       TSC_SYNC_ALL();
-      vpu_ready(qp->coroutine);
+      vpu_ready(qp->coroutine, false);
     }
 
     while ((qp = fetch_quantum(&chan->recv_que)) != NULL) {
       qp->close = true;
       TSC_SYNC_ALL();
-      vpu_ready(qp->coroutine);
+      vpu_ready(qp->coroutine, false);
     }
 
     // clean the auto-refcnt elements in the buffer

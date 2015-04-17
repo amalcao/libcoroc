@@ -262,7 +262,10 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
     // awaken the timer daemon thread ..
     if (tsc_intertimer_manager.suspend) {
       tsc_intertimer_manager.suspend = false;
-      vpu_ready(tsc_intertimer_manager.daemon);
+      lock_release(&tsc_intertimer_manager.lock);
+      // NOTE: must release the lock before calling `vpu_ready()' !!
+      vpu_ready(tsc_intertimer_manager.daemon, true);
+      goto __exit;
     }
   }
 #if defined(ENABLE_NOTIFY)
@@ -272,6 +275,7 @@ int tsc_add_intertimer(tsc_inter_timer_t *timer) {
 #endif
   lock_release(&tsc_intertimer_manager.lock);
 
+__exit:
   TSC_SIGNAL_UNMASK();
   return ret;
 }

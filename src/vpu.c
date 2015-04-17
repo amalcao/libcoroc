@@ -488,7 +488,7 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
 
 // make the given coroutine runnable,
 // change its state and link it to the running queue.
-void vpu_ready(tsc_coroutine_t coroutine) {
+void vpu_ready(tsc_coroutine_t coroutine, bool preempt) {
   vpu_t *vpu = TSC_TLS_GET();
 
   assert(coroutine != NULL &&
@@ -516,7 +516,15 @@ void vpu_ready(tsc_coroutine_t coroutine) {
   if (coroutine->async_wait)
     TSC_ATOMIC_DEC(vpu_manager.total_iowait);
 
-  vpu_wakeup_one();
+  if ( preempt && (vpu != NULL) &&
+       (vpu->current->priority > coroutine->priority) &&
+       (TSC_ATOMIC_READ(vpu_manager.alive) == vpu_manager.xt_index) ) {
+    // FIXME: 
+    //   let the task with the higher priority run first!!
+    tsc_coroutine_yield();
+  } else {
+    vpu_wakeup_one();
+  }
 }
 
 // call the core functions on a system (idle) coroutine's stack context,

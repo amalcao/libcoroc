@@ -80,20 +80,27 @@ int tsc_net_wait(int fd, int mode) {
 static void __tsc_netpoll_timeout(void *arg) {
   TSC_SIGNAL_MASK();
 
+  bool succ;
   tsc_inter_timer_t *timer = (tsc_inter_timer_t *)arg;
   tsc_poll_desc_t desc = timer->args;
 
   lock_acquire(&desc->lock);
   // hazard checking ..
-  if (!TSC_CAS(&desc->done, false, true)) goto __exit_netpoll_timeout;
+  if (!(succ = TSC_CAS(&desc->done, false, true))) 
+    goto __exit_netpoll_timeout;
 
   desc->mode = 0;
 
   __tsc_netpoll_rem(desc);
-  vpu_ready(desc->wait);
 
 __exit_netpoll_timeout:
+  // NOTE: the lock must be released before calling 
+  // the `vpu_ready()', since the `vpu_ready()' may
+  // cause the current task to be scheduled out to 
+  // run a task with higher priority!!
   lock_release(&desc->lock);
+  if (succ) 
+    vpu_ready(desc->wait, true);
   tsc_refcnt_put(desc);  // dec the refcnt !!
 
   TSC_SIGNAL_UNMASK();
@@ -150,7 +157,7 @@ int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
   // this function must be called by
   // system context, so don not need
   // to mask the signals ..
-  vpu_ready(desc->wait);
+  vpu_ready(desc->wait, false);
 
   return 0;
 }

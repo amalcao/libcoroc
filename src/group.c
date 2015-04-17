@@ -86,7 +86,7 @@ void tsc_group_notify(tsc_group_t group, int retval) {
     lock_release(& group->lock);
     
     if (parent != NULL) 
-      vpu_ready(parent);
+      vpu_ready(parent, true);
   }
   return;
 }

@@ -37,7 +37,7 @@ static void *tsc_async_thread_routine(void *unused) {
 
     // after the callback done, add the wait coroutine
     // to the ready queue..
-    vpu_ready(req->wait);
+    vpu_ready(req->wait, false);
 
     pthread_mutex_lock(&tsc_async_pool_manager.mutex);
   }
