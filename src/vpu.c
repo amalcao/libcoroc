@@ -236,7 +236,7 @@ static void core_sched(void) {
 
       if (candidate == NULL) {
         // polling the async net IO ..
-        __tsc_netpoll_polling(false);
+        __tsc_netpoll_polling(0);
 
         // try to fetch tasks from the global queue,
         // or stealing from other VPUs' queue ..
@@ -289,13 +289,17 @@ static void core_sched(void) {
         pthread_mutex_unlock(&vpu_manager.lock);
         /* wait until one net job coming ..*/
         if (__tsc_netpoll_size() > 0) {
-          __tsc_netpoll_polling(false);
-          pthread_mutex_lock(&vpu_manager.lock);
+          // block on the netpoll set for 1 ms..
+          if (! __tsc_netpoll_polling(1)) {
+            // if no task is ready during polling,
+            // suspend the current scheduler thread!!
+            pthread_mutex_lock(&vpu_manager.lock);
 
-          // FIXME : go sleep and wait the net IO ..
-          TSC_ATOMIC_DEC(vpu_manager.idle);
-          pthread_cond_wait(&vpu_manager.cond, &vpu_manager.lock);
-          TSC_ATOMIC_INC(vpu_manager.idle);
+            // FIXME : go sleep and wait the net IO ..
+            TSC_ATOMIC_DEC(vpu_manager.idle);
+            pthread_cond_wait(&vpu_manager.cond, &vpu_manager.lock);
+            TSC_ATOMIC_INC(vpu_manager.idle);
+          }
         }
         /* no any ready coroutines, just halt .. */
         else/* if (vpu_manager.total_ready == 0)*/

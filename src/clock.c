@@ -36,9 +36,9 @@ void clock_routine(void) {
     for (; index < vpu_manager.xt_index; ++index) {
       TSC_OS_THREAD_SENDSIG(vpu_manager.vpu[index].os_thr, TSC_CLOCK_SIGNAL);
     }
-    __tsc_netpoll_polling(false);
+    __tsc_netpoll_polling(0);
 #else
-    __tsc_netpoll_polling(true);
+    __tsc_netpoll_polling(-1);
 #endif  // ENABLE_TIMESHARE
   }
 }

@@ -85,15 +85,14 @@ int __tsc_netpoll_rem(tsc_poll_desc_t desc) {
   return 0;
 }
 
-bool __tsc_netpoll_polling(bool block) {
-  int size, ms, i, mode = 0;
+bool __tsc_netpoll_polling(int timeout) {
+  int size, i, mode = 0;
   struct pollfd *pfds = tsc_netpoll_manager.fds;
   
   size = tsc_netpoll_manager.size;
   if (size == 0) return false;
 
-  ms = block ? -1 : 0;
-  if (poll(pfds, size, ms) <= 0) return false;
+  if (poll(pfds, size, timeout) <= 0) return false;
 
   pthread_mutex_lock(&tsc_netpoll_manager.mutex);
 
