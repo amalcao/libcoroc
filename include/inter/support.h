@@ -23,7 +23,7 @@
 #endif  // __APPLE__
 
 #define TSC_NAME_LENGTH 32
-#define TSC_TASK_NUM_PERPRIO 256
+#define TSC_TASK_NUM_PERPRIO 512
 
 #define TSC_PRIO_NUM 4
 

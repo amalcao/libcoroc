@@ -13,6 +13,7 @@ extern void tsc_clock_initialize(void);
 extern void tsc_intertimer_initialize(void);
 extern void tsc_async_pool_initialize(int);
 extern void tsc_netpoll_initialize(void);
+extern void tsc_profiler_initialize(int);
 
 int __argc;
 char **__argv;
@@ -30,6 +31,8 @@ static bool __tsc_env2int(const char *env, int *ret) {
 
 int tsc_boot(int argc, char **argv, int np, int nasync,
              tsc_coroutine_handler_t entry) {
+  int profile;
+
   __argc = argc;
   __argv = argv;
 
@@ -42,11 +45,14 @@ int tsc_boot(int argc, char **argv, int np, int nasync,
     nasync = (np > 1) ? (np >> 1) : 1;
   }
 
+  __tsc_env2int("TSC_PROFILE", &profile);
+
   tsc_clock_initialize();
   tsc_intertimer_initialize();
   tsc_netpoll_initialize();
   tsc_async_pool_initialize(nasync);
   tsc_vpu_initialize(np, entry);
+  tsc_profiler_initialize(profile);
   // TODO : more modules later .. --
 
   clock_routine();  // never return ..

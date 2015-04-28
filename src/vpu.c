@@ -10,7 +10,7 @@
 #define MAX_SPIN_LOOP_NUM 1
 #define WAKEUP_THRESHOLD (vpu_manager.alive << 1)
 
-#define MAX_STEALING_FAIL_NUM (20 * (vpu_manager.xt_index))
+#define MAX_STEALING_FAIL_NUM (2 * (vpu_manager.xt_index))
 
 // the VPU manager instance.
 vpu_manager_t vpu_manager;
@@ -181,9 +181,43 @@ static inline void* __random_steal(vpu_t* vpu, unsigned prio) {
 static inline tsc_coroutine_t core_elect(vpu_t *vpu, unsigned prio) {
   
   // try to fetch a ready task from the global queue.
+#if 0
   tsc_coroutine_t candidate = 
     atomic_queue_rem(&vpu_manager.xt[prio]);
+#else
+  tsc_coroutine_t candidate = __runqget(& vpu->xt[prio]);
+  if (candidate != NULL) return candidate;
   
+  int retry = 0;
+  queue_t *gq = & vpu_manager.xt[prio];
+
+  while (gq->status > 0 && retry++ < 10) {
+    if (lock_try_acquire(& gq->lock) == 0) {
+      int max_fetch = gq->status < TSC_TASK_NUM_PERPRIO-1 ? 
+                        gq->status : TSC_TASK_NUM_PERPRIO-1;
+
+      while (max_fetch-- > 0) {
+        queue_item_t *kitem = gq->head;
+        gq->head = gq->head->next;
+        gq->status --;
+
+        if (candidate == NULL)
+          candidate = kitem->owner;
+        else
+          __runqput(& vpu->xt[prio], kitem->owner);
+      }
+       
+      if (gq->head)
+        gq->head->prev = NULL;
+      else
+        gq->tail = gq->head;
+      
+      lock_release(& gq->lock);
+      break;
+    }
+  }
+#endif
+
   // if global queue is empty, 
   // try to steal a task from other vpu.
   if (candidate == NULL) {
@@ -286,11 +320,12 @@ static void core_sched(void) {
         // wake up by other vpu ..
         TSC_ATOMIC_INC(vpu_manager.idle);
       } else if (TSC_ATOMIC_READ(vpu_manager.total_ready) == 0) {
-        pthread_mutex_unlock(&vpu_manager.lock);
         /* wait until one net job coming ..*/
         if (__tsc_netpoll_size() > 0) {
           // block on the netpoll set for 1 ms..
-          if (! __tsc_netpoll_polling(1)) {
+#if 0
+          if (! __tsc_netpoll_polling(1) &&
+              TSC_ATOMIC_READ(vpu_manager.total_ready) == 0) {
             // if no task is ready during polling,
             // suspend the current scheduler thread!!
             pthread_mutex_lock(&vpu_manager.lock);
@@ -300,6 +335,20 @@ static void core_sched(void) {
             pthread_cond_wait(&vpu_manager.cond, &vpu_manager.lock);
             TSC_ATOMIC_INC(vpu_manager.idle);
           }
+#else
+          idle_loops = 0;
+          vpu_manager.alive++;
+          pthread_mutex_unlock(&vpu_manager.lock);
+
+          int timeout = 1;
+          while (! __tsc_netpoll_polling(timeout) &&
+                 TSC_ATOMIC_READ(vpu_manager.total_ready) == 0) {
+            timeout << 1;
+                if (timeout > 1000) timeout = 1000;
+          }
+
+          continue;
+#endif
         }
         /* no any ready coroutines, just halt .. */
         else/* if (vpu_manager.total_ready == 0)*/

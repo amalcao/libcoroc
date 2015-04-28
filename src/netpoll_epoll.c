@@ -49,7 +49,6 @@ int __tsc_netpoll_rem(tsc_poll_desc_t desc) {
 bool __tsc_netpoll_polling(int timeout) {
   struct epoll_event events[128];
   int ready, i, mode = 0;
-  if (!block) timeout = 0;
 
   ready = epoll_wait(__tsc_epfd, events, 128, timeout);
 
