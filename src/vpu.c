@@ -179,10 +179,6 @@ static inline void* __random_steal(vpu_t* vpu, unsigned prio) {
 static inline tsc_coroutine_t core_elect(vpu_t *vpu, unsigned prio) {
   
   // try to fetch a ready task from the global queue.
-#if 0
-  tsc_coroutine_t candidate = 
-    atomic_queue_rem(&vpu_manager.xt[prio]);
-#else
   tsc_coroutine_t candidate = __runqget(& vpu->xt[prio]);
   if (candidate != NULL) return candidate;
   
@@ -214,7 +210,6 @@ static inline tsc_coroutine_t core_elect(vpu_t *vpu, unsigned prio) {
       break;
     }
   }
-#endif
 
   // if global queue is empty, 
   // try to steal a task from other vpu.

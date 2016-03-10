@@ -41,6 +41,8 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
                                        void *arguments, const char *name,
                                        uint32_t type, unsigned priority,
                                        tsc_coroutine_cleanup_t cleanup) {
+  assert(priority < TSC_PRIO_NUM);
+
   TSC_SIGNAL_MASK();
 
   size_t size;

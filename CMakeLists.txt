@@ -49,7 +49,6 @@ ENDIF(ENABLE_SPLITSTACK)
 ## Option to enable time-sharing schedule
 OPTION(ENABLE_TIMESHARE "Enable the time-sharing scheduler" OFF)
 
-## Option to enable deadlock detect
 IF(CMAKE_SYSTEM MATCHES "Linux")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
 ENDIF()
