@@ -1,3 +1,7 @@
+// Copyright 2016 Amal Cao (amalcaowei@gmail.com). All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE.txt file.
+
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>

@@ -94,7 +94,7 @@ make sure your GDB is version 7.0 or later and built with python enable.
 
 ## License
 
-The libtsc is under the GPLv2 opensource license, as same as the golang.
+The libtsc is under a BSD-style opensource license, as same as the golang.
 However, the frontend of CoroC based on clang is under the BSD license used by clang/llvm.See `LICENSE.txt` for details.
 
 ## TODO

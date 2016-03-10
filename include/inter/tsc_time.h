@@ -1,3 +1,7 @@
+// Copyright 2016 Amal Cao (amalcaowei@gmail.com). All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE.txt file.
+
 #ifndef _TSC_TIME_H_
 #define _TSC_TIME_H_
 
