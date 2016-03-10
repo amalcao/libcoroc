@@ -64,18 +64,6 @@ IF(ENABLE_FUTEX OR ENABLE_NOTIFY)
     ENDIF()
 ENDIF(ENABLE_FUTEX OR ENABLE_NOTIFY)
 
-## Option to enable the lock-free scheduler
-OPTION(ENABLE_LOCKFREE_RUNQ "Enable the lock-free scheduler" OFF)
-
-## Option to enable the work-stealing
-OPTION(ENABLE_WORKSTEALING "Enable the work-stealing scheduler" ON)
-
-IF(ENABLE_LOCKFREE_RUNQ)
-    IF(NOT ENABLE_WORKSTEALING)
-        MESSAGE(FATAL_ERROR "Must enable work-stealing when using lock-free scheduler!")
-    ENDIF(NOT ENABLE_WORKSTEALING)
-ENDIF(ENABLE_LOCKFREE_RUNQ)
-
 ## Option to use the tc-malloc 
 OPTION(ENABLE_TCMALLOC "Using tc-malloc for memory management" OFF)
 IF(ENABLE_TCMALLOC)

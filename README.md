@@ -20,20 +20,16 @@ And the per-thread signal mechanism is used to emulate the interrupt for computi
 LibTSC is designed for all Unix like systems, include Linux, *BSD and Darwin,
 but only Linux (x86, amd64 and armv7) and Darwin (amd64) have been tested now.
 
-It is simple to build the library and examples, just goto the root directory of the source code and type `make` in command line.
+It is simple to build the library and examples by **CMake**, and the following options
+are provided:
 
-There are some building options:
-
-- `enable_timer=1` to enable the time-sharing mechanism, which is disable default.
-- `enable_debug=[0|1|2]` to set the debug level, 0 means no debug option but optimize the code with "-O2" option.
-- `use_clang=1` to use the clang/llvm compiler to build the programs. This is the default setting for Darwin platform.
-- `enable_splitstack=1` to enable the split-stack feature, make sure your complier (gcc 4.6.0+) and linker (GNU gold) support that feature!
-- `enable_deadlock_detect=1` to enable the deadlock detecting. When all VPUs are sleep, the program will print the backtrace info for each suspended thread and quit.
-- `enable_futex=1` to use the futex based lock mechanism instead of the pthread spinlock.
-
-To build an optimized library with time-sharing support, just use the command:
-		
-		make enable_timer=1 enable_debug=0
+- `BUILD_COROC_EXAMPLES` to build all examples written in CoroC (**you need a CoroC clang frontend for this **)
+- `BUILD_C_EXAMPLES` to build all examples written in C and use libTSC as library calls
+- `ENABLE_FUTEX` to use the futex based lock mechanism instead of the pthread spinlock (**Linux only**)
+- `ENABLE_NOTIFY` to enable the kernel notify (**Linux only**)
+- `ENABLE_SPLITSTACK` to enable the split-stack feature, make sure your complier (gcc 4.6.0+) and linker (GNU gold) support that feature!
+- `ENABLE_TCMALLOC` to use google's tc-malloc instead of the pt-malloc default in GNU libc.
+- `ENABLE_TIMESHARE` to enable the time-sharing scheduler, which is disable default.
 
 
 ## Examples
@@ -95,6 +91,11 @@ the "splitstack" feature is not enable on OS X because we only support 64-bit ar
 
 The GDB debug helper script is available for each supported platforms, however,
 make sure your GDB is version 7.0 or later and built with python enable.
+
+## License
+
+The libtsc is under the GPLv2 opensource license, as same as the golang.
+However, the frontend of CoroC based on clang is under the BSD license used by clang/llvm.See `LICENSE.txt` for details.
 
 ## TODO
 

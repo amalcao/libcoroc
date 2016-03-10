@@ -11,16 +11,12 @@
 typedef void (*unlock_handler_t)(volatile void *lock);
 
 // Type of the private task queue
-#ifdef ENABLE_LOCKFREE_RUNQ
 typedef struct private_task_queue {
   unsigned prio; // the priority level for this pq
   tsc_coroutine_t runq[TSC_TASK_NUM_PERPRIO];
   uint32_t runqhead;
   uint32_t runqtail;
 } p_task_que;
-#else
-typedef queue_t p_task_que;
-#endif
 
 // Type of VPU information,
 //  It's a OS Thread here!!

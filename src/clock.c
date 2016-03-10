@@ -38,13 +38,9 @@ static uint32_t __tsc_get_vpu_ready(vpu_t *vpu) {
   uint64_t ready = 0;
   int prio;
   for (prio = 0; prio < TSC_PRIO_NUM; ++prio) {
-#ifdef ENABLE_LOCKFREE_RUNQ
     p_task_que *pq = & vpu->xt[prio];
     if (pq->runqtail > pq->runqhead)
       ready += (pq->runqtail - pq->runqhead);
-#else
-    ready += vpu->xt[prio].status;
-#endif
   }
   return ready;
 }

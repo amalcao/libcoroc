@@ -19,7 +19,6 @@ TSC_BARRIER_DEFINE
 TSC_TLS_DEFINE
 TSC_SIGNAL_MASK_DEFINE
 
-#ifdef ENABLE_LOCKFREE_RUNQ
 // local runq lock-free interfaces
 // the algorithm is as same as Go 1.3 runtime.
 static inline tsc_coroutine_t __runqget(p_task_que *pq) {
@@ -130,7 +129,6 @@ static tsc_coroutine_t __runqsteal(p_task_que *pq, p_task_que *victim) {
 }
 
 
-#endif // ENABLE_LOCKFREE_RUNQ
 
 // added by ZHJ {{
 /*
@@ -170,11 +168,7 @@ static inline void* __random_steal(vpu_t* vpu, unsigned prio) {
   vpu_t *victim = & vpu_manager.vpu[victim_id];
 
   // try to steal a work ..
-#ifdef ENABLE_LOCKFREE_RUNQ
   return __runqsteal(& vpu->xt[prio], & victim->xt[prio]);
-#else
-  return atomic_queue_rem(& victim->xt[prio]);
-#endif // ENABLE_LOCKFREE_RUNQ
 }
 // }}
 
@@ -262,11 +256,7 @@ static void core_sched(void) {
       if (TSC_ATOMIC_READ(vpu_manager.ready[prio]) == 0) continue;
 
       // try to fetch one ready task from the private queue
-#ifdef ENABLE_LOCKFREE_RUNQ
       candidate = __runqget(& vpu->xt[prio]);
-#else
-      candidate = atomic_queue_try_rem(& vpu->xt[prio]);
-#endif // ENABLE_LOCKFREE_RUNQ
 
       if (candidate == NULL) {
         // polling the async net IO ..
@@ -418,12 +408,8 @@ int core_yield(void* args) {
 }
 
 static void __priv_task_queue_init(p_task_que *que, unsigned prio) {
-#ifdef ENABLE_LOCKFREE_RUNQ
   que->prio = prio;
   que->runqhead = que->runqtail = 0;
-#else
-  atomic_queue_init(que);
-#endif // ENABLE_LOCKFREE_RUNQ
 }
 
 // init every vpu thread, and make current stack context
@@ -552,11 +538,7 @@ void vpu_ready(tsc_coroutine_t coroutine, bool preempt) {
 
   if (vpu != NULL) {
     // try to add this task to current vpu's private queue
-#ifdef ENABLE_LOCKFREE_RUNQ
     __runqput(& vpu->xt[p], coroutine);
-#else
-    atomic_queue_add(& vpu->xt[p], & coroutine->status_link);
-#endif // ENABLE_LOCKFREE_RUNQ
   } else {
     /* called by the asynchornized threads */
     atomic_queue_add(& vpu_manager.xt[p],
@@ -678,23 +660,14 @@ void vpu_backtrace(vpu_t *vpu) {
       wait_thr->backtrace = true;
       // schedule the rescent suspended one,
       // in order to traceback whose call stack..
-#ifdef ENABLE_LOCKFREE_RUNQ
       __runqput(&vpu->xt[wait_thr->priority], wait_thr);
-#else
-      atomic_queue_add(&vpu->xt[wait_thr->priority], 
-                       &wait_thr->status_link);
-#endif // ENABLE_LOCKFREE_RUNQ
+
     }
   }
 
   // schedule the main coroutine at last,
   // because the main coroutine exits will kill the program.
   vpu_manager.main->backtrace = true;
-#ifdef ENABLE_LOCKFREE_RUNQ
   __runqput(& vpu->xt[vpu_manager.main->priority], 
             vpu_manager.main);
-#else
-  atomic_queue_add(&vpu->xt[vpu_manager.main->priority], 
-                   &(vpu_manager.main->status_link));
-#endif // ENABLE_LOCKFREE_RUNQ
 }
