@@ -10,11 +10,15 @@ SET(COROC_FLAGS "-rewrite-coroc"
                 "-I${LibCoroC_SOURCE_DIR}/include/inter"
                 "-I${LibCoroC_BINARY_DIR}/include/inter")
 
+SET(SYS_LIB pthread m)
+
 ## Fix this for OS X Yosemite.
 IF(APPLE)
   SET(COROC_FLAGS "-isysroot"
                   ${CMAKE_OSX_SYSROOT}
                   ${COROC_FLAGS})
+ELSE()
+  SET(SYS_LIB ${SYS_LIB} rt)
 ENDIF(APPLE)
 
 MACRO(add_libcoroc_coroc_example name)
@@ -38,12 +42,12 @@ MACRO(add_libcoroc_coroc_example name)
   IF(LIB_TCMALLOC)
      TARGET_LINK_LIBRARIES(
         ${name}_co.run
-        ${COROC_LIB} ${LIB_TCMALLOC} pthread m rt
+        ${COROC_LIB} ${LIB_TCMALLOC} ${SYS_LIB}
      )
   ELSE(LIB_TCMALLOC)
      TARGET_LINK_LIBRARIES(
         ${name}_co.run
-        ${COROC_LIB} pthread m rt
+        ${COROC_LIB} ${SYS_LIB}
      )
   ENDIF(LIB_TCMALLOC)
 

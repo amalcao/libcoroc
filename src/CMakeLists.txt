@@ -70,7 +70,11 @@ IF(CMAKE_SYSTEM MATCHES "Linux")
     ENDIF(ENABLE_FUTEX)
 
 ELSE()
-    SET(SRC_FILES ${SRC_FILES} netpoll_poll.c)
+    IF(APPLE)
+        SET(SRC_FILES ${SRC_FILES} netpoll_kqueue.c)
+    ELSE()
+        SET(SRC_FILES ${SRC_FILES} netpoll_poll.c)
+    ENDIF(APPLE)
 ENDIF()
 
 ADD_LIBRARY(

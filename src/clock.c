@@ -82,7 +82,11 @@ void tsc_profiler_initialize(int p) {
   do_profile = (p != 0);
 
   if (do_profile) {
+#ifdef __APPLE__
+    atexit(tsc_profiler_print);
+#else
     on_exit(tsc_profiler_print, NULL);
+#endif
 
     signal(SIGINT, tsc_profiler_handler);
     signal(SIGPIPE, SIG_IGN);

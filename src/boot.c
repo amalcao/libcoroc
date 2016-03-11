@@ -35,7 +35,7 @@ static bool __tsc_env2int(const char *env, int *ret) {
 
 int tsc_boot(int argc, char **argv, int np, int nasync,
              tsc_coroutine_handler_t entry) {
-  int profile;
+  int profile = 0;
 
   __argc = argc;
   __argv = argv;
