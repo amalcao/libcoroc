@@ -2,11 +2,7 @@
 
 ## 具体步骤如下：
 
-1. 从 git 仓库下载最新的 Clang-Coroc 代码
-
-```
-git clone https://amalcao@bitbucket.org/amalcao/clang-coroc.git
-```
+1. 从 git 仓库下载最新的 Clang-Coroc 代码: `git clone https://amalcao@bitbucket.org/amalcao/clang-coroc.git`
 
 2. 从llvm.org下载[llvm3.5.0](http://llvm.org/releases/3.5.0/llvm-3.5.0.src.tar.xz)并解压（`tar Jxf llvm-3.5.0.src.tar.xz`），然后下载[compiler-rt-3.5.0](http://llvm.org/releases/3.5.0/compiler-rt-3.5.0.src.tar.xz)源代码，解压到llvm的projects子目录中，并重命名为`compiler-rt`。
 
@@ -37,6 +33,6 @@ git clone https://amalcao@bitbucket.org/amalcao/clang-coroc.git
 
 ## 备注
 
-鉴于 `CoroC` 开发尚处于初级阶段，测试并不完善，各种问题可能会比较多，请大家及时将BUG或问题反馈给我（amalcaowei@gmail.com），以便及早修正。
+鉴于CoroC开发尚处于初级阶段，测试并不完善，各种问题可能会比较多，请大家及时将BUG或问题反馈给我（amalcaowei@gmail.com），以便及早修正。
 
 另外，本文档内容可能比较简略，也希望大家在实际操作过程中根据自己的经验，不断完善本文档，以便后面加入的同学可以节省一些时间，谢谢大家！
