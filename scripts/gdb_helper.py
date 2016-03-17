@@ -9,7 +9,7 @@ sts = { 0xBAFF:"sleep", 0xFACE:"ready", 0xBEEF:"run", 0xBADD:"wait", 0xBADE:"iow
 prios = { 0:"HIGHEST", 1:"HIGH", 2:"NORMAL", 3:"LOW", 4:"IDLE" }
 
 def linked_list(ptr, linkfield):
-    cop = gdb.lookup_type('struct tsc_coroutine').pointer()
+    cop = gdb.lookup_type('struct coroc_coroutine').pointer()
     while ptr:
         yield ptr['owner'].cast(cop)
         ptr = ptr[linkfield]
