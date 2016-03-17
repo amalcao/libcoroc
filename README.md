@@ -13,7 +13,7 @@ Furthermore, our goal is to support the multi-core platforms, time-sharing and p
 or any other coroutine libraries.
 
 In current version, we use the [ucontext](http://en.wikipedia.org/wiki/Setcontext) API defined in GNU libc to implement the coroutine, 
-called `tsc_coroutine_t` in our library and use the POSIX Threads API to support the OS-level threads. 
+called `coroc_coroutine_t` in our library and use the POSIX Threads API to support the OS-level threads. 
 And the per-thread signal mechanism is used to emulate the interrupt for computing-intensive coroutines, which is the basis of the time-sharing in libCoroC.
 
 ## Build
