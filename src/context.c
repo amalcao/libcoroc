@@ -17,22 +17,22 @@ typedef int (*main_entry_t)(int, char**);
 typedef void (*boot_entry_t)();
 
 static void bootstrap(uint32_t low, uint32_t high) {
-  tsc_word_t tmp = high << 16;
+  coroc_word_t tmp = high << 16;
   tmp <<= 16;
   tmp |= low;
 
-  tsc_coroutine_t coroutine = (tsc_coroutine_t)tmp;
+  coroc_coroutine_t coroutine = (coroc_coroutine_t)tmp;
   if (coroutine->type == TSC_COROUTINE_MAIN)
     ((main_entry_t)(coroutine->entry))(__argc, __argv);
   else
     coroutine->entry(coroutine->arguments);
-  tsc_coroutine_exit(0);
+  coroc_coroutine_exit(0);
 }
 
 void TSC_CONTEXT_INIT(TSC_CONTEXT* ctx, void* stack, size_t stack_sz,
                       void* coroutine) {
   uint32_t low, high;
-  uint64_t tmp = (tsc_word_t)(coroutine);
+  uint64_t tmp = (coroc_word_t)(coroutine);
   sigset_t mask;
 
   low = tmp;

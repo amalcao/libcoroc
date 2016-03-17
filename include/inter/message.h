@@ -7,30 +7,30 @@
 
 #include "channel.h"
 
-typedef struct tsc_async_chan {
-  struct tsc_chan _chan;
+typedef struct coroc_async_chan {
+  struct coroc_chan _chan;
   queue_t mque;
-} *tsc_async_chan_t;
+} *coroc_async_chan_t;
 
-typedef struct tsc_msg {
+typedef struct coroc_msg {
   int32_t size;
   void *msg;
-} tsc_msg_t;
+} coroc_msg_t;
 
 typedef struct {
-  struct tsc_msg _msg;
+  struct coroc_msg _msg;
   queue_item_t link;
-} *tsc_msg_item_t;
+} *coroc_msg_item_t;
 
-struct tsc_coroutine;
+struct coroc_coroutine;
 
-extern void tsc_async_chan_init(tsc_async_chan_t);
-extern void tsc_async_chan_fini(tsc_async_chan_t);
+extern void coroc_async_chan_init(coroc_async_chan_t);
+extern void coroc_async_chan_fini(coroc_async_chan_t);
 
-extern int tsc_send(struct tsc_coroutine *, void *, int32_t);
-extern int tsc_recv(void *, int32_t, bool);
+extern int coroc_send(struct coroc_coroutine *, void *, int32_t);
+extern int coroc_recv(void *, int32_t, bool);
 
-extern int tsc_sendp(struct tsc_coroutine *, void *, int32_t);
-extern int tsc_recvp(void **, int32_t *, bool);
+extern int coroc_sendp(struct coroc_coroutine *, void *, int32_t);
+extern int coroc_recvp(void **, int32_t *, bool);
 
 #endif  // _TSC_CORE_MESSAGE_H_

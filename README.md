@@ -1,6 +1,6 @@
-# LibTSC -- A Time Sharing Coroutine Library
+# LibCoroC -- Yet another coroutine library
 
-The LibTSC is a time sharing coroutine library for Unix like systems.
+The LibCoroC is a coroutine library for Unix like systems written by C.
 
 ## Introduction
 
@@ -8,23 +8,24 @@ Coroutine is a kind of light-weight task mechanism which implemented in user spa
 
 The [Go](http://golang.org) and its ancestor [libtask](http://swtch.com/libtask/) use the coroutine mechanism to implement the user-level tasks, called Goroutine in Go and task in libtask.
 
-The LibTSC is yet another coroutine library just like the libtask and Go.
-Furthermore, our goal is to support both the multi-core platforms and time-sharing mechanism which not or not both supported in Go or libtask, or any other coroutine libraries.
+The LibCoroC is yet another coroutine library just like the libtask and Go.
+Furthermore, our goal is to support the multi-core platforms, time-sharing and priority-scheduling mechanism which not or not all supported in Go or libtask, 
+or any other coroutine libraries.
 
 In current version, we use the [ucontext](http://en.wikipedia.org/wiki/Setcontext) API defined in GNU libc to implement the coroutine, 
 called `tsc_coroutine_t` in our library and use the POSIX Threads API to support the OS-level threads. 
-And the per-thread signal mechanism is used to emulate the interrupt for computing-intensive coroutines, which is the basis of the time-sharing in libTSC.
+And the per-thread signal mechanism is used to emulate the interrupt for computing-intensive coroutines, which is the basis of the time-sharing in libCoroC.
 
 ## Build
 
-LibTSC is designed for all Unix like systems, include Linux, *BSD and Darwin,
+LibCoroC is designed for all Unix like systems, include Linux, *BSD and Darwin,
 but only Linux (x86, amd64 and armv7) and Darwin (amd64) have been tested now.
 
 It is simple to build the library and examples by **CMake**, and the following options
 are provided:
 
 - `BUILD_COROC_EXAMPLES` to build all examples written in CoroC (**you need a CoroC clang frontend for this **)
-- `BUILD_C_EXAMPLES` to build all examples written in C and use libTSC as library calls
+- `BUILD_C_EXAMPLES` to build all examples written in C and use libCoroC as library calls
 - `ENABLE_FUTEX` to use the futex based lock mechanism instead of the pthread spinlock (**Linux only**)
 - `ENABLE_NOTIFY` to enable the kernel notify (**Linux only**)
 - `ENABLE_SPLITSTACK` to enable the split-stack feature, make sure your complier (gcc 4.6.0+) and linker (GNU gold) support that feature!
@@ -34,7 +35,7 @@ are provided:
 
 ## Examples
 
-LibTSC is built as a static library now, in order to use it, you need to link it with your own programs.
+LibCoroC is built as a static library now, in order to use it, you need to link it with your own programs.
 
 Some examples are provided for users to test the library:
 
@@ -53,7 +54,7 @@ Some examples are provided for users to test the library:
 
 ## Debug
 
-We provide a python script to enhance the GDB to debug the applications using libTSC.
+We provide a python script to enhance the GDB to debug the applications using libCoroC.
 
 Make sure your GDB is compiled with the option "--with-python", 
 you can open GDB and type such command to test whether python plugin is available for you:

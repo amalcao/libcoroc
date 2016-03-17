@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include "coroutine.h"
 #include "support.h"
-#include "tsc_queue.h"
+#include "coroc_queue.h"
 
 // The unlock handler type
 typedef void (*unlock_handler_t)(volatile void *lock);
@@ -17,7 +17,7 @@ typedef void (*unlock_handler_t)(volatile void *lock);
 // Type of the private task queue
 typedef struct private_task_queue {
   unsigned prio; // the priority level for this pq
-  tsc_coroutine_t runq[TSC_TASK_NUM_PERPRIO];
+  coroc_coroutine_t runq[TSC_TASK_NUM_PERPRIO];
   uint32_t runqhead;
   uint32_t runqtail;
 } p_task_que;
@@ -31,8 +31,8 @@ typedef struct vpu {
   uint32_t watchdog;
   uint32_t ticks;
   unsigned rand_seed;
-  tsc_coroutine_t current;
-  tsc_coroutine_t scheduler;
+  coroc_coroutine_t current;
+  coroc_coroutine_t scheduler;
   
   // the private queues for each priority level:
   p_task_que xt[TSC_PRIO_NUM];
@@ -52,7 +52,7 @@ typedef struct vpu_manager {
 
   uint32_t xt_index;
   uint32_t last_pid;
-  tsc_coroutine_t main;
+  coroc_coroutine_t main;
   queue_t coroutine_list;
   pthread_cond_t cond;
   pthread_mutex_t lock;
@@ -68,10 +68,10 @@ extern int core_wait(void *);
 extern int core_yield(void *);
 extern int core_exit(void *);
 
-extern void tsc_vpu_initialize(int cpu_mp_count, tsc_coroutine_handler_t entry);
+extern void coroc_vpu_initialize(int cpu_mp_count, coroc_coroutine_handler_t entry);
 
 extern void vpu_suspend(volatile void *lock, unlock_handler_t handler);
-extern void vpu_ready(tsc_coroutine_t coroutine, bool);
+extern void vpu_ready(coroc_coroutine_t coroutine, bool);
 extern void vpu_syscall(int (*pfn)(void *));
 extern void vpu_clock_handler(int);
 extern void vpu_wakeup_one(void);

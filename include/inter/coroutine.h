@@ -10,27 +10,27 @@
 #include "support.h"
 #include "context.h"
 #include "message.h"
-#include "tsc_queue.h"
+#include "coroc_queue.h"
 
-typedef int32_t (*tsc_coroutine_handler_t)(void*);
-typedef int32_t (*tsc_coroutine_cleanup_t)(void*, int);
+typedef int32_t (*coroc_coroutine_handler_t)(void*);
+typedef int32_t (*coroc_coroutine_cleanup_t)(void*, int);
 
-typedef int32_t tsc_coroutine_id_t;
+typedef int32_t coroc_coroutine_id_t;
 
 struct vpu;
 
-typedef struct tsc_coroutine_attributes {
+typedef struct coroc_coroutine_attributes {
   uint32_t stack_size;
   uint32_t timeslice;
   uint32_t affinity;
   // TODO : anything else ??
-} tsc_coroutine_attributes_t;
+} coroc_coroutine_attributes_t;
 
-typedef struct tsc_coroutine {
-  struct tsc_async_chan _chan;
+typedef struct coroc_coroutine {
+  struct coroc_async_chan _chan;
 
-  tsc_coroutine_id_t id;
-  tsc_coroutine_id_t pid;  // DEBUG
+  coroc_coroutine_id_t id;
+  coroc_coroutine_id_t pid;  // DEBUG
   char name[TSC_NAME_LENGTH];
 
   uint32_t type:8;
@@ -56,15 +56,15 @@ typedef struct tsc_coroutine {
   uint32_t detachstate;
   void* stack_base;
   size_t stack_size;
-  tsc_coroutine_handler_t entry;
-  tsc_coroutine_cleanup_t cleanup;
+  coroc_coroutine_handler_t entry;
+  coroc_coroutine_cleanup_t cleanup;
   void* arguments;
   int32_t retval;
 
   TSC_CONTEXT ctx;
-}* tsc_coroutine_t;
+}* coroc_coroutine_t;
 
-enum tsc_coroutine_status {
+enum coroc_coroutine_status {
   TSC_COROUTINE_SLEEP = 0xBAFF,
   TSC_COROUTINE_READY = 0xFACE,
   TSC_COROUTINE_RUNNING = 0xBEEF,
@@ -73,7 +73,7 @@ enum tsc_coroutine_status {
   TSC_COROUTINE_EXIT = 0xDEAD,
 };
 
-enum tsc_coroutine_type {
+enum coroc_coroutine_type {
   TSC_COROUTINE_IDLE = 0x0,
   TSC_COROUTINE_NORMAL = 0x1,
   TSC_COROUTINE_MAIN = 0x2,
@@ -88,42 +88,42 @@ enum {
 
 #define TSC_DEFAULT_PRIO TSC_PRIO_NORMAL
 
-enum tsc_coroutine_deallocate {
+enum coroc_coroutine_deallocate {
   TSC_COROUTINE_UNDETACH = 0x0,
   TSC_COROUTINE_DETACH = 0x1,
 };
 
-extern tsc_coroutine_t 
-tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
+extern coroc_coroutine_t 
+coroc_coroutine_allocate(coroc_coroutine_handler_t entry,
                        void* arguments, const char* name,
                        uint32_t type, unsigned priority,
-                       tsc_coroutine_cleanup_t cleanup);
-extern void tsc_coroutine_deallocate(tsc_coroutine_t);
-extern void tsc_coroutine_exit(int value);
-extern void tsc_coroutine_yield(void);
-extern tsc_coroutine_t tsc_coroutine_self(void);
-extern void tsc_coroutine_backtrace(tsc_coroutine_t);
+                       coroc_coroutine_cleanup_t cleanup);
+extern void coroc_coroutine_deallocate(coroc_coroutine_t);
+extern void coroc_coroutine_exit(int value);
+extern void coroc_coroutine_yield(void);
+extern coroc_coroutine_t coroc_coroutine_self(void);
+extern void coroc_coroutine_backtrace(coroc_coroutine_t);
 #ifdef TSC_ENABLE_COROUTINE_JOIN
-extern status_t tsc_coroutine_join(tsc_coroutine_t);
-extern void tsc_coroutine_detach(void);
+extern status_t coroc_coroutine_join(coroc_coroutine_t);
+extern void coroc_coroutine_detach(void);
 #endif  // TSC_ENABLE_COROUTINE_JOIN
 
-#define tsc_coroutine_spawn(entry, args, name)                            \
-  tsc_coroutine_allocate((tsc_coroutine_handler_t)(entry), (void*)(args), \
+#define coroc_coroutine_spawn(entry, args, name)                            \
+  coroc_coroutine_allocate((coroc_coroutine_handler_t)(entry), (void*)(args), \
                          (name), TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, NULL)
 
 
 static inline void 
-tsc_coroutine_set_priority(unsigned priority) {
+coroc_coroutine_set_priority(unsigned priority) {
   assert(priority < TSC_PRIO_NUM);
-  tsc_coroutine_t me = tsc_coroutine_self();
+  coroc_coroutine_t me = coroc_coroutine_self();
   me->priority = priority;
 }
 
 static inline void 
-tsc_coroutine_set_name(const char *name) {
+coroc_coroutine_set_name(const char *name) {
   assert(name != NULL);
-  tsc_coroutine_t me = tsc_coroutine_self();
+  coroc_coroutine_t me = coroc_coroutine_self();
   strncpy(me->name, name, sizeof(me->name) - 1);
 }
 

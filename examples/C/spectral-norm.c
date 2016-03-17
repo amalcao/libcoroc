@@ -7,13 +7,13 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "libtsc.h"
+#include "libcoroc.h"
 
 int Num = 1000;
 int NumCPU = 2;
 double *U, *V, *T;
 double *_u, *_v;
-tsc_chan_t finishChan = NULL;
+coroc_chan_t finishChan = NULL;
 
 static inline double Dot(double *v, double *u, int n) {
   double sum = 0.0;
@@ -43,7 +43,7 @@ void task_Atv(int kk) {
   }
 
   bool finish = true;
-  tsc_chan_send(finishChan, &finish);
+  coroc_chan_send(finishChan, &finish);
 }
 
 void task_Av(int kk) {
@@ -62,7 +62,7 @@ void task_Av(int kk) {
   }
 
   bool finish = true;
-  tsc_chan_send(finishChan, &finish);
+  coroc_chan_send(finishChan, &finish);
 }
 
 void mult_Atv(double *v, double *u) {
@@ -71,13 +71,13 @@ void mult_Atv(double *v, double *u) {
   _v = v;
   _u = u;
   for (k = 0; k < NumCPU; k++) {
-    tsc_coroutine_t task =
-        tsc_coroutine_allocate(task_Atv, k, "", 
+    coroc_coroutine_t task =
+        coroc_coroutine_allocate(task_Atv, k, "", 
                                TSC_COROUTINE_NORMAL, 
                                TSC_DEFAULT_PRIO, NULL);
   }
 
-  for (k = 0; k < NumCPU; k++) tsc_chan_recv(finishChan, &finish);
+  for (k = 0; k < NumCPU; k++) coroc_chan_recv(finishChan, &finish);
 }
 
 void mult_Av(double *v, double *u) {
@@ -86,13 +86,13 @@ void mult_Av(double *v, double *u) {
   _v = v;
   _u = u;
   for (k = 0; k < NumCPU; k++) {
-    tsc_coroutine_t task =
-        tsc_coroutine_allocate(task_Av, k, "",
+    coroc_coroutine_t task =
+        coroc_coroutine_allocate(task_Av, k, "",
                                TSC_COROUTINE_NORMAL, 
                                TSC_DEFAULT_PRIO, NULL);
   }
 
-  for (k = 0; k < NumCPU; k++) tsc_chan_recv(finishChan, &finish);
+  for (k = 0; k < NumCPU; k++) coroc_chan_recv(finishChan, &finish);
 }
 
 void mult_AtAv(double *v, double *u, double *x) {
@@ -126,7 +126,7 @@ double SpectralNorm(int n) {
 void main(int argc, char **argv) {
   if (argc > 1) Num = atoi(argv[1]);
 
-  finishChan = tsc_chan_allocate(sizeof(bool), 0);
+  finishChan = coroc_chan_allocate(sizeof(bool), 0);
   printf("%0.9f\n", SpectralNorm(Num));
-  // tsc_chan_dealloc (finishChan);
+  // coroc_chan_dealloc (finishChan);
 }

@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "libtsc.h"
+#include "libcoroc.h"
 
 const double ZERO = 0;
 const double LIMIT = 2.0;
@@ -22,15 +22,15 @@ int w, h, iter;
 // This func is responsible for rendering a row of pixels,
 // and when complete writing it out to the file.
 
-void renderRow(tsc_chan_t* chans) {
-  tsc_chan_t workChan = chans[0];
-  tsc_chan_t finishChan = chans[1];
+void renderRow(coroc_chan_t* chans) {
+  coroc_chan_t workChan = chans[0];
+  coroc_chan_t finishChan = chans[1];
 
   double Zr, Zi, Tr, Ti, Cr, Ci;
   int x, y, i;
   int offset;
 
-  tsc_chan_recv(workChan, &y);
+  coroc_chan_recv(workChan, &y);
   offset = y * bytesPerRow;
   Ci = (2 * (double)y / (double)h - 1.0);
 
@@ -51,7 +51,7 @@ void renderRow(tsc_chan_t* chans) {
   }
 
   bool finish = true;
-  tsc_chan_send(finishChan, &finish);
+  coroc_chan_send(finishChan, &finish);
 }
 
 #define POOL 4
@@ -60,7 +60,7 @@ void renderRow(tsc_chan_t* chans) {
 
 void main(int argc, char** argv) {
   int size, y;
-  tsc_chan_t chans[2];
+  coroc_chan_t chans[2];
 
   size = (argc > 1) ? atoi(argv[1]) : SIZE;
 
@@ -71,19 +71,19 @@ void main(int argc, char** argv) {
   rows = malloc(sizeof(uint8_t) * bytesPerRow * h);
   memset(rows, 0, bytesPerRow * h);
 
-  chans[WORK_CHAN] = tsc_chan_allocate(sizeof(int), 2 * POOL + 1);
-  chans[FINISH_CHAN] = tsc_chan_allocate(sizeof(bool), 0);
+  chans[WORK_CHAN] = coroc_chan_allocate(sizeof(int), 2 * POOL + 1);
+  chans[FINISH_CHAN] = coroc_chan_allocate(sizeof(bool), 0);
 
   for (y = 0; y < size; y++) {
-    tsc_coroutine_t slave = tsc_coroutine_allocate(renderRow, chans, "",
+    coroc_coroutine_t slave = coroc_coroutine_allocate(renderRow, chans, "",
                                                    TSC_COROUTINE_NORMAL, 
                                                    TSC_DEFAULT_PRIO, NULL);
-    tsc_chan_send(chans[WORK_CHAN], &y);
+    coroc_chan_send(chans[WORK_CHAN], &y);
   }
 
   for (y = 0; y < size; y++) {
     bool finish;
-    tsc_chan_recv(chans[FINISH_CHAN], &finish);
+    coroc_chan_recv(chans[FINISH_CHAN], &finish);
   }
 
   /* -- uncomment the next line to output the result -- */

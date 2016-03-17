@@ -6,7 +6,7 @@
 #define _TSC_LOCK_CHAIN_H_
 
 #include <stdlib.h>
-#include "tsc_lock.h"
+#include "coroc_lock.h"
 
 #define TSC_LOCKCHAIN_DEFAULT_VOLUME 8
 

@@ -13,7 +13,7 @@
 #include "channel.h"
 #include "coroutine.h"
 
-struct tsc_timer;
+struct coroc_timer;
 
 /* internal timer type */
 typedef struct {
@@ -22,45 +22,45 @@ typedef struct {
   int32_t index;
   void (*func)(void *);
   void *args;
-  struct tsc_timer *owner;
-} tsc_inter_timer_t;
+  struct coroc_timer *owner;
+} coroc_inter_timer_t;
 
 /* userspace timer type */
-typedef struct tsc_timer {
-  struct tsc_buffered_chan _chan;
+typedef struct coroc_timer {
+  struct coroc_buffered_chan _chan;
   uint64_t _buffer;
-  tsc_inter_timer_t timer;
-} *tsc_timer_t;
+  coroc_inter_timer_t timer;
+} *coroc_timer_t;
 
 /* userspace api */
 
-tsc_timer_t tsc_timer_allocate(uint32_t period, void (*func)(void));
-void tsc_timer_dealloc(tsc_timer_t);
-tsc_chan_t tsc_timer_after(tsc_timer_t, uint64_t);
-tsc_chan_t tsc_timer_at(tsc_timer_t, uint64_t);
+coroc_timer_t coroc_timer_allocate(uint32_t period, void (*func)(void));
+void coroc_timer_dealloc(coroc_timer_t);
+coroc_chan_t coroc_timer_after(coroc_timer_t, uint64_t);
+coroc_chan_t coroc_timer_at(coroc_timer_t, uint64_t);
 
-int tsc_timer_start(tsc_timer_t);
-int tsc_timer_stop(tsc_timer_t);
-int tsc_timer_reset(tsc_timer_t, uint64_t);
+int coroc_timer_start(coroc_timer_t);
+int coroc_timer_stop(coroc_timer_t);
+int coroc_timer_reset(coroc_timer_t, uint64_t);
 
 /* internal api */
-int tsc_add_intertimer(tsc_inter_timer_t *);
-int tsc_del_intertimer(tsc_inter_timer_t *);
+int coroc_add_intertimer(coroc_inter_timer_t *);
+int coroc_del_intertimer(coroc_inter_timer_t *);
 
 /* get current time */
-static inline int64_t tsc_getmicrotime(void) {
+static inline int64_t coroc_getmicrotime(void) {
   struct timeval tv;
   struct timezone tz;
   gettimeofday(&tv, &tz);
   return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
-static inline int64_t tsc_getnanotime(void) {
+static inline int64_t coroc_getnanotime(void) {
   struct timespec abstime;
   clock_gettime(CLOCK_REALTIME, &abstime);
   return abstime.tv_sec * 1000000000LL + abstime.tv_nsec;
 }
 
-void tsc_udelay(uint64_t us);
+void coroc_udelay(uint64_t us);
 
 #endif  // _TSC_TIME_H_

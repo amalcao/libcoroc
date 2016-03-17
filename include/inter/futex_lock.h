@@ -27,12 +27,12 @@ typedef volatile struct {
 #if (ENABLE_DEBUG > 1)
   uint64_t cookie;
 #endif
-} _tsc_futex_t;
+} _coroc_futex_t;
 
-extern void _tsc_futex_init(volatile _tsc_futex_t *lock);
-extern void _tsc_futex_lock(volatile _tsc_futex_t *lock);
-extern void _tsc_futex_unlock(volatile _tsc_futex_t *lock);
-extern int _tsc_futex_trylock(volatile _tsc_futex_t *lock);
-extern void _tsc_futex_destroy(volatile _tsc_futex_t *lock);
+extern void _coroc_futex_init(volatile _coroc_futex_t *lock);
+extern void _coroc_futex_lock(volatile _coroc_futex_t *lock);
+extern void _coroc_futex_unlock(volatile _coroc_futex_t *lock);
+extern int _coroc_futex_trylock(volatile _coroc_futex_t *lock);
+extern void _coroc_futex_destroy(volatile _coroc_futex_t *lock);
 
 #endif  // _FUTEX_LOCK_H_

@@ -6,15 +6,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "vpu.h"
-#include "tsc_clock.h"
+#include "coroc_clock.h"
 
 #define TSC_CLOCK_PERIOD_NANOSEC 500000  // 0.5 ms per signal
 
-extern bool __tsc_netpoll_polling(bool);
+extern bool __coroc_netpoll_polling(bool);
 
 clock_manager_t clock_manager;
 
-void tsc_clock_initialize(void) {
+void coroc_clock_initialize(void) {
 #ifdef ENABLE_TIMESHARE
   struct sigaction act;
 
@@ -38,7 +38,7 @@ double *avg_ready_pervpu;
 
 static bool do_profile = false;
 
-static uint32_t __tsc_get_vpu_ready(vpu_t *vpu) {
+static uint32_t __coroc_get_vpu_ready(vpu_t *vpu) {
   uint64_t ready = 0;
   int prio;
   for (prio = 0; prio < TSC_PRIO_NUM; ++prio) {
@@ -49,7 +49,7 @@ static uint32_t __tsc_get_vpu_ready(vpu_t *vpu) {
   return ready;
 }
 
-void tsc_profiler_print(int ret, void *p) {
+void coroc_profiler_print(int ret, void *p) {
   printf("\n\nThe average alive vpu number is %f\n", avg_alive);
   printf("The average idle vpu number is %f\n", avg_idle);
   printf("The average total tasks number is %f\n", avg_total);
@@ -66,29 +66,29 @@ void tsc_profiler_print(int ret, void *p) {
   printf("The current total ready tasks number is %d\n", vpu_manager.total_ready);
   for (i = 0; i < vpu_manager.xt_index; ++i) {
     printf("\tThe vpu %d cur ready tasks is %d\n", i, 
-            __tsc_get_vpu_ready(& vpu_manager.vpu[i]));
+            __coroc_get_vpu_ready(& vpu_manager.vpu[i]));
   }
 
 }
 
 
 
-void tsc_profiler_handler(int signum) {
+void coroc_profiler_handler(int signum) {
   exit(-1);
 }
 
-void tsc_profiler_initialize(int p) {
+void coroc_profiler_initialize(int p) {
   
   do_profile = (p != 0);
 
   if (do_profile) {
 #ifdef __APPLE__
-    atexit(tsc_profiler_print);
+    atexit(coroc_profiler_print);
 #else
-    on_exit(tsc_profiler_print, NULL);
+    on_exit(coroc_profiler_print, NULL);
 #endif
 
-    signal(SIGINT, tsc_profiler_handler);
+    signal(SIGINT, coroc_profiler_handler);
     signal(SIGPIPE, SIG_IGN);
   }
 }
@@ -110,7 +110,7 @@ void clock_routine(void) {
     for (; index < vpu_manager.xt_index; ++index) {
       TSC_OS_THREAD_SENDSIG(vpu_manager.vpu[index].os_thr, TSC_CLOCK_SIGNAL);
     }
-    __tsc_netpoll_polling(0);
+    __coroc_netpoll_polling(0);
 #endif  // ENABLE_TIMESHARE
     
     if (!do_profile) continue;
@@ -129,12 +129,12 @@ void clock_routine(void) {
     avg_idle = AVG(avg_idle, cur, samples);
         
     for (index = 0; index < vpu_manager.xt_index; ++index) {
-      cur = __tsc_get_vpu_ready(& vpu_manager.vpu[index]);
+      cur = __coroc_get_vpu_ready(& vpu_manager.vpu[index]);
       avg_ready_pervpu[index] = 
         AVG(avg_ready_pervpu[index], cur, samples);
     }
 
     if (samples % 2000 == 0)
-      tsc_profiler_print(0, NULL);
+      coroc_profiler_print(0, NULL);
   }
 }

@@ -20,9 +20,9 @@
 // This is the NET API wrapper for libtsc,
 // copy & modify from the LibTask project.
 
-int tsc_net_lookup(const char *name, uint32_t *ip);
+int coroc_net_lookup(const char *name, uint32_t *ip);
 
-int tsc_net_announce(bool istcp, const char *server, int port) {
+int coroc_net_announce(bool istcp, const char *server, int port) {
   int fd, n, proto;
   struct sockaddr_in sa;
   socklen_t sn;
@@ -33,7 +33,7 @@ int tsc_net_announce(bool istcp, const char *server, int port) {
   sa.sin_family = AF_INET;
 
   if (server != NULL && strcmp(server, "*") != 0) {
-    if (tsc_net_lookup(server, &ip) < 0) return -1;
+    if (coroc_net_lookup(server, &ip) < 0) return -1;
     memmove(&sa.sin_addr, &ip, 4);
   }
 
@@ -53,25 +53,25 @@ int tsc_net_announce(bool istcp, const char *server, int port) {
 
   if (proto == SOCK_STREAM) listen(fd, port);
 
-  tsc_net_nonblock(fd);
+  coroc_net_nonblock(fd);
   return fd;
 }
 
-int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
+int coroc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
   int cfd, one;
   struct sockaddr_in sa;
   uint8_t *ip;
   socklen_t len;
 
   if (usec <= 0)
-    tsc_net_wait(fd, TSC_NETPOLL_READ);
-  else if (!tsc_net_timedwait(fd, TSC_NETPOLL_READ, usec))
+    coroc_net_wait(fd, TSC_NETPOLL_READ);
+  else if (!coroc_net_timedwait(fd, TSC_NETPOLL_READ, usec))
     return -1;
 
   len = sizeof sa;
 #if defined(__APPLE__)
   if ((cfd = accept(fd, (void*)&sa, &len)) < 0) return -1;
-  tsc_net_nonblock(cfd);
+  coroc_net_nonblock(cfd);
 #else
   if ((cfd = accept4(fd, (void *)&sa, &len, 
                      SOCK_NONBLOCK | SOCK_CLOEXEC)) < 0) return -1;
@@ -84,19 +84,19 @@ int tsc_net_timed_accept(int fd, char *server, int *port, int64_t usec) {
 
   if (port) *port = ntohs(sa.sin_port);
 
-  // tsc_net_nonblock(cfd);
+  // coroc_net_nonblock(cfd);
   one = 1;
   setsockopt(cfd, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof one);
 
   return cfd;
 }
 
-int tsc_net_accept(int fd, char *server, int *port) {
-  return tsc_net_timed_accept(fd, server, port, 0);
+int coroc_net_accept(int fd, char *server, int *port) {
+  return coroc_net_timed_accept(fd, server, port, 0);
 }
 
 #define CLASS(p) ((*(unsigned char *)(p)) >> 6)
-static int __tsc_parseip(const char *name, uint32_t *ip) {
+static int __coroc_parseip(const char *name, uint32_t *ip) {
   uint8_t addr[4];
   char *p;
   int i, x;
@@ -138,10 +138,10 @@ static int __tsc_parseip(const char *name, uint32_t *ip) {
   return 0;
 }
 
-int tsc_net_lookup(const char *name, uint32_t *ip) {
+int coroc_net_lookup(const char *name, uint32_t *ip) {
   struct hostent *he;
 
-  if (__tsc_parseip(name, ip) >= 0) return 0;
+  if (__coroc_parseip(name, ip) >= 0) return 0;
 
   if ((he = gethostbyname(name)) != 0) {
     *ip = *(uint32_t *)he->h_addr;
@@ -151,18 +151,18 @@ int tsc_net_lookup(const char *name, uint32_t *ip) {
   return -1;
 }
 
-int tsc_net_timed_dial(bool istcp, const char *server, int port, int64_t usec) {
+int coroc_net_timed_dial(bool istcp, const char *server, int port, int64_t usec) {
   int proto, fd, n;
   uint32_t ip;
   struct sockaddr_in sa;
   socklen_t sn;
 
-  if (tsc_net_lookup(server, &ip) < 0) return -1;
+  if (coroc_net_lookup(server, &ip) < 0) return -1;
 
   proto = istcp ? SOCK_STREAM : SOCK_DGRAM;
   if ((fd = socket(AF_INET, proto, 0)) < 0) return -1;
 
-  tsc_net_nonblock(fd);
+  coroc_net_nonblock(fd);
 
   if (!istcp) {
     n = 1;
@@ -183,8 +183,8 @@ int tsc_net_timed_dial(bool istcp, const char *server, int port, int64_t usec) {
 
   // wait for the connection finish ..
   if (usec <= 0) {
-    tsc_net_wait(fd, TSC_NETPOLL_WRITE);
-  } else if (!tsc_net_timedwait(fd, TSC_NETPOLL_WRITE, usec)) {
+    coroc_net_wait(fd, TSC_NETPOLL_WRITE);
+  } else if (!coroc_net_timedwait(fd, TSC_NETPOLL_WRITE, usec)) {
     close(fd);
     return -1;
   }
@@ -202,6 +202,6 @@ int tsc_net_timed_dial(bool istcp, const char *server, int port, int64_t usec) {
   return -1;
 }
 
-int tsc_net_dial(bool istcp, const char *server, int port) {
-  return tsc_net_timed_dial(istcp, server, port, 0);
+int coroc_net_dial(bool istcp, const char *server, int port) {
+  return coroc_net_timed_dial(istcp, server, port, 0);
 }

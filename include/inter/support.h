@@ -188,8 +188,8 @@ typedef pthread_t TSC_OS_THREAD_T;
 #endif
 
 #ifdef ENABLE_FUTEX
-extern void _tsc_futex_sleep(uint32_t*, uint32_t, int64_t);
-extern void _tsc_futex_wakeup(uint32_t*, uint32_t);
+extern void _coroc_futex_sleep(uint32_t*, uint32_t, int64_t);
+extern void _coroc_futex_wakeup(uint32_t*, uint32_t);
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -214,11 +214,11 @@ static int inline TSC_NP_ONLINE(void) {
 #define TSC_NP_ONLINE() get_nprocs()
 #endif
 
-/* define the tsc_word_t which match the arch word size */
+/* define the coroc_word_t which match the arch word size */
 #if __x86_64__  // the only 64-bit arch we support now is x86-64
-typedef long long tsc_word_t;
+typedef long long coroc_word_t;
 #else  // other such as i386, armv7 ..
-typedef long tsc_word_t;
+typedef long coroc_word_t;
 #endif
 
 static inline void __procyield(uint32_t cnt) {

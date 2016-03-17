@@ -16,7 +16,7 @@
 
 #include "coroutine.h"
 
-void _tsc_futex_sleep(uint32_t *addr, uint32_t val, int64_t ns) {
+void _coroc_futex_sleep(uint32_t *addr, uint32_t val, int64_t ns) {
   struct timespec ts;
   int32_t nsec;
 
@@ -30,13 +30,13 @@ void _tsc_futex_sleep(uint32_t *addr, uint32_t val, int64_t ns) {
   syscall(__NR_futex, addr, FUTEX_WAIT, val, &ts, NULL, 0);
 }
 
-void _tsc_futex_wakeup(uint32_t *addr, uint32_t cnt) {
+void _coroc_futex_wakeup(uint32_t *addr, uint32_t cnt) {
   int64_t ret;
 
   ret = syscall(__NR_futex, addr, FUTEX_WAKE, cnt, NULL, NULL, 0);
 
 #ifdef ENABLE_DEBUG
-  tsc_coroutine_t self = tsc_coroutine_self();
+  coroc_coroutine_t self = coroc_coroutine_self();
   uint64_t coid = self ? self->id : 0;
   TSC_DEBUG("[futex wakeup %p] ret = %ld coid = %ld\n", addr, ret, coid);
 #endif

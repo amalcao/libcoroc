@@ -1,4 +1,4 @@
-SET(INCLUDE_FILES ${LibCoroC_SOURCE_DIR}/include/libtsc.h)
+SET(INCLUDE_FILES ${LibCoroC_SOURCE_DIR}/include/libcoroc.h)
 SET(COROC_LIB coroc)
 LINK_DIRECTORIES(${LibCoroC_SOURCE_DIR}/src)
 

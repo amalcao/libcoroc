@@ -4,24 +4,24 @@
 
 #include <sys/time.h>
 
-#include "tsc_time.h"
+#include "coroc_time.h"
 #include "notify.h"
 
-void tsc_notify_wakeup(tsc_notify_t *note) {
+void coroc_notify_wakeup(coroc_notify_t *note) {
   if (TSC_CAS(&note->key, 0, 1))
-    _tsc_futex_wakeup(&note->key, 1);
+    _coroc_futex_wakeup(&note->key, 1);
 }
 
-void __tsc_notify_tsleep(void *arg) {
-  tsc_notify_t *note = (tsc_notify_t *)arg;
+void __coroc_notify_tsleep(void *arg) {
+  coroc_notify_t *note = (coroc_notify_t *)arg;
   int64_t ns = note->ns;
-  int64_t now = tsc_getnanotime();
+  int64_t now = coroc_getnanotime();
   int64_t deadline = ns + now;
 
   for (;;) {
-    _tsc_futex_sleep(&note->key, 0, ns);
+    _coroc_futex_sleep(&note->key, 0, ns);
     if (TSC_ATOMIC_READ(note->key) != 0) break;
-    now = tsc_getnanotime();
+    now = coroc_getnanotime();
     if (now >= deadline) break;
     ns = deadline - now;
   }
@@ -29,7 +29,7 @@ void __tsc_notify_tsleep(void *arg) {
 
 // ----------------------------------
 
-void __tsc_nanosleep(void *pns) {
+void __coroc_nanosleep(void *pns) {
   uint64_t ns = *(uint64_t *)pns;
   struct timespec req, rem;
 

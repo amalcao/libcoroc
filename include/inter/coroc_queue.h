@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "tsc_lock.h"
+#include "coroc_lock.h"
 
 struct queue;
 
@@ -21,7 +21,7 @@ typedef struct queue_item {
 } queue_item_t;
 
 typedef struct queue {
-  tsc_lock lock;
+  coroc_lock lock;
   queue_item_t *head;
   queue_item_t *tail;
   volatile uint32_t status;

@@ -10,19 +10,19 @@
 
 #include "vpu.h"
 #include "coroutine.h"
-#include "tsc_clock.h"
+#include "coroc_clock.h"
 
-extern void tsc_vpu_initialize(int, tsc_coroutine_handler_t);
-extern void tsc_clock_initialize(void);
-extern void tsc_intertimer_initialize(void);
-extern void tsc_async_pool_initialize(int);
-extern void tsc_netpoll_initialize(void);
-extern void tsc_profiler_initialize(int);
+extern void coroc_vpu_initialize(int, coroc_coroutine_handler_t);
+extern void coroc_clock_initialize(void);
+extern void coroc_intertimer_initialize(void);
+extern void coroc_async_pool_initialize(int);
+extern void coroc_netpoll_initialize(void);
+extern void coroc_profiler_initialize(int);
 
 int __argc;
 char **__argv;
 
-static bool __tsc_env2int(const char *env, int *ret) {
+static bool __coroc_env2int(const char *env, int *ret) {
   const char *value = getenv(env);
   char *endp = NULL;
 
@@ -33,30 +33,30 @@ static bool __tsc_env2int(const char *env, int *ret) {
   return (errno == 0);
 }
 
-int tsc_boot(int argc, char **argv, int np, int nasync,
-             tsc_coroutine_handler_t entry) {
+int coroc_boot(int argc, char **argv, int np, int nasync,
+             coroc_coroutine_handler_t entry) {
   int profile = 0;
 
   __argc = argc;
   __argv = argv;
 
   if (np <= 0) {
-    __tsc_env2int("TSC_NP", &np);
+    __coroc_env2int("TSC_NP", &np);
     if (np <= 0) np = TSC_NP_ONLINE();
   }
 
-  if (nasync <= 0 && !__tsc_env2int("TSC_ASYNC", &nasync)) {
+  if (nasync <= 0 && !__coroc_env2int("TSC_ASYNC", &nasync)) {
     nasync = (np > 1) ? (np >> 1) : 1;
   }
 
-  __tsc_env2int("TSC_PROFILE", &profile);
+  __coroc_env2int("TSC_PROFILE", &profile);
 
-  tsc_clock_initialize();
-  tsc_intertimer_initialize();
-  tsc_netpoll_initialize();
-  tsc_async_pool_initialize(nasync);
-  tsc_vpu_initialize(np, entry);
-  tsc_profiler_initialize(profile);
+  coroc_clock_initialize();
+  coroc_intertimer_initialize();
+  coroc_netpoll_initialize();
+  coroc_async_pool_initialize(nasync);
+  coroc_vpu_initialize(np, entry);
+  coroc_profiler_initialize(profile);
   // TODO : more modules later .. --
 
   clock_routine();  // never return ..

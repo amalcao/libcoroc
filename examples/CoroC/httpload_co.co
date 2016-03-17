@@ -19,13 +19,13 @@ int fetchtask(void) {
 
   fprintf(stderr, "starting...\n");
   while (1) {
-    if ((fd = tsc_net_dial(true, server, 80)) < 0) {
+    if ((fd = coroc_net_dial(true, server, 80)) < 0) {
       fprintf(stderr, "dial %s: %s\n", server, strerror(errno));
       continue;
     }
     snprintf(buf, sizeof buf, "GET %s HTTP/1.0\r\nHost: %s\r\n\r\n", url, server);
-    tsc_net_write(fd, buf, strlen(buf));
-    while ((n = tsc_net_read(fd, buf, sizeof buf)) > 0);
+    coroc_net_write(fd, buf, strlen(buf));
+    while ((n = coroc_net_read(fd, buf, sizeof buf)) > 0);
 
     close(fd);
     write(1, ".", 1);
@@ -48,7 +48,7 @@ int main (int argc, char **argv) {
 
   for (i = 0; i < n; i++) {
     __CoroC_Spawn fetchtask();
-    tsc_udelay(1000);
+    coroc_udelay(1000);
   }
 
   while (1) __CoroC_Yield;

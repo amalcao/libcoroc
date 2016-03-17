@@ -11,22 +11,22 @@
 #include "support.h"
 #include "coroutine.h"
 
-typedef void (*tsc_async_callback_t)(void *);
+typedef void (*coroc_async_callback_t)(void *);
 
 // the asynchronize request type ..
 typedef struct {
   queue_item_t link;
-  tsc_coroutine_t wait;
-  tsc_async_callback_t func;
+  coroc_coroutine_t wait;
+  coroc_async_callback_t func;
   void *argument;
-} tsc_async_request_t;
+} coroc_async_request_t;
 
 // the API for the coroutines ..
-void tsc_async_request_submit(tsc_async_callback_t func, void *argument);
+void coroc_async_request_submit(coroc_async_callback_t func, void *argument);
 
 // the API for the vpus or framework ..
-tsc_coroutine_t tsc_async_pool_fetch(void);
-void tsc_async_pool_initialize(int);
-bool tsc_async_pool_working(void);
+coroc_coroutine_t coroc_async_pool_fetch(void);
+void coroc_async_pool_initialize(int);
+bool coroc_async_pool_working(void);
 
 #endif  // _TSC_CORE_ASYNC_POOL_H_

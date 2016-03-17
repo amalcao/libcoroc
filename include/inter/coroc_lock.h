@@ -9,14 +9,14 @@
 /* use a customized futex lock like Go */
 #include "futex_lock.h"
 
-typedef _tsc_futex_t tsc_lock;
-typedef tsc_lock* lock_t;
+typedef _coroc_futex_t coroc_lock;
+typedef coroc_lock* lock_t;
 
-#define lock_init _tsc_futex_init
-#define lock_acquire _tsc_futex_lock
-#define lock_try_acquire _tsc_futex_trylock
-#define lock_release _tsc_futex_unlock
-#define lock_fini _tsc_futex_destroy
+#define lock_init _coroc_futex_init
+#define lock_acquire _coroc_futex_lock
+#define lock_try_acquire _coroc_futex_trylock
+#define lock_release _coroc_futex_unlock
+#define lock_fini _coroc_futex_destroy
 
 #else
 
@@ -26,8 +26,8 @@ typedef tsc_lock* lock_t;
 #include "darwin/pthread_spinlock.h"
 #endif
 
-typedef pthread_spinlock_t tsc_lock;
-typedef tsc_lock* lock_t;
+typedef pthread_spinlock_t coroc_lock;
+typedef coroc_lock* lock_t;
 
 #define lock_init(lock) pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE)
 #define lock_acquire pthread_spin_lock

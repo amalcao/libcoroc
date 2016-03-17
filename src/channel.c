@@ -15,14 +15,14 @@ TSC_SIGNAL_MASK_DECLARE
 typedef struct quantum {
   bool close;
   bool select;
-  tsc_chan_t chan;
-  tsc_coroutine_t coroutine;
+  coroc_chan_t chan;
+  coroc_coroutine_t coroutine;
   uint8_t *itembuf;
   queue_item_t link;
 } quantum;
 
-static inline void quantum_init(quantum *q, tsc_chan_t chan,
-                                tsc_coroutine_t coroutine, void *buf,
+static inline void quantum_init(quantum *q, coroc_chan_t chan,
+                                coroc_coroutine_t coroutine, void *buf,
                                 bool select) {
   q->close = false;
   q->select = select;
@@ -32,8 +32,8 @@ static inline void quantum_init(quantum *q, tsc_chan_t chan,
   queue_item_init(&q->link, q);
 }
 
-bool __tsc_copy_to_buff(tsc_chan_t chan, void *buf) {
-  tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
+bool __coroc_copy_to_buff(coroc_chan_t chan, void *buf) {
+  coroc_buffered_chan_t bchan = (coroc_buffered_chan_t)chan;
 
   if (bchan->nbuf < bchan->bufsize) {
     uint8_t *p = bchan->buf;
@@ -47,8 +47,8 @@ bool __tsc_copy_to_buff(tsc_chan_t chan, void *buf) {
   return false;
 }
 
-bool __tsc_copy_from_buff(tsc_chan_t chan, void *buf) {
-  tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
+bool __coroc_copy_from_buff(coroc_chan_t chan, void *buf) {
+  coroc_buffered_chan_t bchan = (coroc_buffered_chan_t)chan;
 
   if (bchan->nbuf > 0) {
     uint8_t *p = bchan->buf;
@@ -61,39 +61,39 @@ bool __tsc_copy_from_buff(tsc_chan_t chan, void *buf) {
   return false;
 }
 
-void __tsc_clean_buff(tsc_chan_t chan) {
-  tsc_buffered_chan_t bchan = (tsc_buffered_chan_t)chan;
+void __coroc_clean_buff(coroc_chan_t chan) {
+  coroc_buffered_chan_t bchan = (coroc_buffered_chan_t)chan;
 
   while (bchan->nbuf > 0) {
     uint8_t *p = bchan->buf;
     p += (chan->elemsize) * (bchan->recvx++);
-    tsc_refcnt_put(*((tsc_refcnt_t*)p));
+    coroc_refcnt_put(*((coroc_refcnt_t*)p));
     (bchan->recvx) %= (bchan->bufsize);
     bchan->nbuf--;
   }
 }
 
-tsc_chan_t _tsc_chan_allocate(int32_t elemsize, int32_t bufsize, bool isref) {
-  struct tsc_chan *chan;
+coroc_chan_t _coroc_chan_allocate(int32_t elemsize, int32_t bufsize, bool isref) {
+  struct coroc_chan *chan;
   bool _isref = (bufsize > 0) && isref; // if no buffer, we don't handle the refcnt types!!
 
   if (bufsize > 0) {
-    tsc_buffered_chan_t bchan =
-        TSC_ALLOC(sizeof(struct tsc_buffered_chan) + elemsize * bufsize);
+    coroc_buffered_chan_t bchan =
+        TSC_ALLOC(sizeof(struct coroc_buffered_chan) + elemsize * bufsize);
     // init the buffered channel ..
-    tsc_buffered_chan_init(bchan, elemsize, bufsize, _isref);
-    chan = (tsc_chan_t)bchan;
+    coroc_buffered_chan_init(bchan, elemsize, bufsize, _isref);
+    chan = (coroc_chan_t)bchan;
   } else {
-    chan = TSC_ALLOC(sizeof(struct tsc_chan));
-    tsc_chan_init(chan, elemsize, _isref, NULL, NULL);
+    chan = TSC_ALLOC(sizeof(struct coroc_chan));
+    coroc_chan_init(chan, elemsize, _isref, NULL, NULL);
   }
 
   return chan;
 }
 
-void _tsc_chan_dealloc(tsc_chan_t chan) {
+void _coroc_chan_dealloc(coroc_chan_t chan) {
   /* TODO: awaken the sleeping coroutines */
-  tsc_chan_close(chan);
+  coroc_chan_close(chan);
   lock_fini(&chan->lock);
   TSC_DEALLOC(chan);
 }
@@ -109,8 +109,8 @@ static quantum *fetch_quantum(queue_t *queue) {
   return q;
 }
 
-static int __tsc_chan_send(tsc_chan_t chan, void *buf, bool block) {
-  tsc_coroutine_t self = tsc_coroutine_self();
+static int __coroc_chan_send(coroc_chan_t chan, void *buf, bool block) {
+  coroc_coroutine_t self = coroc_coroutine_self();
 
   // check if there're any waiting coroutines ..
   quantum *qp = fetch_quantum(&chan->recv_que);
@@ -143,8 +143,8 @@ static int __tsc_chan_send(tsc_chan_t chan, void *buf, bool block) {
   return CHAN_BUSY;
 }
 
-static int __tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
-  tsc_coroutine_t self = tsc_coroutine_self();
+static int __coroc_chan_recv(coroc_chan_t chan, void *buf, bool block) {
+  coroc_coroutine_t self = coroc_coroutine_self();
 
   // check if there're any empty slots ..
   if (chan->copy_from_buff && chan->copy_from_buff(chan, buf))
@@ -179,27 +179,27 @@ static int __tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
   return CHAN_BUSY;
 }
 
-/* -- the public APIs for tsc_chan -- */
-int _tsc_chan_send(tsc_chan_t chan, void *buf, bool block) {
+/* -- the public APIs for coroc_chan -- */
+int _coroc_chan_send(coroc_chan_t chan, void *buf, bool block) {
   TSC_SIGNAL_MASK();
 
   int ret;
   lock_acquire(&chan->lock);
-  ret = __tsc_chan_send(chan, buf, block);
+  ret = __coroc_chan_send(chan, buf, block);
   lock_release(&chan->lock);
 
   TSC_SIGNAL_UNMASK();
   return ret;
 }
 
-int _tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
+int _coroc_chan_recv(coroc_chan_t chan, void *buf, bool block) {
   TSC_SIGNAL_MASK();
   int ret;
 
   // if the `chan' is nil, start the message passing mode..
-  if (chan == NULL) chan = (tsc_chan_t)tsc_coroutine_self();
+  if (chan == NULL) chan = (coroc_chan_t)coroc_coroutine_self();
   lock_acquire(&chan->lock);
-  ret = __tsc_chan_recv(chan, buf, block);
+  ret = __coroc_chan_recv(chan, buf, block);
   lock_release(&chan->lock);
 
   TSC_SIGNAL_UNMASK();
@@ -207,16 +207,16 @@ int _tsc_chan_recv(tsc_chan_t chan, void *buf, bool block) {
 }
 
 #if 0
-int _tsc_chan_sendp(tsc_chan_t chan, void *ptr, bool block) {
-  return _tsc_chan_send(chan, &ptr, block);
+int _coroc_chan_sendp(coroc_chan_t chan, void *ptr, bool block) {
+  return _coroc_chan_send(chan, &ptr, block);
 }
 
-int _tsc_chan_recvp(tsc_chan_t chan, void **pptr, bool block) {
-  return _tsc_chan_recv(chan, pptr, block);
+int _coroc_chan_recvp(coroc_chan_t chan, void **pptr, bool block) {
+  return _coroc_chan_recv(chan, pptr, block);
 }
 #endif
 
-int tsc_chan_close(tsc_chan_t chan) {
+int coroc_chan_close(coroc_chan_t chan) {
   int ret = CHAN_SUCCESS;
 
   TSC_SIGNAL_MASK();
@@ -242,7 +242,7 @@ int tsc_chan_close(tsc_chan_t chan) {
 
     // clean the auto-refcnt elements in the buffer
     if (chan->isref) 
-      __tsc_clean_buff(chan);
+      __coroc_clean_buff(chan);
   }
 
   lock_release(&chan->lock);
@@ -252,21 +252,21 @@ int tsc_chan_close(tsc_chan_t chan) {
 }
 
 /* -- the public APIs for channel select -- */
-tsc_chan_set_t tsc_chan_set_allocate(int n) {
-  tsc_chan_set_t set = TSC_ALLOC( CHAN_SET_SIZE(n) );
+coroc_chan_set_t coroc_chan_set_allocate(int n) {
+  coroc_chan_set_t set = TSC_ALLOC( CHAN_SET_SIZE(n) );
   assert(set != NULL);
-  tsc_chan_set_init(set, n);
+  coroc_chan_set_init(set, n);
   return set;
 }
 
-void tsc_chan_set_dealloc(tsc_chan_set_t set) { TSC_DEALLOC(set); }
+void coroc_chan_set_dealloc(coroc_chan_set_t set) { TSC_DEALLOC(set); }
 
-void tsc_chan_set_send(tsc_chan_set_t set, tsc_chan_t chan, void *buf) {
+void coroc_chan_set_send(coroc_chan_set_t set, coroc_chan_t chan, void *buf) {
   assert(set != NULL && chan != NULL);
   assert(set->size < set->volume);
 
   int i = set->size++;
-  tsc_scase_t *scase = &(set->cases[i]);
+  coroc_scase_t *scase = &(set->cases[i]);
 
   scase->type = CHAN_SEND;
   scase->chan = chan;
@@ -276,14 +276,14 @@ void tsc_chan_set_send(tsc_chan_set_t set, tsc_chan_t chan, void *buf) {
   chan->select = true;
 }
 
-void tsc_chan_set_recv(tsc_chan_set_t set, tsc_chan_t chan, void *buf) {
+void coroc_chan_set_recv(coroc_chan_set_t set, coroc_chan_t chan, void *buf) {
   assert(set != NULL);
   assert(set->size < set->volume);
   // if the `chan' is nil, start the message-passing mode ..
-  if (chan == NULL) chan = (tsc_chan_t)tsc_coroutine_self();
+  if (chan == NULL) chan = (coroc_chan_t)coroc_coroutine_self();
 
   int i = set->size++;
-  tsc_scase_t *scase = &(set->cases[i]);
+  coroc_scase_t *scase = &(set->cases[i]);
 
   scase->type = CHAN_RECV;
   scase->chan = chan;
@@ -293,7 +293,7 @@ void tsc_chan_set_recv(tsc_chan_set_t set, tsc_chan_t chan, void *buf) {
   chan->select = true;
 }
 
-int _tsc_chan_set_select(tsc_chan_set_t set, bool block, tsc_chan_t *active) {
+int _coroc_chan_set_select(coroc_chan_set_t set, bool block, coroc_chan_t *active) {
   assert(set != NULL);
   TSC_SIGNAL_MASK();
 
@@ -303,7 +303,7 @@ int _tsc_chan_set_select(tsc_chan_set_t set, bool block, tsc_chan_t *active) {
   }
 
   int ret;
-  tsc_coroutine_t self = tsc_coroutine_self();
+  coroc_coroutine_t self = coroc_coroutine_self();
 
   /* before lock the lock_chain, ensure that the locks in the chain
    * are sorted by their address, to avoid the deadlock !! */
@@ -311,14 +311,14 @@ int _tsc_chan_set_select(tsc_chan_set_t set, bool block, tsc_chan_t *active) {
 
   int i;
   for (i = 0; i < set->size; i++) {
-    tsc_scase_t *e = &set->cases[i];
+    coroc_scase_t *e = &set->cases[i];
 
     switch (e->type) {
       case CHAN_SEND:
-        ret = __tsc_chan_send(e->chan, e->buf, false);
+        ret = __coroc_chan_send(e->chan, e->buf, false);
         break;
       case CHAN_RECV:
-        ret = __tsc_chan_recv(e->chan, e->buf, false);
+        ret = __coroc_chan_recv(e->chan, e->buf, false);
     }
     if (ret == CHAN_SUCCESS) {
       *active = e->chan;
@@ -335,7 +335,7 @@ int _tsc_chan_set_select(tsc_chan_set_t set, bool block, tsc_chan_t *active) {
     quantum *pq = qarray;
 
     for (i = 0; i < set->size; i++) {
-      tsc_scase_t *e = &set->cases[i];
+      coroc_scase_t *e = &set->cases[i];
       quantum_init(pq, e->chan, self, e->buf, true);
       switch (e->type) {
         case CHAN_SEND:
@@ -352,14 +352,14 @@ int _tsc_chan_set_select(tsc_chan_set_t set, bool block, tsc_chan_t *active) {
     lock_chain_acquire((lock_chain_t *)set);
 
     // get the selected one
-    *active = (tsc_chan_t)(self->qtag);
+    *active = (coroc_chan_t)(self->qtag);
     ret = CHAN_SUCCESS;
 
     // dequeue all unactive chans ..
     pq = qarray;
 
     for (i = 0; i < set->size; i++) {
-      tsc_scase_t *e = &set->cases[i];
+      coroc_scase_t *e = &set->cases[i];
       queue_t *que = &(e->chan->send_que);
       if (e->type == CHAN_RECV) que = &(e->chan->recv_que);
 
@@ -373,7 +373,7 @@ int _tsc_chan_set_select(tsc_chan_set_t set, bool block, tsc_chan_t *active) {
     // relase the quantums , safe ?
     TSC_DEALLOC(qarray);
 
-    *active = (tsc_chan_t)(self->qtag);
+    *active = (coroc_chan_t)(self->qtag);
     self->qtag = NULL;
   }
 

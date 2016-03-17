@@ -12,37 +12,37 @@
 
 TSC_SIGNAL_MASK_DECLARE
 
-int tsc_net_nonblock(int fd) {
+int coroc_net_nonblock(int fd) {
   return fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 }
 
-int tsc_net_read(int fd, void *buf, int n) {
+int coroc_net_read(int fd, void *buf, int n) {
   int m, total;
   for (total = 0; total < n; total += m) {
     while ((m = read(fd, (char*)buf + total, n - total)) < 0 &&
             errno == EAGAIN)
-      tsc_net_wait(fd, TSC_NETPOLL_READ);
+      coroc_net_wait(fd, TSC_NETPOLL_READ);
     if (m < 0) return m;
     if (m == 0) break;
   }
   return total;
 }
 
-int tsc_net_timed_read(int fd, void *buf, int n, int64_t timeout) {
+int coroc_net_timed_read(int fd, void *buf, int n, int64_t timeout) {
   int m;
   while ((m = read(fd, buf, n)) < 0 && errno == EAGAIN)
-    if (!tsc_net_timedwait(fd, TSC_NETPOLL_READ, timeout))
+    if (!coroc_net_timedwait(fd, TSC_NETPOLL_READ, timeout))
       return -1;
   return m;
 }
 
-int tsc_net_write(int fd, void *buf, int n) {
+int coroc_net_write(int fd, void *buf, int n) {
   int m, total;
 
   for (total = 0; total < n; total += m) {
     while ((m = write(fd, (char *)buf + total, n - total)) < 0 &&
            errno == EAGAIN)
-      tsc_net_wait(fd, TSC_NETPOLL_WRITE);
+      coroc_net_wait(fd, TSC_NETPOLL_WRITE);
     if (m < 0) return m;
     if (m == 0) break;
   }
@@ -50,43 +50,43 @@ int tsc_net_write(int fd, void *buf, int n) {
   return total;
 }
 
-static void __tsc_poll_desc_init(tsc_poll_desc_t desc, int fd, int mode,
-                                 tsc_inter_timer_t *deadline) {
+static void __coroc_poll_desc_init(coroc_poll_desc_t desc, int fd, int mode,
+                                 coroc_inter_timer_t *deadline) {
   desc->done = false;
   desc->fd = fd;
   desc->mode = mode;
-  desc->wait = tsc_coroutine_self();
+  desc->wait = coroc_coroutine_self();
   desc->deadline = deadline;
   lock_init(&desc->lock);
 
-  tsc_refcnt_init(&desc->refcnt, TSC_DEALLOC);
+  coroc_refcnt_init(&desc->refcnt, TSC_DEALLOC);
 }
 
-int tsc_net_wait(int fd, int mode) {
-  tsc_poll_desc_t desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
-  __tsc_poll_desc_init(desc, fd, mode, NULL);
+int coroc_net_wait(int fd, int mode) {
+  coroc_poll_desc_t desc = TSC_ALLOC(sizeof(struct coroc_poll_desc));
+  __coroc_poll_desc_init(desc, fd, mode, NULL);
 
   TSC_SIGNAL_MASK();
   // calling the low level Netpoll APIs to add ..
   lock_acquire(&desc->lock);
-  __tsc_netpoll_add(desc);
+  __coroc_netpoll_add(desc);
   // then suspend current thread ..
   vpu_suspend(&desc->lock, (unlock_handler_t)lock_release);
 
   TSC_SIGNAL_UNMASK();
 
   mode = desc->mode;
-  tsc_refcnt_put(desc);
+  coroc_refcnt_put(desc);
 
   return mode;
 }
 
-static void __tsc_netpoll_timeout(void *arg) {
+static void __coroc_netpoll_timeout(void *arg) {
   TSC_SIGNAL_MASK();
 
   bool succ;
-  tsc_inter_timer_t *timer = (tsc_inter_timer_t *)arg;
-  tsc_poll_desc_t desc = timer->args;
+  coroc_inter_timer_t *timer = (coroc_inter_timer_t *)arg;
+  coroc_poll_desc_t desc = timer->args;
 
   lock_acquire(&desc->lock);
   // hazard checking ..
@@ -95,7 +95,7 @@ static void __tsc_netpoll_timeout(void *arg) {
 
   desc->mode = 0;
 
-  __tsc_netpoll_rem(desc);
+  __coroc_netpoll_rem(desc);
 
 __exit_netpoll_timeout:
   // NOTE: the lock must be released before calling 
@@ -105,43 +105,43 @@ __exit_netpoll_timeout:
   lock_release(&desc->lock);
   if (succ) 
     vpu_ready(desc->wait, true);
-  tsc_refcnt_put(desc);  // dec the refcnt !!
+  coroc_refcnt_put(desc);  // dec the refcnt !!
 
   TSC_SIGNAL_UNMASK();
 }
 
-int tsc_net_timedwait(int fd, int mode, int64_t usec) {
+int coroc_net_timedwait(int fd, int mode, int64_t usec) {
   assert (usec > 0);
 
-  tsc_inter_timer_t deadline;
-  struct tsc_poll_desc *desc = TSC_ALLOC(sizeof(struct tsc_poll_desc));
-  __tsc_poll_desc_init(desc, fd, mode, &deadline);
+  coroc_inter_timer_t deadline;
+  struct coroc_poll_desc *desc = TSC_ALLOC(sizeof(struct coroc_poll_desc));
+  __coroc_poll_desc_init(desc, fd, mode, &deadline);
 
-  deadline.when = tsc_getmicrotime() + usec;
+  deadline.when = coroc_getmicrotime() + usec;
   deadline.period = 0;
-  deadline.func = __tsc_netpoll_timeout;
-  deadline.args = tsc_refcnt_get(desc);  // inc the refcnt!!
+  deadline.func = __coroc_netpoll_timeout;
+  deadline.args = coroc_refcnt_get(desc);  // inc the refcnt!!
   deadline.owner = NULL;
 
   TSC_SIGNAL_MASK();
   lock_acquire(&desc->lock);
-  __tsc_netpoll_add(desc);
+  __coroc_netpoll_add(desc);
   // add the timer to do timeout check..
-  tsc_add_intertimer(&deadline);
+  coroc_add_intertimer(&deadline);
   // then suspend current task ..
   vpu_suspend(&desc->lock, (unlock_handler_t)lock_release);
   // delete the deadline timer here!!
-  if (tsc_del_intertimer(&deadline) == 0) tsc_refcnt_put(desc);
+  if (coroc_del_intertimer(&deadline) == 0) coroc_refcnt_put(desc);
 
   // drop the reference ..
   mode = desc->mode;
-  tsc_refcnt_put(desc);
+  coroc_refcnt_put(desc);
 
   TSC_SIGNAL_UNMASK();
   return mode;
 }
 
-int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
+int coroc_netpoll_wakeup(coroc_poll_desc_t desc) {
   lock_acquire(&desc->lock);
 #if 0
   // hazard checking, maybe not neccessary..
@@ -151,7 +151,7 @@ int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
 
   // must remove the desc before wakeup the wait task,
   // so the netpoll will not return this desc again!!
-  __tsc_netpoll_rem(desc);
+  __coroc_netpoll_rem(desc);
   
   // since the `desc->wait' will release the desc, 
   // so we must release the lock before calling vpu_ready
@@ -166,4 +166,4 @@ int tsc_netpoll_wakeup(tsc_poll_desc_t desc) {
   return 0;
 }
 
-void tsc_netpoll_initialize(void) { __tsc_netpoll_init(128); }
+void coroc_netpoll_initialize(void) { __coroc_netpoll_init(128); }

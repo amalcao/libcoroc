@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE.txt file.
 
-#include "tsc_hash.h"
+#include "coroc_hash.h"
 
 static inline uint64_t __hash_fun0(uint64_t code) { return (A * code + B) % M; }
 

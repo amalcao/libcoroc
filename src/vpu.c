@@ -9,7 +9,7 @@
 #include "vpu.h"
 #include "async.h"
 #include "netpoll.h"
-#include "tsc_lock.h"
+#include "coroc_lock.h"
 
 #define MAX_SPIN_LOOP_NUM 1
 #define WAKEUP_THRESHOLD (vpu_manager.alive << 1)
@@ -25,8 +25,8 @@ TSC_SIGNAL_MASK_DEFINE
 
 // local runq lock-free interfaces
 // the algorithm is as same as Go 1.3 runtime.
-static inline tsc_coroutine_t __runqget(p_task_que *pq) {
-  tsc_coroutine_t task = NULL;
+static inline coroc_coroutine_t __runqget(p_task_que *pq) {
+  coroc_coroutine_t task = NULL;
   uint32_t tail, head;
 
   while (1) {
@@ -41,10 +41,10 @@ static inline tsc_coroutine_t __runqget(p_task_que *pq) {
   return task;
 }
 
-static bool __runqputslow(p_task_que *pq, tsc_coroutine_t task,
+static bool __runqputslow(p_task_que *pq, coroc_coroutine_t task,
         uint32_t head, uint32_t tail) {
 
-  tsc_coroutine_t temp[TSC_TASK_NUM_PERPRIO/2+1];
+  coroc_coroutine_t temp[TSC_TASK_NUM_PERPRIO/2+1];
   uint32_t n, i;
 
   n = (tail - head) / 2;
@@ -68,7 +68,7 @@ static bool __runqputslow(p_task_que *pq, tsc_coroutine_t task,
   return true;
 }
 
-static void __runqput(p_task_que *pq, tsc_coroutine_t task) {
+static void __runqput(p_task_que *pq, coroc_coroutine_t task) {
   uint32_t tail, head;
 
   while (1) {
@@ -89,7 +89,7 @@ static void __runqput(p_task_que *pq, tsc_coroutine_t task) {
   return;
 }
 
-static uint32_t __runqgrab(p_task_que *pq, tsc_coroutine_t *temp) {
+static uint32_t __runqgrab(p_task_que *pq, coroc_coroutine_t *temp) {
   uint32_t tail, head, n, i;
 
   while (1) {
@@ -110,9 +110,9 @@ static uint32_t __runqgrab(p_task_que *pq, tsc_coroutine_t *temp) {
   return n;
 }
 
-static tsc_coroutine_t __runqsteal(p_task_que *pq, p_task_que *victim) {
-  tsc_coroutine_t task;
-  tsc_coroutine_t temp[TSC_TASK_NUM_PERPRIO/2];
+static coroc_coroutine_t __runqsteal(p_task_que *pq, p_task_que *victim) {
+  coroc_coroutine_t task;
+  coroc_coroutine_t temp[TSC_TASK_NUM_PERPRIO/2];
   uint32_t tail, head, n, i;
 
   n = __runqgrab(victim, temp);
@@ -176,10 +176,10 @@ static inline void* __random_steal(vpu_t* vpu, unsigned prio) {
 }
 // }}
 
-static inline tsc_coroutine_t core_elect(vpu_t *vpu, unsigned prio) {
+static inline coroc_coroutine_t core_elect(vpu_t *vpu, unsigned prio) {
   
   // try to fetch a ready task from the global queue.
-  tsc_coroutine_t candidate = __runqget(& vpu->xt[prio]);
+  coroc_coroutine_t candidate = __runqget(& vpu->xt[prio]);
   if (candidate != NULL) return candidate;
   
   int retry = 0;
@@ -238,7 +238,7 @@ static inline tsc_coroutine_t core_elect(vpu_t *vpu, unsigned prio) {
 //
 static void core_sched(void) {
   vpu_t* vpu = TSC_TLS_GET();
-  tsc_coroutine_t candidate = NULL;
+  coroc_coroutine_t candidate = NULL;
   int idle_loops = 0;
 
   // atomic inc the all idle thread number
@@ -259,7 +259,7 @@ static void core_sched(void) {
 
       if (candidate == NULL) {
         // polling the async net IO ..
-        __tsc_netpoll_polling(0);
+        __coroc_netpoll_polling(0);
 
         // try to fetch tasks from the global queue,
         // or stealing from other VPUs' queue ..
@@ -310,10 +310,10 @@ static void core_sched(void) {
         TSC_ATOMIC_INC(vpu_manager.idle);
       } else if (TSC_ATOMIC_READ(vpu_manager.total_ready) == 0) {
         /* wait until one net job coming ..*/
-        if (__tsc_netpoll_size() > 0) {
+        if (__coroc_netpoll_size() > 0) {
           // block on the netpoll set for 1 ms..
 #if 0
-          if (! __tsc_netpoll_polling(1) &&
+          if (! __coroc_netpoll_polling(1) &&
               TSC_ATOMIC_READ(vpu_manager.total_ready) == 0) {
             // if no task is ready during polling,
             // suspend the current scheduler thread!!
@@ -330,7 +330,7 @@ static void core_sched(void) {
           pthread_mutex_unlock(&vpu_manager.lock);
 
           int timeout = 1;
-          while (! __tsc_netpoll_polling(timeout) &&
+          while (! __coroc_netpoll_polling(timeout) &&
                  TSC_ATOMIC_READ(vpu_manager.total_ready) == 0) {
             timeout << 1;
                 if (timeout > 1000) timeout = 1000;
@@ -357,13 +357,13 @@ static void core_sched(void) {
 // which called by system (idle) corouine on the system context.
 int core_exit(void* args) {
   vpu_t* vpu = TSC_TLS_GET();
-  tsc_coroutine_t garbage = (tsc_coroutine_t)args;
+  coroc_coroutine_t garbage = (coroc_coroutine_t)args;
 
   if (garbage->type == TSC_COROUTINE_MAIN) {
     // TODO : more works to halt the system
     exit(0);
   }
-  tsc_coroutine_deallocate(garbage);
+  coroc_coroutine_deallocate(garbage);
 
   return 0;
 }
@@ -372,7 +372,7 @@ int core_exit(void* args) {
 // let the given coroutine waiting for some event
 int core_wait(void* args) {
   vpu_t* vpu = TSC_TLS_GET();
-  tsc_coroutine_t victim = (tsc_coroutine_t)args;
+  coroc_coroutine_t victim = (coroc_coroutine_t)args;
 
   victim->status = TSC_COROUTINE_WAIT;
 
@@ -394,7 +394,7 @@ int core_wait(void* args) {
 // NOTE : must link current one to the global running queue!
 int core_yield(void* args) {
   vpu_t* vpu = TSC_TLS_GET();
-  tsc_coroutine_t victim = (tsc_coroutine_t)args;
+  coroc_coroutine_t victim = (coroc_coroutine_t)args;
 
   victim->status = TSC_COROUTINE_READY;
   atomic_queue_add(&vpu_manager.xt[victim->priority], 
@@ -416,11 +416,11 @@ static void __priv_task_queue_init(p_task_que *que, unsigned prio) {
 // all system calls must run on those contexts
 // via the `vpu_syscall()' .
 static void* per_vpu_initalize(void* vpu_id) {
-  tsc_coroutine_t scheduler;
-  tsc_coroutine_attributes_t attr;
+  coroc_coroutine_t scheduler;
+  coroc_coroutine_attributes_t attr;
 
-  vpu_t* vpu = &vpu_manager.vpu[((tsc_word_t)vpu_id)];
-  vpu->id = (int)((tsc_word_t)vpu_id);
+  vpu_t* vpu = &vpu_manager.vpu[((coroc_word_t)vpu_id)];
+  vpu->id = (int)((coroc_word_t)vpu_id);
   vpu->ticks = 0;
   vpu->watchdog = 0;
 
@@ -435,7 +435,7 @@ static void* per_vpu_initalize(void* vpu_id) {
   TSC_TLS_SET(vpu);
 
   // initialize the system scheduler coroutine ..
-  scheduler = tsc_coroutine_allocate(NULL, NULL, 
+  scheduler = coroc_coroutine_allocate(NULL, NULL, 
                                      "sys/scheduler",
                                      TSC_COROUTINE_IDLE, 
                                      0, NULL);
@@ -476,7 +476,7 @@ static void* per_vpu_initalize(void* vpu_id) {
 
 // init the vpu sub-system with the hint of
 // how many OS threads will be used.
-void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
+void coroc_vpu_initialize(int vpu_mp_count, coroc_coroutine_handler_t entry) {
   // schedulers initialization
   size_t stacksize = 1024 + PTHREAD_STACK_MIN;
   vpu_manager.xt_index = vpu_mp_count;
@@ -506,12 +506,12 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
   TSC_SIGNAL_MASK_INIT();
 
   // create the first coroutine, "init" ..
-  tsc_coroutine_t init =
-      tsc_coroutine_allocate(entry, NULL, "init", 
+  coroc_coroutine_t init =
+      coroc_coroutine_allocate(entry, NULL, "init", 
                              TSC_COROUTINE_MAIN, TSC_PRIO_LOW, 0);
 
   // VPU initialization
-  tsc_word_t index = 0;
+  coroc_word_t index = 0;
   for (; index < vpu_manager.xt_index; ++index) {
     TSC_OS_THREAD_ATTR attr;
     TSC_OS_THREAD_ATTR_INIT(&attr);
@@ -526,7 +526,7 @@ void tsc_vpu_initialize(int vpu_mp_count, tsc_coroutine_handler_t entry) {
 
 // make the given coroutine runnable,
 // change its state and link it to the running queue.
-void vpu_ready(tsc_coroutine_t coroutine, bool preempt) {
+void vpu_ready(coroc_coroutine_t coroutine, bool preempt) {
   vpu_t *vpu = TSC_TLS_GET();
 
   assert(coroutine != NULL &&
@@ -555,7 +555,7 @@ void vpu_ready(tsc_coroutine_t coroutine, bool preempt) {
        (TSC_ATOMIC_READ(vpu_manager.alive) == vpu_manager.xt_index) ) {
     // FIXME: 
     //   let the task with the higher priority run first!!
-    tsc_coroutine_yield();
+    coroc_coroutine_yield();
   } else {
     vpu_wakeup_one();
   }
@@ -565,7 +565,7 @@ void vpu_ready(tsc_coroutine_t coroutine, bool preempt) {
 // in order to prevent the conpetition among the VPUs.
 void vpu_syscall(int (*pfn)(void*)) {
   vpu_t* vpu = TSC_TLS_GET();
-  tsc_coroutine_t self = vpu->current;
+  coroc_coroutine_t self = vpu->current;
 
   assert(self != NULL);
 
@@ -580,7 +580,7 @@ void vpu_syscall(int (*pfn)(void*)) {
 
   /* trick : use `syscall' to distinguish if already returned from syscall */
   if (self && self->syscall) {
-    tsc_coroutine_t scheduler = vpu->scheduler;
+    coroc_coroutine_t scheduler = vpu->scheduler;
 
 #ifdef ENABLE_SPLITSTACK
     TSC_STACK_CONTEXT_LOAD(&scheduler->ctx);
@@ -597,7 +597,7 @@ void vpu_syscall(int (*pfn)(void*)) {
 
   /* check if grouine is returned for backtrace */
   if (self && self->backtrace) {
-    tsc_coroutine_backtrace(self);
+    coroc_coroutine_backtrace(self);
   }
 
   return;
@@ -653,7 +653,7 @@ void vpu_backtrace(vpu_t *vpu) {
   // the libc's `backtrace()' can only trace the frame of the caller,
   // so we must schedule the suspended coroutine to a running OS coroutine
   // and then calling the `backtrace()' ..
-  tsc_coroutine_t wait_thr;
+  coroc_coroutine_t wait_thr;
   while ((wait_thr = atomic_queue_rem(&vpu_manager.coroutine_list)) != NULL) {
     if (wait_thr != vpu_manager.main) {
       wait_thr->backtrace = true;

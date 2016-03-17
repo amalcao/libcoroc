@@ -11,12 +11,12 @@ SET(INCLUDE_FILES ../include/inter/support.h
                   ../include/inter/netpoll.h
                   ../include/inter/async.h
                   ../include/inter/refcnt.h
-                  ../include/inter/tsc_clock.h
-                  ../include/inter/tsc_lock.h
-                  ../include/inter/tsc_queue.h
-                  ../include/inter/tsc_hash.h
-                  ../include/inter/tsc_time.h
-                  ../include/inter/tsc_group.h)
+                  ../include/inter/coroc_clock.h
+                  ../include/inter/coroc_lock.h
+                  ../include/inter/coroc_queue.h
+                  ../include/inter/coroc_hash.h
+                  ../include/inter/coroc_time.h
+                  ../include/inter/coroc_group.h)
 
 SET(SRC_FILES boot.c 
               vpu.c 
@@ -30,7 +30,7 @@ SET(SRC_FILES boot.c
               async.c
               group.c
               clock.c
-              tsc_main.c
+              coroc_main.c
               hash.c
               vfs.c)
 

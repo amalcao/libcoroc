@@ -10,7 +10,7 @@
 #include <assert.h>
 #include "coroutine.h"
 #include "vpu.h"
-#include "tsc_group.h"
+#include "coroc_group.h"
 
 #if defined(ENABLE_SPLITSTACK)  // && defined(LINKER_SUPPORTS_SPLIT_STACK)
 #define TSC_DEFAULT_STACK_SIZE PTHREAD_STACK_MIN
@@ -31,29 +31,29 @@
 TSC_TLS_DECLARE
 TSC_SIGNAL_MASK_DECLARE
 
-void tsc_coroutine_attr_init(tsc_coroutine_attributes_t *attr) {
+void coroc_coroutine_attr_init(coroc_coroutine_attributes_t *attr) {
   attr->stack_size = TSC_DEFAULT_STACK_SIZE;
   attr->timeslice = TSC_DEFAULT_TIMESLICE;
   attr->affinity = TSC_DEFAULT_AFFINITY;
 }
 
-tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
+coroc_coroutine_t coroc_coroutine_allocate(coroc_coroutine_handler_t entry,
                                        void *arguments, const char *name,
                                        uint32_t type, unsigned priority,
-                                       tsc_coroutine_cleanup_t cleanup) {
+                                       coroc_coroutine_cleanup_t cleanup) {
   assert(priority < TSC_PRIO_NUM);
 
   TSC_SIGNAL_MASK();
 
   size_t size;
   vpu_t *vpu = TSC_TLS_GET();
-  tsc_coroutine_t coroutine = TSC_ALLOC(sizeof(struct tsc_coroutine));
-  memset(coroutine, 0, sizeof(struct tsc_coroutine));
+  coroc_coroutine_t coroutine = TSC_ALLOC(sizeof(struct coroc_coroutine));
+  memset(coroutine, 0, sizeof(struct coroc_coroutine));
   memset(&coroutine->ctx, 0, sizeof(TSC_CONTEXT));
 
   if (coroutine != NULL) {
     // init the interal channel ..
-    tsc_async_chan_init((tsc_async_chan_t)coroutine);
+    coroc_async_chan_init((coroc_async_chan_t)coroutine);
 
     strcpy(coroutine->name, name);
     coroutine->type = type;
@@ -109,7 +109,7 @@ tsc_coroutine_t tsc_coroutine_allocate(tsc_coroutine_handler_t entry,
   return coroutine;
 }
 
-void tsc_coroutine_deallocate(tsc_coroutine_t coroutine) {
+void coroc_coroutine_deallocate(coroc_coroutine_t coroutine) {
   assert(coroutine->status == TSC_COROUTINE_RUNNING);
   // TODO : reclaim the coroutine elements ..
   coroutine->status = TSC_COROUTINE_EXIT;
@@ -124,18 +124,18 @@ void tsc_coroutine_deallocate(tsc_coroutine_t coroutine) {
   }
 #endif
 
-  tsc_async_chan_fini((tsc_async_chan_t)coroutine);
-  tsc_refcnt_put((tsc_refcnt_t)coroutine);
+  coroc_async_chan_fini((coroc_async_chan_t)coroutine);
+  coroc_refcnt_put((coroc_refcnt_t)coroutine);
   // TSC_DEALLOC(coroutine);
 }
 
-void tsc_coroutine_exit(int value) {
+void coroc_coroutine_exit(int value) {
   TSC_SIGNAL_MASK();
   
   // call notify API before quit,
   // if current task belongs to a group!!
   vpu_t *vpu = TSC_TLS_GET();
-  tsc_coroutine_t self = vpu->current;
+  coroc_coroutine_t self = vpu->current;
   
   assert(self && (self->status == TSC_COROUTINE_RUNNING));
 
@@ -146,14 +146,14 @@ void tsc_coroutine_exit(int value) {
   TSC_SIGNAL_UNMASK();
 }
 
-void tsc_coroutine_yield(void) {
+void coroc_coroutine_yield(void) {
   TSC_SIGNAL_MASK();
   vpu_syscall(core_yield);
   TSC_SIGNAL_UNMASK();
 }
 
-tsc_coroutine_t tsc_coroutine_self(void) {
-  tsc_coroutine_t self = NULL;
+coroc_coroutine_t coroc_coroutine_self(void) {
+  coroc_coroutine_t self = NULL;
   TSC_SIGNAL_MASK();
   vpu_t *vpu = TSC_TLS_GET();
 
@@ -163,7 +163,7 @@ tsc_coroutine_t tsc_coroutine_self(void) {
   return self;
 }
 
-void tsc_coroutine_backtrace(tsc_coroutine_t self) {
+void coroc_coroutine_backtrace(coroc_coroutine_t self) {
   int level;
   void *buffer[TSC_BACKTRACE_LEVEL];
 

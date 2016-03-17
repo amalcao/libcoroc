@@ -5,51 +5,51 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "libtsc.h"
+#include "libcoroc.h"
 
-tsc_coroutine_t init;
+coroc_coroutine_t init;
 
-int subtask(tsc_chan_t chan) {
+int subtask(coroc_chan_t chan) {
   int ret, id;
   while (1) {
-    ret = tsc_chan_recv(chan, &id);
+    ret = coroc_chan_recv(chan, &id);
     // printf ("[subtask] %x\n", ret);
     if (ret == CHAN_CLOSED) break;
     printf("[subtask] recv id is %d.\n", id);
   }
 
-  tsc_sendp(init, NULL, 0);
-  tsc_refcnt_put((tsc_refcnt_t)chan);
-  tsc_coroutine_exit(0);
+  coroc_sendp(init, NULL, 0);
+  coroc_refcnt_put((coroc_refcnt_t)chan);
+  coroc_coroutine_exit(0);
 }
 
 int main(int argc, char** argv) {
-  init = tsc_coroutine_self();
+  init = coroc_coroutine_self();
 
   uint64_t awaken = 0;
   int i = 0;
-  tsc_chan_t chan = tsc_chan_allocate(sizeof(int), 0);
+  coroc_chan_t chan = coroc_chan_allocate(sizeof(int), 0);
 
-  tsc_timer_t timer = tsc_timer_allocate(1000000 * 1, NULL);
-  tsc_timer_after(timer, 1000000 * 1);  // 1 seconds later
+  coroc_timer_t timer = coroc_timer_allocate(1000000 * 1, NULL);
+  coroc_timer_after(timer, 1000000 * 1);  // 1 seconds later
 
-  tsc_coroutine_allocate(subtask, tsc_refcnt_get(chan), "sub",
+  coroc_coroutine_allocate(subtask, coroc_refcnt_get(chan), "sub",
                          TSC_COROUTINE_NORMAL, TSC_DEFAULT_PRIO, 0);
 
   for (i = 0; i < 5; i++) {
     printf("waiting for 1 seconds!\n");
-    tsc_chan_recv((tsc_chan_t)timer, &awaken);
-    tsc_chan_sende(chan, i + 1);
+    coroc_chan_recv((coroc_chan_t)timer, &awaken);
+    coroc_chan_sende(chan, i + 1);
   }
 
   printf("release the timer ..\n");
-  tsc_chan_close(chan);
-  tsc_refcnt_put((tsc_refcnt_t)chan);
+  coroc_chan_close(chan);
+  coroc_refcnt_put((coroc_refcnt_t)chan);
 
-  tsc_timer_stop(timer);
-  tsc_timer_dealloc(timer);
+  coroc_timer_stop(timer);
+  coroc_timer_dealloc(timer);
 
-  tsc_recv(NULL, 0, true);
+  coroc_recv(NULL, 0, true);
 
-  tsc_coroutine_exit(0);
+  coroc_coroutine_exit(0);
 }

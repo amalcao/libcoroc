@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "libtsc.h"
+#include "libcoroc.h"
 
 void sub_task(void* arg) {
   uint64_t id = (uint64_t)arg;
@@ -19,29 +19,29 @@ void sub_task(void* arg) {
 
   for (;;) {
 #ifndef ENABLE_TIMESHARE
-    tsc_coroutine_yield();
+    coroc_coroutine_yield();
 #endif
   }
 
-  tsc_coroutine_exit(0);
+  coroc_coroutine_exit(0);
 }
 
 int main(int argc, char** argv) {
-  tsc_coroutine_t threads[100];
+  coroc_coroutine_t threads[100];
 
   int i;
   for (i = 0; i < 100; ++i) {
     threads[i] =
-        tsc_coroutine_allocate(sub_task, i, "", TSC_COROUTINE_NORMAL, 0);
+        coroc_coroutine_allocate(sub_task, i, "", TSC_COROUTINE_NORMAL, 0);
   }
 
   for (;;) {
 #ifndef ENABLE_TIMESHARE
-    tsc_coroutine_yield();
+    coroc_coroutine_yield();
 #endif
   }
 
-  tsc_coroutine_exit(0);
+  coroc_coroutine_exit(0);
 
   return 0;
 }
